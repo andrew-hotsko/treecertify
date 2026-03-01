@@ -91,17 +91,17 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">
             Welcome back, {arborist.name.split(" ")[0]}
           </h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-500 truncate">
             ISA #{arborist.isaCertificationNum} &middot;{" "}
             {arborist.companyName ?? "Independent Arborist"}
           </p>
         </div>
-        <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
+        <Button asChild className="bg-emerald-600 hover:bg-emerald-700 self-start sm:self-auto">
           <Link href="/properties/new">
             <Plus className="mr-2 h-4 w-4" />
             New Property

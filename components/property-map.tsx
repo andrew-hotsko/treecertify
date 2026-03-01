@@ -63,20 +63,25 @@ function createMarkerElement(
   pin: TreePin,
   isSelected: boolean
 ): HTMLDivElement {
+  // Use larger pins on touch devices for better tap targets
+  const isTouch = window.matchMedia("(pointer: coarse)").matches;
+  const size = isTouch ? 36 : 30;
+  const fontSize = isTouch ? "14px" : "12px";
+
   const wrapper = document.createElement("div");
   wrapper.style.position = "relative";
-  wrapper.style.width = "30px";
-  wrapper.style.height = "30px";
+  wrapper.style.width = `${size}px`;
+  wrapper.style.height = `${size}px`;
 
   const el = document.createElement("div");
-  el.style.width = "30px";
-  el.style.height = "30px";
-  el.style.lineHeight = "30px";
+  el.style.width = `${size}px`;
+  el.style.height = `${size}px`;
+  el.style.lineHeight = `${size}px`;
   el.style.textAlign = "center";
   el.style.borderRadius = "50%";
   el.style.color = "white";
   el.style.fontWeight = "700";
-  el.style.fontSize = "12px";
+  el.style.fontSize = fontSize;
   el.style.cursor = "pointer";
   el.style.userSelect = "none";
   el.style.backgroundColor = pinColor(pin);

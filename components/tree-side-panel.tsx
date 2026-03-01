@@ -35,6 +35,7 @@ import {
   Mic,
   PenLine,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -273,7 +274,17 @@ export function TreeSidePanel({
 
   // ---- Render ----
   return (
-    <div className="flex h-full w-96 flex-col border-l bg-background">
+    <div className={cn(
+      "flex flex-col bg-background",
+      // Mobile: bottom sheet overlay
+      "fixed inset-x-0 bottom-0 z-50",
+      "max-h-[75vh] rounded-t-2xl shadow-2xl",
+      // Desktop: right side panel
+      "md:relative md:inset-auto md:z-auto",
+      "md:h-full md:w-96 md:max-h-none md:rounded-none md:shadow-none md:border-l"
+    )}>
+      {/* Mobile drag handle */}
+      <div className="md:hidden mx-auto mt-2 mb-1 h-1 w-10 rounded-full bg-gray-300" />
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="flex items-center gap-2">

@@ -27,14 +27,14 @@ export default async function PropertiesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Properties</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Properties</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {properties.length} propert{properties.length !== 1 ? "ies" : "y"}
           </p>
         </div>
-        <Link href="/properties/new">
+        <Link href="/properties/new" className="self-start sm:self-auto">
           <Button className="bg-emerald-700 hover:bg-emerald-600">
             <Plus className="h-4 w-4 mr-2" />
             New Property
@@ -80,17 +80,17 @@ export default async function PropertiesPage() {
                 className="block"
               >
                 <Card className="hover:border-emerald-300 transition-colors cursor-pointer">
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 flex-1 min-w-0">
-                        <div className="flex-shrink-0">
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                        <div className="flex-shrink-0 hidden sm:block">
                           <div className="rounded-full bg-emerald-50 p-2">
                             <MapPin className="h-5 w-5 text-emerald-600" />
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-foreground truncate">
+                            <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">
                               {property.address}
                             </h3>
                             {latestReport ? (
@@ -99,14 +99,20 @@ export default async function PropertiesPage() {
                               <StatusBadge status={property.status} />
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground truncate">
-                            {property.city}, {property.county} County
-                          </p>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span className="truncate">
+                              {property.city}, {property.county} County
+                            </span>
+                            <span className="flex items-center gap-1 sm:hidden text-xs shrink-0">
+                              <TreePine className="h-3.5 w-3.5 text-emerald-600" />
+                              <span className="font-mono">{treeCount}</span>
+                            </span>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-6 flex-shrink-0 ml-4">
-                        <div className="text-right">
+                      <div className="flex items-center gap-4 sm:gap-6 flex-shrink-0">
+                        <div className="hidden sm:block text-right">
                           <div className="flex items-center gap-2 text-sm">
                             <TreePine className="h-4 w-4 text-emerald-600" />
                             <span className="font-mono font-medium">
@@ -128,14 +134,14 @@ export default async function PropertiesPage() {
                           </div>
                         </div>
 
-                        <div className="text-right text-sm text-muted-foreground">
+                        <div className="hidden md:block text-right text-sm text-muted-foreground">
                           {format(new Date(property.updatedAt), "MMM d, yyyy")}
                         </div>
 
                         {latestReport && (
                           <a
                             href={`/properties/${property.id}/report`}
-                            className="text-emerald-600 hover:text-emerald-500 relative z-10"
+                            className="hidden sm:block text-emerald-600 hover:text-emerald-500 relative z-10"
                           >
                             <FileText className="h-5 w-5" />
                           </a>

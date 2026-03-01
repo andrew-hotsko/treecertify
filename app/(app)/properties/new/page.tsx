@@ -267,7 +267,7 @@ export default function NewPropertyPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>City *</Label>
                 <Input
@@ -288,7 +288,7 @@ export default function NewPropertyPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="zip">ZIP Code</Label>
                 <Input
@@ -333,7 +333,7 @@ export default function NewPropertyPage() {
                   className="mt-1"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="permitNumber">Permit Number</Label>
                   <Input
@@ -390,7 +390,7 @@ export default function NewPropertyPage() {
                 className="mt-1"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="homeownerEmail">Email</Label>
                 <Input

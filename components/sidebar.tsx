@@ -45,7 +45,7 @@ export function Sidebar({ arboristName, isaCertNum }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-[hsl(var(--sidebar))] text-[hsl(var(--sidebar-foreground))]">
+    <aside className="hidden md:flex fixed inset-y-0 left-0 z-50 w-64 flex-col bg-[hsl(var(--sidebar))] text-[hsl(var(--sidebar-foreground))]">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2 border-b border-[hsl(var(--sidebar-muted))] px-6">
         <TreePine className="h-7 w-7 text-emerald-400" />

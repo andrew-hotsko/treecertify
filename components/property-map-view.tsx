@@ -334,29 +334,29 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   return (
     <div className="flex flex-col gap-4">
       {/* Top Bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/properties">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link href="/properties" className="shrink-0">
             <Button variant="ghost" size="sm">
               <ChevronLeft className="h-4 w-4" />
-              Properties
+              <span className="hidden sm:inline">Properties</span>
             </Button>
           </Link>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold">
+              <h1 className="text-lg font-semibold truncate">
                 {property.address}
               </h1>
               {reportTypeConfig && (
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-xs shrink-0 hidden sm:inline-flex">
                   {reportTypeConfig.label}
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-muted-foreground">{property.city}</p>
+            <p className="text-sm text-muted-foreground truncate">{property.city}</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="secondary" className="gap-1">
             <TreePine className="h-3 w-3" />
             {trees.length} tree{trees.length !== 1 ? "s" : ""}
@@ -367,9 +367,11 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               <Link href={`/properties/${property.id}/report`}>
                 <Button variant="outline" size="sm">
                   <FileText className="h-4 w-4 mr-1" />
-                  {property.reports[0].status === "certified"
-                    ? "View Report"
-                    : "Edit Report"}
+                  <span className="hidden sm:inline">
+                    {property.reports[0].status === "certified"
+                      ? "View Report"
+                      : "Edit Report"}
+                  </span>
                 </Button>
               </Link>
               {property.reports[0].status === "certified" && (
@@ -459,15 +461,17 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             <CardTitle className="flex items-center gap-2 text-sm font-semibold">
               <HardHat className="h-4 w-4 text-blue-600" />
               Project Information
-              <ChevronDown
-                className={`h-4 w-4 ml-auto text-muted-foreground transition-transform ${
-                  projectOpen ? "rotate-180" : ""
-                }`}
-              />
+              <span className="ml-auto flex items-center justify-center h-11 w-11 -mr-3">
+                <ChevronDown
+                  className={`h-4 w-4 text-muted-foreground transition-transform ${
+                    projectOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </span>
             </CardTitle>
           </CardHeader>
           {projectOpen && (
-            <CardContent className="pt-0 space-y-3">
+            <CardContent className="pt-0 px-3 md:px-6 space-y-3">
               <div>
                 <Label htmlFor="mv-proj-desc" className="text-xs">
                   Project Description
@@ -480,7 +484,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                   className="mt-1"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="mv-permit" className="text-xs">
                     Permit Number
@@ -546,15 +550,17 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           <CardTitle className="flex items-center gap-2 text-sm font-semibold">
             <ClipboardList className="h-4 w-4 text-violet-600" />
             Site Information
-            <ChevronDown
-              className={`h-4 w-4 ml-auto text-muted-foreground transition-transform ${
-                siteInfoOpen ? "rotate-180" : ""
-              }`}
-            />
+            <span className="ml-auto flex items-center justify-center h-11 w-11 -mr-3">
+              <ChevronDown
+                className={`h-4 w-4 text-muted-foreground transition-transform ${
+                  siteInfoOpen ? "rotate-180" : ""
+                }`}
+              />
+            </span>
           </CardTitle>
         </CardHeader>
         {siteInfoOpen && (
-          <CardContent className="pt-0 space-y-3">
+          <CardContent className="pt-0 px-3 md:px-6 space-y-3">
             <div>
               <Label htmlFor="mv-scope" className="text-xs">
                 Scope of Assignment
@@ -608,24 +614,26 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           <CardTitle className="flex items-center gap-2 text-sm font-semibold">
             <Mic className="h-4 w-4 text-emerald-600" />
             Site Audio Notes
-            <ChevronDown
-              className={`h-4 w-4 ml-auto text-muted-foreground transition-transform ${
-                audioOpen ? "rotate-180" : ""
-              }`}
-            />
+            <span className="ml-auto flex items-center justify-center h-11 w-11 -mr-3">
+              <ChevronDown
+                className={`h-4 w-4 text-muted-foreground transition-transform ${
+                  audioOpen ? "rotate-180" : ""
+                }`}
+              />
+            </span>
           </CardTitle>
         </CardHeader>
         {audioOpen && (
-          <CardContent className="pt-0">
+          <CardContent className="pt-0 px-3 md:px-6">
             <PropertyAudioNotes propertyId={property.id} />
           </CardContent>
         )}
       </Card>
 
       {/* Main Area: Map + Side Panel */}
-      <div className="flex gap-0 rounded-xl border overflow-hidden">
-        {/* Map */}
-        <div className="flex-1" style={{ minHeight: 500 }}>
+      <div className="flex gap-0 rounded-xl border overflow-hidden relative">
+        {/* Map — full width on mobile, flex-1 on desktop */}
+        <div className="w-full md:flex-1" style={{ minHeight: 400 }}>
           <PropertyMap
             center={center}
             pins={pins}
@@ -654,7 +662,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           />
         </div>
 
-        {/* Side Panel */}
+        {/* Side Panel — bottom sheet on mobile, right panel on desktop */}
         {showSidePanel && (
           <TreeSidePanel
             tree={sidePanelTree}
