@@ -1,16 +1,9 @@
 import { prisma } from "@/lib/db";
+import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getOrdinanceByCity } from "@/lib/ordinances";
 import { getReportTemplate } from "@/lib/report-templates";
 import Anthropic from "@anthropic-ai/sdk";
-
-async function getDemoArboristId(): Promise<string> {
-  const arborist = await prisma.arborist.findFirst();
-  if (!arborist) {
-    throw new Error("No arborist found in the database");
-  }
-  return arborist.id;
-}
 
 interface TreeRecordData {
   treeNumber: number;
@@ -304,7 +297,22 @@ This report has been prepared in accordance with the standards and guidelines of
 
 export async function POST(request: NextRequest) {
   try {
-    const arboristId = await getDemoArboristId();
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const arborist = await prisma.arborist.findUnique({
+      where: { clerkUserId: userId },
+    });
+    if (!arborist) {
+      return NextResponse.json(
+        { error: "No arborist found" },
+        { status: 404 }
+      );
+    }
+
+    const arboristId = arborist.id;
     const body = await request.json();
 
     if (!body.propertyId || !body.reportType) {

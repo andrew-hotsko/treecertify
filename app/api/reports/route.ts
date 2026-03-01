@@ -1,17 +1,24 @@
 import { prisma } from "@/lib/db";
+import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-
-async function getDemoArboristId(): Promise<string> {
-  const arborist = await prisma.arborist.findFirst();
-  if (!arborist) {
-    throw new Error("No arborist found in the database");
-  }
-  return arborist.id;
-}
 
 export async function POST(request: NextRequest) {
   try {
-    const arboristId = await getDemoArboristId();
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const arborist = await prisma.arborist.findUnique({
+      where: { clerkUserId: userId },
+    });
+    if (!arborist) {
+      return NextResponse.json(
+        { error: "No arborist found" },
+        { status: 404 }
+      );
+    }
+
     const body = await request.json();
 
     if (!body.propertyId || !body.reportType) {
@@ -35,7 +42,7 @@ export async function POST(request: NextRequest) {
     const report = await prisma.report.create({
       data: {
         propertyId: body.propertyId,
-        arboristId,
+        arboristId: arborist.id,
         reportType: body.reportType,
         aiDraftContent: body.aiDraftContent ?? null,
       },

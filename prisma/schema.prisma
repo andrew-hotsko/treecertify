@@ -9,6 +9,7 @@ datasource db {
 
 model Arborist {
   id                  String   @id @default(cuid())
+  clerkUserId         String?  @unique
   name                String
   email               String   @unique
   isaCertificationNum String

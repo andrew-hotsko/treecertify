@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { auth } from "@clerk/nextjs/server";
 
-// GET /api/arborist/profile — fetch the current (demo) arborist profile
+// GET /api/arborist/profile — fetch the current arborist profile
 export async function GET() {
   try {
-    const arborist = await prisma.arborist.findFirst();
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const arborist = await prisma.arborist.findUnique({
+      where: { clerkUserId: userId },
+    });
     if (!arborist) {
       return NextResponse.json(
         { error: "No arborist found" },
@@ -24,7 +32,14 @@ export async function GET() {
 // PUT /api/arborist/profile — update arborist profile fields
 export async function PUT(request: NextRequest) {
   try {
-    const arborist = await prisma.arborist.findFirst();
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const arborist = await prisma.arborist.findUnique({
+      where: { clerkUserId: userId },
+    });
     if (!arborist) {
       return NextResponse.json(
         { error: "No arborist found" },

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { requireArborist } from "@/lib/auth";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,17 +15,15 @@ import {
 } from "lucide-react";
 
 export default async function PropertiesPage() {
-  const arborist = await prisma.arborist.findFirst();
-  const properties = arborist
-    ? await prisma.property.findMany({
-        where: { arboristId: arborist.id },
-        include: {
-          trees: { orderBy: { treeNumber: "asc" } },
-          reports: { orderBy: { updatedAt: "desc" }, take: 1 },
-        },
-        orderBy: { updatedAt: "desc" },
-      })
-    : [];
+  const arborist = await requireArborist();
+  const properties = await prisma.property.findMany({
+    where: { arboristId: arborist.id },
+    include: {
+      trees: { orderBy: { treeNumber: "asc" } },
+      reports: { orderBy: { updatedAt: "desc" }, take: 1 },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
 
   return (
     <div>

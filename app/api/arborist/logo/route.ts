@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { prisma } from "@/lib/db";
+import { auth } from "@clerk/nextjs/server";
 import {
   ALLOWED_IMAGE_TYPES,
   MAX_IMAGE_SIZE,
@@ -13,7 +14,14 @@ import {
 // POST /api/arborist/logo — upload a company logo
 export async function POST(request: NextRequest) {
   try {
-    const arborist = await prisma.arborist.findFirst();
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const arborist = await prisma.arborist.findUnique({
+      where: { clerkUserId: userId },
+    });
     if (!arborist) {
       return NextResponse.json(
         { error: "No arborist found" },
@@ -93,7 +101,14 @@ export async function POST(request: NextRequest) {
 // DELETE /api/arborist/logo — remove the company logo
 export async function DELETE() {
   try {
-    const arborist = await prisma.arborist.findFirst();
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const arborist = await prisma.arborist.findUnique({
+      where: { clerkUserId: userId },
+    });
     if (!arborist) {
       return NextResponse.json(
         { error: "No arborist found" },

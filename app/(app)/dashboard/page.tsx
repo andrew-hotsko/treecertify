@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { requireArborist } from "@/lib/auth";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,26 +16,7 @@ import {
 import { format } from "date-fns";
 
 export default async function DashboardPage() {
-  const arborist = await prisma.arborist.findFirst({
-    orderBy: { createdAt: "asc" },
-  });
-
-  if (!arborist) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24">
-        <div className="rounded-full bg-emerald-50 p-4 mb-6">
-          <TreePine className="h-10 w-10 text-emerald-600" />
-        </div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-          No Arborist Profile Found
-        </h2>
-        <p className="text-gray-500 text-sm max-w-md text-center mb-6">
-          It looks like no arborist profile has been set up yet. Create a profile
-          to start using TreeCertify.
-        </p>
-      </div>
-    );
-  }
+  const arborist = await requireArborist();
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
