@@ -17,6 +17,9 @@ export interface TreePin {
   speciesCommon?: string;
   dbhInches?: number;
   conditionRating?: number;
+  recommendedAction?: string;
+  isProtected?: boolean;
+  isHeritage?: boolean;
 }
 
 export interface CircleOverlay {
@@ -35,6 +38,7 @@ interface PropertyMapProps {
   onPinMove?: (id: string, lat: number, lng: number) => void;
   onPinClick?: (id: string) => void;
   selectedPinId?: string | null;
+  flyToId?: string | null;
   interactive?: boolean;
   className?: string;
 }
@@ -43,33 +47,39 @@ interface PropertyMapProps {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function statusHexColor(status: TreePin["status"]): string {
-  switch (status) {
-    case "certified":
-      return "#10b981"; // emerald-500
-    case "assessed":
-      return "#3b82f6"; // blue-500
-    default:
-      return "#9ca3af"; // gray-400
+function pinColor(pin: TreePin): string {
+  if (pin.recommendedAction === "remove") return "#ef4444"; // red
+  if (pin.conditionRating != null) {
+    if (pin.conditionRating <= 1) return "#ef4444"; // red (Dead/Critical)
+    if (pin.conditionRating === 2) return "#f97316"; // orange (Poor)
+    if (pin.conditionRating === 3) return "#eab308"; // yellow (Fair)
+    if (pin.conditionRating === 4) return "#84cc16"; // lime (Good)
+    if (pin.conditionRating >= 5) return "#22c55e"; // green (Excellent)
   }
+  return "#9ca3af"; // gray (unassessed)
 }
 
 function createMarkerElement(
   pin: TreePin,
   isSelected: boolean
 ): HTMLDivElement {
+  const wrapper = document.createElement("div");
+  wrapper.style.position = "relative";
+  wrapper.style.width = "30px";
+  wrapper.style.height = "30px";
+
   const el = document.createElement("div");
-  el.style.width = "32px";
-  el.style.height = "32px";
-  el.style.lineHeight = "32px";
+  el.style.width = "30px";
+  el.style.height = "30px";
+  el.style.lineHeight = "30px";
   el.style.textAlign = "center";
   el.style.borderRadius = "50%";
   el.style.color = "white";
   el.style.fontWeight = "700";
-  el.style.fontSize = "13px";
+  el.style.fontSize = "12px";
   el.style.cursor = "pointer";
   el.style.userSelect = "none";
-  el.style.backgroundColor = statusHexColor(pin.status);
+  el.style.backgroundColor = pinColor(pin);
   el.style.border = "2px solid white";
   el.style.transition = "transform 0.15s, box-shadow 0.15s";
 
@@ -81,7 +91,61 @@ function createMarkerElement(
   }
 
   el.textContent = String(pin.treeNumber);
-  return el;
+  wrapper.appendChild(el);
+
+  // Protection badge (green shield)
+  if (pin.isProtected && !pin.isHeritage) {
+    const badge = document.createElement("div");
+    badge.style.position = "absolute";
+    badge.style.top = "-4px";
+    badge.style.right = "-4px";
+    badge.style.width = "14px";
+    badge.style.height = "14px";
+    badge.style.borderRadius = "50%";
+    badge.style.backgroundColor = "#22c55e";
+    badge.style.border = "1.5px solid white";
+    badge.style.display = "flex";
+    badge.style.alignItems = "center";
+    badge.style.justifyContent = "center";
+    badge.style.fontSize = "8px";
+    badge.style.color = "white";
+    badge.textContent = "🛡";
+    wrapper.appendChild(badge);
+  }
+
+  // Heritage badge (gold star)
+  if (pin.isHeritage) {
+    const badge = document.createElement("div");
+    badge.style.position = "absolute";
+    badge.style.top = "-4px";
+    badge.style.right = "-4px";
+    badge.style.width = "14px";
+    badge.style.height = "14px";
+    badge.style.borderRadius = "50%";
+    badge.style.backgroundColor = "#eab308";
+    badge.style.border = "1.5px solid white";
+    badge.style.display = "flex";
+    badge.style.alignItems = "center";
+    badge.style.justifyContent = "center";
+    badge.style.fontSize = "8px";
+    badge.style.color = "white";
+    badge.textContent = "★";
+    wrapper.appendChild(badge);
+  }
+
+  // Hover effect
+  wrapper.addEventListener("mouseenter", () => {
+    if (!isSelected) {
+      el.style.transform = "scale(1.15)";
+    }
+  });
+  wrapper.addEventListener("mouseleave", () => {
+    if (!isSelected) {
+      el.style.transform = "scale(1)";
+    }
+  });
+
+  return wrapper;
 }
 
 /** Generate a GeoJSON circle polygon (no turf dependency). */
@@ -116,6 +180,7 @@ export function PropertyMap({
   onPinMove,
   onPinClick,
   selectedPinId,
+  flyToId,
   interactive = true,
   className,
 }: PropertyMapProps) {
@@ -219,6 +284,17 @@ export function PropertyMap({
       markersRef.current.push(marker);
     });
   }, [pins, selectedPinId, interactive, onPinClick, onPinMove, clearMarkers]);
+
+  // ---- flyTo support ----
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !flyToId) return;
+
+    const pin = pins.find((p) => p.id === flyToId);
+    if (pin) {
+      map.flyTo({ center: [pin.lng, pin.lat], zoom: 20, duration: 800 });
+    }
+  }, [flyToId, pins]);
 
   // ---- Sync circle overlays (TPZ/SRZ) ----
   useEffect(() => {

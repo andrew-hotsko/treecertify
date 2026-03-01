@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { ButtonSelector } from "@/components/ui/button-selector";
 import { SpeciesSearch } from "@/components/species-search";
 import { ConditionRating } from "@/components/condition-rating";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,10 +29,11 @@ import {
   Trash2,
   ShieldCheck,
   ShieldX,
-  Shield,
+  ShieldAlert,
   Loader2,
   Camera,
   Mic,
+  PenLine,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -51,6 +53,7 @@ export interface TreeFormData {
   isProtected: boolean;
   protectionReason: string | null;
   mitigationRequired: string | null;
+  tagNumber: string;
   typeSpecificData?: string; // JSON string
 }
 
@@ -67,6 +70,7 @@ interface TreeRecord {
   id?: string;
   pinLat?: number;
   pinLng?: number;
+  tagNumber?: string | null;
   speciesCommon?: string;
   speciesScientific?: string;
   dbhInches?: number;
@@ -97,6 +101,13 @@ interface TreeSidePanelProps {
   saving?: boolean;
 }
 
+const ACTION_OPTIONS = [
+  { value: "retain", label: "Retain", color: "green" },
+  { value: "remove", label: "Remove", color: "red" },
+  { value: "prune", label: "Prune", color: "amber" },
+  { value: "monitor", label: "Monitor", color: "blue" },
+];
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -113,6 +124,7 @@ export function TreeSidePanel({
   saving = false,
 }: TreeSidePanelProps) {
   // ---- Form state ----
+  const [tagNumber, setTagNumber] = useState(tree?.tagNumber ?? "");
   const [speciesCommon, setSpeciesCommon] = useState(tree?.speciesCommon ?? "");
   const [speciesScientific, setSpeciesScientific] = useState(
     tree?.speciesScientific ?? ""
@@ -127,7 +139,7 @@ export function TreeSidePanel({
     tree?.canopySpreadFt != null ? String(tree.canopySpreadFt) : ""
   );
   const [conditionRating, setConditionRating] = useState<number>(
-    tree?.conditionRating ?? 3
+    tree?.conditionRating ?? 0
   );
   const [healthNotes, setHealthNotes] = useState(tree?.healthNotes ?? "");
   const [structuralNotes, setStructuralNotes] = useState(
@@ -165,26 +177,16 @@ export function TreeSidePanel({
         : null
     );
   const [checkingProtection, setCheckingProtection] = useState(false);
+  const [overrideProtection, setOverrideProtection] = useState(false);
+  const [overrideIsProtected, setOverrideIsProtected] = useState(
+    tree?.isProtected ?? false
+  );
+  const [overrideReason, setOverrideReason] = useState(
+    tree?.protectionReason ?? ""
+  );
 
-  // ---- Derived ----
-  const isExisting = tree != null && tree.id != null;
-  const statusDot =
-    tree?.status === "certified"
-      ? "bg-emerald-500"
-      : tree?.status === "assessed"
-        ? "bg-blue-500"
-        : "bg-gray-400";
-
-  const reportTypeConfig = reportType
-    ? getReportTypeConfig(reportType)
-    : undefined;
-
-  // ---- Handlers ----
-  function handleSpeciesChange(common: string, scientific: string) {
-    setSpeciesCommon(common);
-    setSpeciesScientific(scientific);
-    setProtectionResult(null); // reset on species change
-  }
+  // ---- Auto-check ordinance debounce ----
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const checkProtection = useCallback(async () => {
     if (!speciesCommon || !dbhInches || !propertyCity) return;
@@ -206,7 +208,42 @@ export function TreeSidePanel({
     }
   }, [speciesCommon, dbhInches, propertyCity]);
 
+  // Auto-trigger ordinance check when species + DBH both have values
+  useEffect(() => {
+    if (!speciesCommon || !dbhInches) return;
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      checkProtection();
+    }, 500);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [speciesCommon, dbhInches, checkProtection]);
+
+  // ---- Derived ----
+  const isExisting = tree != null && tree.id != null;
+  const statusDot =
+    tree?.status === "certified"
+      ? "bg-emerald-500"
+      : tree?.status === "assessed"
+        ? "bg-blue-500"
+        : "bg-gray-400";
+
+  const reportTypeConfig = reportType
+    ? getReportTypeConfig(reportType)
+    : undefined;
+
+  // ---- Handlers ----
+  function handleSpeciesChange(common: string, scientific: string) {
+    setSpeciesCommon(common);
+    setSpeciesScientific(scientific);
+    setProtectionResult(null);
+  }
+
   function handleSave() {
+    const useOverride = overrideProtection;
     onSave({
       speciesCommon,
       speciesScientific,
@@ -217,9 +254,16 @@ export function TreeSidePanel({
       healthNotes,
       structuralNotes,
       recommendedAction,
-      isProtected: protectionResult?.isProtected ?? false,
-      protectionReason: protectionResult?.reason ?? null,
-      mitigationRequired: protectionResult?.mitigationRequired ?? null,
+      isProtected: useOverride
+        ? overrideIsProtected
+        : (protectionResult?.isProtected ?? false),
+      protectionReason: useOverride
+        ? overrideReason || null
+        : (protectionResult?.reason ?? null),
+      mitigationRequired: useOverride
+        ? null
+        : (protectionResult?.mitigationRequired ?? null),
+      tagNumber,
       typeSpecificData:
         reportType && Object.keys(typeData).length > 0
           ? JSON.stringify(typeData)
@@ -235,6 +279,12 @@ export function TreeSidePanel({
         <div className="flex items-center gap-2">
           <span className={`h-2.5 w-2.5 rounded-full ${statusDot}`} />
           <h2 className="text-lg font-semibold">Tree #{treeNumber}</h2>
+          <Input
+            placeholder="Tag #"
+            value={tagNumber}
+            onChange={(e) => setTagNumber(e.target.value)}
+            className="h-7 w-20 text-xs font-mono"
+          />
         </div>
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-4 w-4" />
@@ -368,70 +418,56 @@ export function TreeSidePanel({
           </div>
         </div>
 
-        {/* Recommended Action */}
+        {/* Recommended Action — Pill Buttons */}
         <div className="space-y-1.5">
-          <Label htmlFor="sp-action" className="text-xs">
-            Recommended Action
-          </Label>
-          <select
-            id="sp-action"
+          <Label className="text-xs">Recommended Action</Label>
+          <ButtonSelector
+            options={ACTION_OPTIONS}
             value={recommendedAction}
-            onChange={(e) => setRecommendedAction(e.target.value)}
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          >
-            <option value="">Select action...</option>
-            <option value="retain">Retain</option>
-            <option value="remove">Remove</option>
-            <option value="prune">Prune</option>
-            <option value="monitor">Monitor</option>
-          </select>
+            onChange={setRecommendedAction}
+            size="sm"
+          />
         </div>
 
-        {/* Protection Check */}
+        {/* Protection Status — Auto-check */}
         <div className="space-y-2">
           <Label className="text-xs">Protection Status</Label>
 
-          {!protectionResult && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={checkProtection}
-              disabled={checkingProtection || !speciesCommon || !dbhInches}
-            >
-              {checkingProtection ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Checking...
-                </>
-              ) : (
-                <>
-                  <Shield className="h-4 w-4" />
-                  Check Protection
-                </>
-              )}
-            </Button>
+          {/* Loading state */}
+          {checkingProtection && (
+            <div className="flex items-center gap-2 rounded-lg border p-3 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Checking ordinance...</span>
+            </div>
           )}
 
-          {protectionResult && (
+          {/* No data yet — prompt */}
+          {!checkingProtection && !protectionResult && (!speciesCommon || !dbhInches) && (
+            <div className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
+              Enter species and DBH to auto-check protection status.
+            </div>
+          )}
+
+          {/* Result card */}
+          {!checkingProtection && protectionResult && (
             <div
               className={`rounded-lg border-2 p-3 text-sm ${
                 protectionResult.isProtected
                   ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30"
-                  : "border-red-400 bg-red-50 dark:bg-red-950/30"
+                  : "border-gray-300 bg-gray-50 dark:bg-gray-900/30"
               }`}
             >
               <div className="flex items-center gap-2">
                 {protectionResult.isProtected ? (
                   <ShieldCheck className="h-5 w-5 shrink-0 text-emerald-600" />
                 ) : (
-                  <ShieldX className="h-5 w-5 shrink-0 text-red-500" />
+                  <ShieldX className="h-5 w-5 shrink-0 text-gray-400" />
                 )}
                 <span
                   className={`font-semibold ${
                     protectionResult.isProtected
                       ? "text-emerald-700 dark:text-emerald-400"
-                      : "text-red-600 dark:text-red-400"
+                      : "text-gray-600 dark:text-gray-400"
                   }`}
                 >
                   {protectionResult.isProtected ? "Protected" : "Not Protected"}
@@ -446,10 +482,11 @@ export function TreeSidePanel({
                 className={`mt-1.5 text-xs ${
                   protectionResult.isProtected
                     ? "text-emerald-600 dark:text-emerald-300"
-                    : "text-red-500 dark:text-red-300"
+                    : "text-gray-500 dark:text-gray-400"
                 }`}
               >
-                {protectionResult.reason}
+                {protectionResult.reason ||
+                  `No specific protection under ${propertyCity} ordinance`}
               </p>
               {protectionResult.mitigationRequired && (
                 <div className="mt-2 rounded border bg-muted/50 p-2">
@@ -461,6 +498,43 @@ export function TreeSidePanel({
                   </p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Arborist Override */}
+          <button
+            type="button"
+            onClick={() => setOverrideProtection((v) => !v)}
+            className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <PenLine className="h-3 w-3" />
+            {overrideProtection ? "Cancel override" : "Override protection status"}
+          </button>
+
+          {overrideProtection && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="h-4 w-4 text-amber-600" />
+                <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                  Manual Override
+                </span>
+              </div>
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={overrideIsProtected}
+                  onChange={(e) => setOverrideIsProtected(e.target.checked)}
+                  className="rounded border-input h-3.5 w-3.5"
+                />
+                Tree is protected
+              </label>
+              <Textarea
+                placeholder="Reason for protection status..."
+                value={overrideReason}
+                onChange={(e) => setOverrideReason(e.target.value)}
+                rows={2}
+                className="text-xs"
+              />
             </div>
           )}
         </div>
@@ -491,6 +565,8 @@ export function TreeSidePanel({
                 data={typeData as TreeValuationData}
                 onChange={setTypeData}
                 dbhInches={Number(dbhInches) || 0}
+                conditionRating={conditionRating}
+                speciesCommon={speciesCommon}
               />
             )}
 

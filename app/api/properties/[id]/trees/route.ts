@@ -82,6 +82,7 @@ export async function POST(
         protectionReason: body.protectionReason ?? null,
         recommendedAction: body.recommendedAction ?? "retain",
         mitigationRequired: body.mitigationRequired ?? null,
+        tagNumber: body.tagNumber ?? null,
         typeSpecificData: body.typeSpecificData ?? null,
       },
     });

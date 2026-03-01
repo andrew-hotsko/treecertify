@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
   calcTrunkArea,
   calcAppraisedValue,
+  conditionToPercent,
+  getSpeciesRating,
   type TreeValuationData,
 } from "@/lib/report-types";
 
@@ -13,32 +15,55 @@ interface TreeValuationFieldsProps {
   data: TreeValuationData;
   onChange: (data: TreeValuationData) => void;
   dbhInches: number;
+  conditionRating: number;
+  speciesCommon: string;
 }
 
 export function TreeValuationFields({
   data,
   onChange,
   dbhInches,
+  conditionRating,
+  speciesCommon,
 }: TreeValuationFieldsProps) {
+  const initializedRef = useRef(false);
+
+  // Auto-populate species rating and condition % on mount (once)
+  useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
+    const updates: Partial<TreeValuationData> = {};
+    if (speciesCommon && data.speciesRating == null) {
+      updates.speciesRating = getSpeciesRating(speciesCommon);
+    }
+    if (conditionRating > 0 && data.conditionRating == null) {
+      updates.conditionRating = conditionToPercent(conditionRating);
+    }
+    if (Object.keys(updates).length > 0) {
+      onChange({ ...data, ...updates });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Auto-calculate on DBH or rating changes
   useEffect(() => {
     const trunkArea = dbhInches > 0 ? calcTrunkArea(dbhInches) : 0;
     const costPerSqInch = data.costPerSquareInch ?? 75;
-    const speciesRating = data.speciesRating ?? 70;
-    const conditionRating = data.conditionRating ?? 70;
+    const speciesRatingVal = data.speciesRating ?? 70;
+    const conditionRatingVal = data.conditionRating ?? 70;
     const locationRating = data.locationRating ?? 70;
     const appraisedValue =
       trunkArea > 0
         ? calcAppraisedValue(
             trunkArea,
             costPerSqInch,
-            speciesRating,
-            conditionRating,
+            speciesRatingVal,
+            conditionRatingVal,
             locationRating
           )
         : 0;
 
-    // Only update if values actually changed
     if (
       Math.abs((data.trunkArea ?? 0) - trunkArea) > 0.01 ||
       Math.abs((data.appraisedValue ?? 0) - appraisedValue) > 0.01
@@ -57,6 +82,12 @@ export function TreeValuationFields({
   function update(partial: Partial<TreeValuationData>) {
     onChange({ ...data, ...partial });
   }
+
+  const suggestedSpecies = speciesCommon
+    ? getSpeciesRating(speciesCommon)
+    : null;
+  const suggestedCondition =
+    conditionRating > 0 ? conditionToPercent(conditionRating) : null;
 
   const formatter = new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -98,6 +129,11 @@ export function TreeValuationFields({
             }
             className="font-mono"
           />
+          {suggestedSpecies != null && (
+            <p className="text-[10px] text-muted-foreground">
+              Suggested: {suggestedSpecies}%
+            </p>
+          )}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="tsd-condition-rating" className="text-xs">
@@ -120,6 +156,11 @@ export function TreeValuationFields({
             }
             className="font-mono"
           />
+          {suggestedCondition != null && (
+            <p className="text-[10px] text-muted-foreground">
+              From rating: {suggestedCondition}%
+            </p>
+          )}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="tsd-location-rating" className="text-xs">

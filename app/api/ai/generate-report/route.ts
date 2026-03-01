@@ -7,6 +7,7 @@ import Anthropic from "@anthropic-ai/sdk";
 
 interface TreeRecordData {
   treeNumber: number;
+  tagNumber?: string | null;
   speciesCommon: string;
   speciesScientific: string | null;
   dbhInches: number;
@@ -29,6 +30,8 @@ interface PropertyData {
   zip: string | null;
   county: string | null;
   parcelNumber: string | null;
+  scopeOfAssignment?: string | null;
+  siteObservations?: string | null;
 }
 
 /**
@@ -44,6 +47,24 @@ function formatTypeSpecificBlock(
     switch (reportType) {
       case "health_assessment":
         return [
+          d.likelihoodOfFailure
+            ? `    - TRAQ Likelihood of Failure: ${d.likelihoodOfFailure}`
+            : "",
+          d.likelihoodOfImpact
+            ? `    - TRAQ Likelihood of Impact: ${d.likelihoodOfImpact}`
+            : "",
+          d.consequences
+            ? `    - TRAQ Consequences: ${d.consequences}`
+            : "",
+          d.overallRiskRating
+            ? `    - TRAQ Overall Risk Rating: ${d.overallRiskRating}`
+            : "",
+          d.targetDescription
+            ? `    - Target Description: ${d.targetDescription}`
+            : "",
+          d.maintenanceItems?.length
+            ? `    - Maintenance Items: ${d.maintenanceItems.join(", ")}`
+            : "",
           d.maintenanceRecommendations
             ? `    - Maintenance Recommendations: ${d.maintenanceRecommendations}`
             : "",
@@ -68,7 +89,10 @@ function formatTypeSpecificBlock(
             : "",
           d.removalReason ? `    - Removal Reason: ${d.removalReason}` : "",
           d.retentionFeasibility
-            ? `    - Retention Feasibility: ${d.retentionFeasibility}`
+            ? `    - Retention Feasibility: ${d.retentionFeasibility.replace(/_/g, " ")}`
+            : "",
+          d.retentionNotes
+            ? `    - Retention Notes: ${d.retentionNotes}`
             : "",
           d.estimatedRemainingLifespan
             ? `    - Estimated Remaining Lifespan: ${d.estimatedRemainingLifespan}`
@@ -106,9 +130,15 @@ function formatTypeSpecificBlock(
 
       case "construction_encroachment":
         return [
-          d.tpzRadius != null ? `    - TPZ Radius: ${d.tpzRadius} ft` : "",
+          d.tpzRadius != null ? `    - TPZ Radius (auto): ${d.tpzRadius} ft` : "",
+          d.tpzOverride && d.tpzManual != null
+            ? `    - TPZ Radius (manual override): ${d.tpzManual} ft`
+            : "",
           d.srzRadius != null
-            ? `    - SRZ Radius: ${d.srzRadius.toFixed(1)} ft`
+            ? `    - SRZ Radius (auto): ${d.srzRadius.toFixed(1)} ft`
+            : "",
+          d.tpzOverride && d.srzManual != null
+            ? `    - SRZ Radius (manual override): ${d.srzManual} ft`
             : "",
           d.encroachmentDescription
             ? `    - Encroachment Description: ${d.encroachmentDescription}`
@@ -119,10 +149,14 @@ function formatTypeSpecificBlock(
           d.impactAssessment
             ? `    - Impact Assessment: ${d.impactAssessment}`
             : "",
-          d.protectionMeasures
+          d.protectionMeasuresList?.length
+            ? `    - Protection Measures: ${d.protectionMeasuresList.join(", ")}`
+            : d.protectionMeasures
             ? `    - Protection Measures: ${d.protectionMeasures}`
             : "",
-          d.monitoringSchedule
+          d.monitoringFrequency
+            ? `    - Monitoring Frequency: ${d.monitoringFrequency}`
+            : d.monitoringSchedule
             ? `    - Monitoring Schedule: ${d.monitoringSchedule}`
             : "",
         ]
@@ -389,6 +423,7 @@ export async function POST(request: NextRequest) {
             const typeBlock = formatTypeSpecificBlock(body.reportType, t.typeSpecificData);
 
             return `  Tree #${t.treeNumber}:
+    - Tag Number: ${t.tagNumber || "N/A"}
     - Species: ${t.speciesCommon}${t.speciesScientific ? ` (${t.speciesScientific})` : ""}
     - DBH: ${t.dbhInches} inches
     - Height: ${t.heightFt ? `${t.heightFt} feet` : "Not measured"}
@@ -469,7 +504,9 @@ PROPERTY DATA:
 - County: ${property.county || "N/A"}
 - Parcel Number: ${property.parcelNumber || "N/A"}
 - Report Type: ${reportTypeLabel}
-- Total Trees: ${treeCount}${
+- Total Trees: ${treeCount}
+- Scope of Assignment: ${property.scopeOfAssignment || "N/A"}
+- Site Observations: ${property.siteObservations || "N/A"}${
   body.reportType === "construction_encroachment"
     ? `\n- Project Description: ${property.projectDescription || "N/A"}\n- Permit Number: ${property.permitNumber || "N/A"}\n- Developer/Contractor: ${property.developerName || "N/A"}\n- Architect: ${property.architectName || "N/A"}`
     : ""
@@ -488,6 +525,8 @@ When trees have field audio notes (transcribed arborist voice recordings), incor
 When property-level field notes are provided, weave them into the Site Observations and/or Executive Summary sections. Reference them as "Site conditions noted during the field inspection include..." Do not mention they came from audio recordings.
 
 When trees have photos on file, reference them in the individual assessments as "See Photo 1", "See Photo 2", etc. to support observations.
+
+When a Scope of Assignment is provided, use it to write the "Scope of Assignment" section describing the purpose, limitations, and scope of the assessment. When Site Observations are provided, weave them into the Site Observations section along with any additional observations from the tree data.
 
 Use professional arborist terminology. Reference specific municipal code sections where applicable. The report should be thorough and suitable for submission to the City of ${property.city}.`;
 

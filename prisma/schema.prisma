@@ -59,6 +59,10 @@ model Property {
   developerName      String?
   architectName      String?
 
+  // Site-level assessment fields
+  siteObservations    String?
+  scopeOfAssignment   String?
+
   status    String   @default("active") // active, archived
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -76,6 +80,8 @@ model TreeRecord {
 
   pinLat Float?
   pinLng Float?
+
+  tagNumber         String?
 
   speciesCommon     String   @default("")
   speciesScientific String   @default("")
@@ -174,7 +180,7 @@ model Report {
   propertyId String
   arboristId String
 
-  reportType     String // removal_permit, construction_encroachment, health_assessment, pre_listing
+  reportType     String // removal_permit, construction_encroachment, health_assessment, tree_valuation
   aiDraftContent String? // markdown
   finalContent   String? // markdown after edits
   citySections   String  @default("{}") // JSON

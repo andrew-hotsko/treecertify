@@ -7,12 +7,34 @@ interface ConditionRatingProps {
 }
 
 const CONDITION_LABELS: Record<number, string> = {
-  1: "Poor",
-  2: "Fair",
-  3: "Average",
+  0: "Dead",
+  1: "Critical",
+  2: "Poor",
+  3: "Fair",
   4: "Good",
   5: "Excellent",
 };
+
+function getButtonClasses(rating: number, isSelected: boolean): string {
+  if (!isSelected) return "border-muted hover:border-muted-foreground/40";
+
+  switch (rating) {
+    case 0:
+      return "border-gray-700 bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+    case 1:
+      return "border-red-500 bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300";
+    case 2:
+      return "border-orange-500 bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300";
+    case 3:
+      return "border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300";
+    case 4:
+      return "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300";
+    case 5:
+      return "border-green-600 bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300";
+    default:
+      return "border-muted";
+  }
+}
 
 export function ConditionRating({
   value,
@@ -21,37 +43,24 @@ export function ConditionRating({
 }: ConditionRatingProps) {
   const isSm = size === "sm";
 
-  function getSelectedClasses(rating: number): string {
-    if (rating <= 2) {
-      return "border-red-500 bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300";
-    }
-    if (rating === 3) {
-      return "border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300";
-    }
-    return "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300";
-  }
-
   return (
-    <div className="flex gap-2">
-      {[1, 2, 3, 4, 5].map((rating) => (
+    <div className="flex gap-1.5">
+      {[0, 1, 2, 3, 4, 5].map((rating) => (
         <button
           key={rating}
           type="button"
           onClick={() => onChange(rating)}
           className={`flex flex-1 flex-col items-center gap-0.5 rounded-lg border-2 transition-colors ${
-            isSm ? "px-1.5 py-2 text-xs" : "px-2 py-3 text-sm"
-          } ${
-            value === rating
-              ? getSelectedClasses(rating)
-              : "border-muted hover:border-muted-foreground/40"
-          }`}
+            isSm ? "px-1 py-2 text-xs" : "px-1.5 py-3 text-sm"
+          } ${getButtonClasses(rating, value === rating)}`}
+          style={{ minHeight: 44 }}
         >
           <span className={`font-bold ${isSm ? "text-sm" : "text-lg"}`}>
             {rating}
           </span>
           <span
             className={`leading-tight font-medium ${
-              isSm ? "text-[9px]" : "text-[10px]"
+              isSm ? "text-[8px]" : "text-[9px]"
             }`}
           >
             {CONDITION_LABELS[rating]}

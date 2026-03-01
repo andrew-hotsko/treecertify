@@ -13,6 +13,7 @@ import type { TreePin, CircleOverlay } from "@/components/property-map";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PropertyAudioNotes } from "@/components/property-audio-notes";
 import { getReportTypeConfig, calcTpzRadius, calcSrzRadius } from "@/lib/report-types";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ChevronLeft,
   FileText,
@@ -21,6 +22,7 @@ import {
   ChevronDown,
   HardHat,
   Loader2,
+  ClipboardList,
 } from "lucide-react";
 
 // Dynamically import PropertyMap with SSR disabled (Mapbox GL needs window/DOM)
@@ -36,6 +38,7 @@ const PropertyMap = dynamic(
 interface TreeData {
   id: string;
   treeNumber: number;
+  tagNumber?: string | null;
   pinLat: number;
   pinLng: number;
   speciesCommon: string;
@@ -65,6 +68,8 @@ interface PropertyData {
   permitNumber?: string | null;
   developerName?: string | null;
   architectName?: string | null;
+  siteObservations?: string | null;
+  scopeOfAssignment?: string | null;
   trees: TreeData[];
   reports: { id: string; status: string }[];
 }
@@ -86,6 +91,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   } | null>(null);
   const [showSidePanel, setShowSidePanel] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [flyToId, setFlyToId] = useState<string | null>(null);
   const [audioOpen, setAudioOpen] = useState(false);
 
   // Construction encroachment project fields
@@ -103,6 +109,16 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     property.architectName ?? ""
   );
   const [savingProject, setSavingProject] = useState(false);
+
+  // Site information fields
+  const [siteInfoOpen, setSiteInfoOpen] = useState(false);
+  const [scopeOfAssignment, setScopeOfAssignment] = useState(
+    property.scopeOfAssignment ?? ""
+  );
+  const [siteObservations, setSiteObservations] = useState(
+    property.siteObservations ?? ""
+  );
+  const [savingSiteInfo, setSavingSiteInfo] = useState(false);
 
   const reportType = property.reportType ?? "health_assessment";
   const reportTypeConfig = getReportTypeConfig(reportType);
@@ -125,6 +141,8 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     speciesCommon: t.speciesCommon,
     dbhInches: t.dbhInches,
     conditionRating: t.conditionRating,
+    recommendedAction: t.recommendedAction,
+    isProtected: t.isProtected,
   }));
 
   // Add pending pin if exists
@@ -260,6 +278,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     setPendingPin(null);
     setSelectedTreeId(id);
     setShowSidePanel(true);
+    setFlyToId(id);
   }, []);
 
   const handleSaveProject = useCallback(async () => {
@@ -281,6 +300,24 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
       setSavingProject(false);
     }
   }, [property.id, projectDescription, permitNumber, developerName, architectName]);
+
+  const handleSaveSiteInfo = useCallback(async () => {
+    setSavingSiteInfo(true);
+    try {
+      await fetch(`/api/properties/${property.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scopeOfAssignment: scopeOfAssignment.trim() || null,
+          siteObservations: siteObservations.trim() || null,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to save site info:", err);
+    } finally {
+      setSavingSiteInfo(false);
+    }
+  }, [property.id, scopeOfAssignment, siteObservations]);
 
   // ---- Current side panel data ----
   const sidePanelTree = pendingPin
@@ -417,6 +454,68 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         </Card>
       )}
 
+      {/* Site Information */}
+      <Card>
+        <CardHeader
+          className="pb-2 cursor-pointer hover:bg-muted/50 transition-colors"
+          onClick={() => setSiteInfoOpen((v) => !v)}
+        >
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <ClipboardList className="h-4 w-4 text-violet-600" />
+            Site Information
+            <ChevronDown
+              className={`h-4 w-4 ml-auto text-muted-foreground transition-transform ${
+                siteInfoOpen ? "rotate-180" : ""
+              }`}
+            />
+          </CardTitle>
+        </CardHeader>
+        {siteInfoOpen && (
+          <CardContent className="pt-0 space-y-3">
+            <div>
+              <Label htmlFor="mv-scope" className="text-xs">
+                Scope of Assignment
+              </Label>
+              <Textarea
+                id="mv-scope"
+                placeholder="Describe the scope and purpose of this assessment..."
+                value={scopeOfAssignment}
+                onChange={(e) => setScopeOfAssignment(e.target.value)}
+                rows={3}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="mv-site-obs" className="text-xs">
+                Site Observations
+              </Label>
+              <Textarea
+                id="mv-site-obs"
+                placeholder="Describe site conditions, terrain, surrounding land use..."
+                value={siteObservations}
+                onChange={(e) => setSiteObservations(e.target.value)}
+                rows={3}
+                className="mt-1"
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                onClick={handleSaveSiteInfo}
+                disabled={savingSiteInfo}
+                className="bg-violet-600 hover:bg-violet-700 text-white"
+              >
+                {savingSiteInfo ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Save"
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
       {/* Site Audio Notes */}
       <Card>
         <CardHeader
@@ -466,6 +565,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             onPinClick={handlePinClick}
             onPinMove={handlePinMove}
             selectedPinId={pendingPin ? "pending" : selectedTreeId}
+            flyToId={flyToId}
             interactive
             className="h-full w-full"
           />
@@ -494,6 +594,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         trees={trees}
         selectedTreeId={selectedTreeId}
         onSelectTree={handleSelectTreeFromSummary}
+        reportType={reportType}
       />
     </div>
   );

@@ -73,6 +73,7 @@ export async function PUT(
         ...(body.mitigationRequired !== undefined && { mitigationRequired: body.mitigationRequired }),
         ...(body.photos !== undefined && { photos: body.photos }),
         ...(body.status !== undefined && { status: body.status }),
+        ...(body.tagNumber !== undefined && { tagNumber: body.tagNumber }),
         ...(body.typeSpecificData !== undefined && { typeSpecificData: body.typeSpecificData }),
       },
     });

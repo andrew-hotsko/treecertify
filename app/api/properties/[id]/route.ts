@@ -75,6 +75,8 @@ export async function PUT(
         ...(body.permitNumber !== undefined && { permitNumber: body.permitNumber }),
         ...(body.developerName !== undefined && { developerName: body.developerName }),
         ...(body.architectName !== undefined && { architectName: body.architectName }),
+        ...(body.siteObservations !== undefined && { siteObservations: body.siteObservations }),
+        ...(body.scopeOfAssignment !== undefined && { scopeOfAssignment: body.scopeOfAssignment }),
       },
       include: {
         trees: {

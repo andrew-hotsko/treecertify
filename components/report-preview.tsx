@@ -58,7 +58,6 @@ const REPORT_TYPE_LABELS: Record<string, string> = {
   removal_permit: "Tree Removal Permit Application",
   construction_encroachment: "Construction Impact Report",
   health_assessment: "Tree Health Assessment",
-  pre_listing: "Pre-Listing Real Estate Assessment",
   tree_valuation: "Tree Valuation Report",
 };
 
