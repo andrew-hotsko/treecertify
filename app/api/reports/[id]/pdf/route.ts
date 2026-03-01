@@ -59,21 +59,62 @@ export async function GET(
       5: "Excellent",
     };
 
+    // Condition color mapping for inventory table
+    const conditionColors: Record<number, string> = {
+      0: "#6b7280",
+      1: "#dc2626",
+      2: "#ea580c",
+      3: "#d97706",
+      4: "#65a30d",
+      5: "#16a34a",
+    };
+
+    // Action color mapping
+    const actionColors: Record<string, string> = {
+      retain: "#16a34a",
+      remove: "#dc2626",
+      prune: "#d97706",
+      monitor: "#2563eb",
+    };
+
+    // TRAQ risk color mapping
+    const riskColors: Record<string, string> = {
+      low: "#e8f5e9",
+      moderate: "#fff8e1",
+      high: "#fff3e0",
+      extreme: "#ffebee",
+    };
+
+    const riskTextColors: Record<string, string> = {
+      low: "#2e7d32",
+      moderate: "#f57f17",
+      high: "#e65100",
+      extreme: "#c62828",
+    };
+
     // Tree inventory rows
     const treeRows = trees
       .map(
-        (tree, idx) => `
+        (tree, idx) => {
+          const condLabel = conditionLabels[tree.conditionRating] ?? `${tree.conditionRating}`;
+          const condColor = conditionColors[tree.conditionRating] ?? "#6b7280";
+          const actionRaw = tree.recommendedAction || "";
+          const actionLabel = actionRaw.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) || "N/A";
+          const actionColor = actionColors[actionRaw] || "#374151";
+
+          return `
       <tr${idx % 2 === 1 ? ' class="alt"' : ""}>
         <td class="center">${tree.treeNumber}</td>
-        <td>${esc(tree.tagNumber || "\u2014")}</td>
+        <td class="center">${esc(tree.tagNumber || "\u2014")}</td>
         <td>${esc(tree.speciesCommon)}${tree.speciesScientific ? ` <em>(${esc(tree.speciesScientific)})</em>` : ""}</td>
         <td class="center">${tree.dbhInches}"</td>
-        <td class="center">${tree.heightFt ? `${tree.heightFt}'` : "N/A"}</td>
-        <td class="center">${tree.canopySpreadFt ? `${tree.canopySpreadFt}'` : "N/A"}</td>
-        <td class="center">${conditionLabels[tree.conditionRating] ?? tree.conditionRating}</td>
-        <td class="center">${tree.isProtected ? "Yes" : "No"}</td>
-        <td>${esc(tree.recommendedAction?.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) || "N/A")}</td>
-      </tr>`
+        <td class="center">${tree.heightFt ? `${tree.heightFt}'` : "\u2014"}</td>
+        <td class="center">${tree.canopySpreadFt ? `${tree.canopySpreadFt}'` : "\u2014"}</td>
+        <td class="center"><span style="color:${condColor}; font-weight:600;">${condLabel}</span> <span style="color:#999; font-size:7.5pt;">(${tree.conditionRating}/5)</span></td>
+        <td class="center">${tree.isProtected ? '<span style="color:#16a34a;">&#10003;</span>' : '<span style="color:#ccc;">\u2014</span>'}</td>
+        <td><span style="color:${actionColor}; font-weight:600;">${actionLabel}</span></td>
+      </tr>`;
+        }
       )
       .join("\n");
 
@@ -85,14 +126,14 @@ export async function GET(
       .map(
         (tree) => `
       <div class="photo-group">
-        <h3>Tree #${tree.treeNumber} \u2014 ${esc(tree.speciesCommon)}</h3>
+        <h3>Tree #${tree.treeNumber} \u2014 ${esc(tree.speciesCommon)}${tree.speciesScientific ? ` <em>(${esc(tree.speciesScientific)})</em>` : ""}</h3>
         <div class="photo-grid">
           ${(tree.treePhotos || [])
             .map(
               (photo, i) => `
             <div class="photo-item">
               <img src="${photo.url}" alt="Tree #${tree.treeNumber} photo ${i + 1}" />
-              <p class="photo-caption">Photo ${i + 1}${photo.caption ? `: ${esc(photo.caption)}` : ""}</p>
+              <p class="photo-caption">Photo ${i + 1}${photo.caption ? ` \u2014 ${esc(photo.caption)}` : ""}</p>
             </div>`
             )
             .join("")}
@@ -119,6 +160,15 @@ export async function GET(
           const likelihoodOfImpact = fmtEnum(data.likelihoodOfImpact as string);
           const consequences = fmtEnum(data.consequences as string);
           const overallRisk = fmtEnum(data.overallRiskRating as string);
+          const overallRiskRaw = ((data.overallRiskRating as string) || "").toLowerCase();
+          const riskBg = riskColors[overallRiskRaw] || "#f0f0f0";
+          const riskTxt = riskTextColors[overallRiskRaw] || "#1a1a1a";
+
+          // Individual row risk coloring
+          const lofRaw = ((data.likelihoodOfFailure as string) || "").toLowerCase();
+          const loiRaw = ((data.likelihoodOfImpact as string) || "").toLowerCase();
+          const consRaw = ((data.consequences as string) || "").toLowerCase();
+
           const target = (data.targetDescription as string) || "N/A";
           const maintenance = Array.isArray(data.maintenanceItems)
             ? (data.maintenanceItems as string[]).join(", ")
@@ -126,7 +176,7 @@ export async function GET(
 
           return `
         <div class="traq-tree avoid-break">
-          <h3>Tree #${tree.treeNumber} \u2014 ${esc(tree.speciesCommon)}</h3>
+          <h3>Tree #${tree.treeNumber} \u2014 ${esc(tree.speciesCommon)}${tree.speciesScientific ? ` <em>(${esc(tree.speciesScientific)})</em>` : ""}</h3>
           <table class="traq-table">
             <tr>
               <td class="label-cell">Species</td>
@@ -137,11 +187,11 @@ export async function GET(
             <tr>
               <td class="label-cell">Height</td>
               <td>${tree.heightFt ? `${tree.heightFt}'` : "N/A"}</td>
-              <td class="label-cell">Condition Rating</td>
+              <td class="label-cell">Condition</td>
               <td>${conditionLabels[tree.conditionRating] ?? tree.conditionRating} (${tree.conditionRating}/5)</td>
             </tr>
             <tr>
-              <td class="label-cell">Target Description</td>
+              <td class="label-cell">Target</td>
               <td colspan="3">${esc(target)}</td>
             </tr>
           </table>
@@ -153,21 +203,21 @@ export async function GET(
               </tr>
             </thead>
             <tbody>
-              <tr>
+              <tr style="background:${riskRowBg(lofRaw)};">
                 <td>Likelihood of Failure</td>
                 <td class="center">${likelihoodOfFailure}</td>
               </tr>
-              <tr>
+              <tr style="background:${riskRowBg(loiRaw)};">
                 <td>Likelihood of Impact</td>
                 <td class="center">${likelihoodOfImpact}</td>
               </tr>
-              <tr>
+              <tr style="background:${riskRowBg(consRaw)};">
                 <td>Consequences of Failure</td>
                 <td class="center">${consequences}</td>
               </tr>
-              <tr class="risk-row">
+              <tr class="risk-row" style="background:${riskBg};">
                 <td><strong>Overall Risk Rating</strong></td>
-                <td class="center"><strong>${overallRisk}</strong></td>
+                <td class="center"><strong style="color:${riskTxt}; font-size:10pt;">${overallRisk}</strong></td>
               </tr>
             </tbody>
           </table>
@@ -183,12 +233,16 @@ export async function GET(
       ${traqRows}`;
     }
 
-    // Draft watermark as absolutely-positioned element (not CSS ::after which doesn't work in Puppeteer PDF)
+    // Draft watermark
     const draftWatermark = !isCertified
-      ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 120pt; font-weight: bold; color: rgba(200, 200, 200, 0.15); letter-spacing: 20px; pointer-events: none; z-index: 0; white-space: nowrap;">DRAFT</div>`
+      ? `<div style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-35deg); font-size:140pt; font-weight:bold; color:rgba(200,200,200,0.08); letter-spacing:24px; pointer-events:none; z-index:0; white-space:nowrap;">DRAFT</div>`
       : "";
 
-    // Build the full HTML document (no toolbar, no body::after watermark)
+    // Footer text for displayHeaderFooter
+    const footerCompany = arborist.companyName || arborist.name;
+    const footerAddress = `${property.address}, ${property.city}`;
+
+    // Build the full HTML document
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -201,7 +255,7 @@ export async function GET(
       font-family: 'Georgia', 'Times New Roman', serif;
       color: #1a1a1a;
       font-size: 10.5pt;
-      line-height: 1.55;
+      line-height: 1.6;
       margin: 0;
       padding: 0;
       position: relative;
@@ -212,84 +266,185 @@ export async function GET(
     .cover-page {
       display: flex;
       flex-direction: column;
+      min-height: 9in;
+      position: relative;
+      padding: 0;
+    }
+
+    /* Top branding bar: logo left, company info right */
+    .cover-branding {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #2d5016;
+      margin-bottom: 0;
+    }
+    .cover-brand-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .cover-logo { max-height: 64px; width: auto; }
+    .cover-company-name {
+      font-size: 16pt;
+      font-weight: bold;
+      color: #2d5016;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      letter-spacing: 0.5px;
+    }
+    .cover-brand-right {
+      text-align: right;
+      font-size: 8.5pt;
+      color: #666;
+      line-height: 1.5;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+
+    /* Centered title block */
+    .cover-title-block {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
-      min-height: 9in;
       text-align: center;
-      position: relative;
+      padding: 60px 0 40px 0;
     }
-    .cover-logo { max-height: 80px; width: auto; margin-bottom: 24px; }
-    .cover-company {
-      font-size: 14pt;
-      font-weight: bold;
-      color: #333;
-      margin-bottom: 4px;
-    }
-    .cover-contact { font-size: 9pt; color: #666; margin-bottom: 40px; }
-    .cover-rule {
-      width: 200px;
+    .cover-rule-top {
+      width: 280px;
       border: none;
-      border-top: 2px solid #333;
-      margin: 0 auto 40px auto;
+      border-top: 3px double #2d5016;
+      margin: 0 auto 32px auto;
     }
     .cover-title {
       font-size: 28pt;
       font-weight: bold;
       color: #1a1a1a;
-      letter-spacing: 3px;
+      letter-spacing: 4px;
       text-transform: uppercase;
-      margin: 0 0 8px 0;
+      margin: 0 0 6px 0;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     }
-    .cover-subtitle {
+    .cover-address {
       font-size: 14pt;
       color: #333;
       font-weight: normal;
-      margin: 0 0 8px 0;
+      margin: 0 0 4px 0;
     }
-    .cover-type {
+    .cover-city {
       font-size: 11pt;
-      color: #555;
-      border: 1px solid #999;
+      color: #666;
+      margin: 0 0 20px 0;
+    }
+    .cover-type-badge {
+      font-size: 9pt;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
       display: inline-block;
-      padding: 4px 16px;
-      margin: 16px 0 40px 0;
+      padding: 5px 20px;
+      border-radius: 20px;
+      margin: 0 0 4px 0;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     }
-    .cover-meta {
+    .cover-type-certified {
+      background: #2d5016;
+      color: #fff;
+    }
+    .cover-type-draft {
+      background: #e5e7eb;
+      color: #6b7280;
+    }
+    .cover-rule-bottom {
+      width: 280px;
+      border: none;
+      border-top: 3px double #2d5016;
+      margin: 28px auto 0 auto;
+    }
+
+    /* 2-column meta table */
+    .cover-meta-table {
+      width: 80%;
+      max-width: 480px;
+      margin: 32px auto 0 auto;
+      border-collapse: collapse;
       font-size: 10pt;
-      color: #555;
-      line-height: 1.8;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     }
-    .cover-meta strong { color: #333; }
-    ${!isCertified ? '.cover-draft { font-size: 16pt; color: #999; letter-spacing: 4px; margin-top: 20px; border: 2px solid #ccc; padding: 6px 30px; display: inline-block; }' : ''}
+    .cover-meta-table td {
+      padding: 6px 12px;
+      vertical-align: top;
+    }
+    .cover-meta-label {
+      color: #888;
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding-bottom: 2px;
+    }
+    .cover-meta-value {
+      color: #1a1a1a;
+      font-weight: 500;
+    }
+
+    /* Cover footer area */
+    .cover-footer {
+      text-align: center;
+      padding-top: 20px;
+      margin-top: auto;
+    }
+    .cover-draft-badge {
+      font-size: 14pt;
+      color: #b0b0b0;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      border: 2px solid #d0d0d0;
+      padding: 6px 32px;
+      display: inline-block;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      margin-bottom: 16px;
+    }
+    .cover-confidential {
+      font-size: 7.5pt;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
 
     /* ==== REPORT BODY ==== */
     .section-title {
       font-size: 14pt;
-      color: #1a1a1a;
+      color: #2d5016;
       font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
       margin: 24px 0 8px 0;
-      border-bottom: 1px solid #333;
-      padding-bottom: 3px;
+      border-bottom: 2px solid #2d5016;
+      padding-bottom: 4px;
+      font-weight: 700;
     }
     .report-body h1 {
       font-size: 14pt;
-      color: #1a1a1a;
-      border-bottom: 1px solid #999;
-      padding-bottom: 3px;
-      margin: 24px 0 10px 0;
+      color: #2d5016;
+      border-bottom: 2px solid #2d5016;
+      padding-bottom: 4px;
+      margin: 28px 0 10px 0;
       font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-weight: 700;
     }
     .report-body h2 {
       font-size: 12pt;
       color: #1a1a1a;
-      margin: 18px 0 8px 0;
+      margin: 20px 0 8px 0;
       font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-weight: 600;
     }
     .report-body h3 {
       font-size: 10.5pt;
       color: #333;
-      margin: 14px 0 6px 0;
+      margin: 16px 0 6px 0;
       font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-weight: 600;
     }
     .report-body p { margin: 6px 0; }
     .report-body ul, .report-body ol { margin: 6px 0; padding-left: 24px; }
@@ -302,9 +457,9 @@ export async function GET(
       font-size: 9pt;
     }
     .report-body table th {
-      background: #333;
+      background: #2d5016;
       color: white;
-      padding: 4px 8px;
+      padding: 5px 8px;
       text-align: left;
       font-weight: bold;
       font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -314,7 +469,7 @@ export async function GET(
       padding: 4px 8px;
       border: 1px solid #ddd;
     }
-    .report-body table tr:nth-child(even) { background: #f7f7f7; }
+    .report-body table tr:nth-child(even) { background: #f7f9f5; }
 
     /* ---- Tree Inventory Table ---- */
     .inventory-table {
@@ -324,45 +479,63 @@ export async function GET(
       font-size: 8.5pt;
     }
     .inventory-table th {
-      background: #333;
+      background: #2d5016;
       color: white;
-      padding: 5px 6px;
+      padding: 6px 6px;
       text-align: left;
-      font-weight: bold;
+      font-weight: 600;
       font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
       font-size: 8pt;
+      letter-spacing: 0.3px;
     }
     .inventory-table td {
       padding: 4px 6px;
-      border: 1px solid #ddd;
+      border-bottom: 1px solid #e5e7eb;
     }
-    .inventory-table tr.alt { background: #f7f7f7; }
+    .inventory-table tr.alt { background: #f7f9f5; }
     .inventory-table td.center,
     .inventory-table th.center { text-align: center; }
+    .inventory-legend {
+      font-size: 7.5pt;
+      color: #999;
+      margin-top: 6px;
+      font-style: italic;
+    }
 
     /* ---- Photo Documentation ---- */
-    .photo-group { margin-bottom: 20px; page-break-inside: avoid; }
+    .photo-group {
+      margin-bottom: 24px;
+      page-break-inside: avoid;
+    }
     .photo-group h3 {
       font-size: 11pt;
-      color: #333;
-      margin: 0 0 8px 0;
+      color: #2d5016;
+      margin: 0 0 10px 0;
       font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-weight: 600;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 4px;
     }
     .photo-grid {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 14px;
     }
-    .photo-item { text-align: center; }
+    .photo-item {
+      text-align: center;
+      max-width: 280px;
+    }
     .photo-item img {
-      max-width: 220px;
-      max-height: 180px;
-      border: 1px solid #ddd;
+      max-width: 280px;
+      max-height: 220px;
+      border: 1px solid #d0d0d0;
+      border-radius: 3px;
     }
     .photo-caption {
       font-size: 8pt;
       color: #666;
-      margin-top: 3px;
+      margin-top: 4px;
+      font-style: italic;
     }
 
     /* ---- TRAQ Appendix ---- */
@@ -373,56 +546,62 @@ export async function GET(
       margin: 0 0 20px 0;
     }
     .traq-tree {
-      margin-bottom: 24px;
-      border: 1px solid #ccc;
-      padding: 12px;
+      margin-bottom: 28px;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      padding: 16px;
+      page-break-inside: avoid;
     }
     .traq-tree h3 {
-      margin: 0 0 8px 0;
+      margin: 0 0 10px 0;
       font-size: 11pt;
-      color: #1a1a1a;
-      border-bottom: 1px solid #ddd;
+      color: #2d5016;
+      border-bottom: 1px solid #e5e7eb;
       padding-bottom: 4px;
       font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-weight: 600;
     }
     .traq-table {
       width: 100%;
       border-collapse: collapse;
-      margin: 0 0 8px 0;
+      margin: 0 0 10px 0;
       font-size: 9pt;
     }
     .traq-table td {
-      padding: 4px 8px;
-      border: 1px solid #ddd;
+      padding: 5px 8px;
+      border: 1px solid #e5e7eb;
     }
     .traq-table .label-cell {
-      background: #f0f0f0;
-      font-weight: bold;
+      background: #f0f4ec;
+      font-weight: 600;
       width: 20%;
+      color: #333;
     }
     .traq-matrix {
       width: 100%;
       border-collapse: collapse;
-      margin: 0 0 8px 0;
+      margin: 0 0 10px 0;
       font-size: 9pt;
     }
     .traq-matrix th {
-      background: #555;
+      background: #2d5016;
       color: white;
-      padding: 4px 8px;
+      padding: 5px 8px;
       text-align: left;
-      font-weight: bold;
+      font-weight: 600;
       font-size: 8.5pt;
     }
     .traq-matrix td {
-      padding: 4px 8px;
-      border: 1px solid #ddd;
+      padding: 5px 8px;
+      border: 1px solid #e5e7eb;
     }
-    .traq-matrix .risk-row { background: #f0f0f0; }
+    .traq-matrix .risk-row { font-size: 10pt; }
     .traq-matrix td.center { text-align: center; }
     .maintenance-line {
       font-size: 9pt;
-      margin: 4px 0 0 0;
+      margin: 6px 0 0 0;
+      padding: 6px 0 0 0;
+      border-top: 1px solid #e5e7eb;
     }
     .avoid-break { page-break-inside: avoid; }
 
@@ -432,40 +611,38 @@ export async function GET(
       padding-top: 40px;
     }
     .cert-box {
-      border: 2px solid #333;
-      padding: 24px;
+      border: 3px double #2d5016;
+      padding: 32px;
       margin: 20px 0;
+      background: #f8faf5;
+      border-radius: 2px;
     }
     .cert-box h2 {
       margin: 0 0 16px 0;
       font-size: 14pt;
-      color: #1a1a1a;
+      color: #2d5016;
       font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-weight: 700;
     }
-    .cert-box p { margin: 4px 0; font-size: 10pt; }
+    .cert-icon {
+      display: inline-block;
+      margin-right: 8px;
+      font-size: 16pt;
+    }
+    .cert-box p { margin: 5px 0; font-size: 10pt; line-height: 1.6; }
     .cert-signature {
-      margin-top: 24px;
-      padding-top: 12px;
+      margin-top: 40px;
+      padding-top: 16px;
       border-top: 1px solid #ccc;
     }
-    .cert-signature p { margin: 3px 0; font-size: 10pt; }
+    .cert-signature p { margin: 4px 0; font-size: 10pt; }
     .signature-line {
       border-bottom: 1px solid #333;
       display: inline-block;
-      min-width: 280px;
-      padding-bottom: 2px;
+      min-width: 300px;
+      padding-bottom: 3px;
       font-style: italic;
-    }
-
-    /* ---- Footer ---- */
-    .page-footer {
-      text-align: center;
-      font-size: 8pt;
-      color: #999;
-      margin-top: 40px;
-      padding-top: 8px;
-      border-top: 1px solid #eee;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      margin-left: 4px;
     }
   </style>
 </head>
@@ -474,34 +651,73 @@ export async function GET(
 
   <!-- ========== COVER PAGE ========== -->
   <div class="cover-page">
-    ${
-      arborist.companyLogoUrl
-        ? `<img src="${arborist.companyLogoUrl}" alt="Company Logo" class="cover-logo" />`
-        : ""
-    }
-    ${arborist.companyName ? `<div class="cover-company">${esc(arborist.companyName)}</div>` : ""}
-    <div class="cover-contact">
-      ${[arborist.companyAddress, arborist.companyPhone, arborist.companyEmail, arborist.companyWebsite].filter(Boolean).map((s) => esc(s!)).join(" &bull; ")}
+    <!-- Top branding bar -->
+    <div class="cover-branding">
+      <div class="cover-brand-left">
+        ${arborist.companyLogoUrl ? `<img src="${arborist.companyLogoUrl}" alt="Logo" class="cover-logo" />` : ""}
+        ${arborist.companyName ? `<div class="cover-company-name">${esc(arborist.companyName)}</div>` : `<div class="cover-company-name">${esc(arborist.name)}</div>`}
+      </div>
+      <div class="cover-brand-right">
+        ${arborist.companyAddress ? `${esc(arborist.companyAddress)}<br/>` : ""}
+        ${arborist.companyPhone ? `${esc(arborist.companyPhone)}<br/>` : ""}
+        ${arborist.companyEmail ? `${esc(arborist.companyEmail)}<br/>` : ""}
+        ${arborist.companyWebsite ? `${esc(arborist.companyWebsite)}` : ""}
+      </div>
     </div>
 
-    <hr class="cover-rule" />
+    <!-- Centered title block -->
+    <div class="cover-title-block">
+      <hr class="cover-rule-top" />
+      <div class="cover-title">Arborist Report</div>
+      <div class="cover-address">${esc(property.address)}</div>
+      <div class="cover-city">
+        ${esc(property.city)}, ${esc(property.state || "CA")}${property.county ? ` \u2014 ${esc(property.county)} County` : ""}
+      </div>
+      <div class="cover-type-badge ${isCertified ? "cover-type-certified" : "cover-type-draft"}">
+        ${isCertified ? "\u2713 Certified" : "Draft"} \u2014 ${esc(reportTypeLabel)}
+      </div>
+      <hr class="cover-rule-bottom" />
 
-    <div class="cover-title">Arborist Report</div>
-    <div class="cover-subtitle">${esc(property.address)}</div>
-    <div class="cover-subtitle" style="font-size: 11pt; color: #666;">
-      ${esc(property.city)}, ${esc(property.state || "CA")}${property.county ? ` \u2014 ${esc(property.county)} County` : ""}
+      <!-- 2-column meta table -->
+      <table class="cover-meta-table">
+        <tr>
+          <td>
+            <div class="cover-meta-label">Prepared By</div>
+            <div class="cover-meta-value">${esc(arborist.name)}</div>
+          </td>
+          <td>
+            <div class="cover-meta-label">ISA Certification</div>
+            <div class="cover-meta-value">#${esc(arborist.isaCertificationNum)}</div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div class="cover-meta-label">Report Date</div>
+            <div class="cover-meta-value">${dateStr}</div>
+          </td>
+          <td>
+            <div class="cover-meta-label">Property APN</div>
+            <div class="cover-meta-value">${esc(property.parcelNumber || "N/A")}</div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div class="cover-meta-label">Trees Assessed</div>
+            <div class="cover-meta-value">${trees.length}${protectedCount > 0 ? ` (${protectedCount} protected)` : ""}</div>
+          </td>
+          <td>
+            <div class="cover-meta-label">Report Type</div>
+            <div class="cover-meta-value">${esc(reportTypeLabel)}</div>
+          </td>
+        </tr>
+      </table>
     </div>
 
-    <div class="cover-type">${esc(reportTypeLabel)}</div>
-
-    <div class="cover-meta">
-      <strong>Prepared by:</strong> ${esc(arborist.name)}, ISA #${esc(arborist.isaCertificationNum)}<br />
-      <strong>Date:</strong> ${dateStr}<br />
-      <strong>Property APN:</strong> ${esc(property.parcelNumber || "N/A")}<br />
-      <strong>Trees Assessed:</strong> ${trees.length}${protectedCount > 0 ? ` (${protectedCount} protected)` : ""}
+    <!-- Cover footer -->
+    <div class="cover-footer">
+      ${!isCertified ? '<div class="cover-draft-badge">DRAFT</div><br/>' : ""}
+      <div class="cover-confidential">Confidential \u2014 Prepared for property owner and authorized parties only</div>
     </div>
-
-    ${!isCertified ? '<div class="cover-draft">DRAFT</div>' : ""}
   </div>
 
   <!-- ========== TREE INVENTORY TABLE ========== -->
@@ -510,23 +726,23 @@ export async function GET(
   <table class="inventory-table">
     <thead>
       <tr>
-        <th class="center" style="width:5%">Tree&nbsp;#</th>
-        <th style="width:5%">Tag</th>
+        <th class="center" style="width:5%">#</th>
+        <th class="center" style="width:5%">Tag</th>
         <th>Species</th>
         <th class="center" style="width:6%">DBH</th>
-        <th class="center" style="width:6%">Height</th>
+        <th class="center" style="width:6%">Ht.</th>
         <th class="center" style="width:7%">Canopy</th>
-        <th class="center" style="width:9%">Condition</th>
-        <th class="center" style="width:8%">Protected</th>
-        <th style="width:9%">Action</th>
+        <th class="center" style="width:12%">Condition</th>
+        <th class="center" style="width:6%">Prot.</th>
+        <th style="width:10%">Action</th>
       </tr>
     </thead>
     <tbody>
       ${treeRows}
     </tbody>
   </table>
-  <p style="font-size:8pt; color:#999; margin-top:4px;">
-    Condition Scale: 0=Dead, 1=Critical, 2=Poor, 3=Fair, 4=Good, 5=Excellent
+  <p class="inventory-legend">
+    Condition: 0 = Dead &bull; 1 = Critical &bull; 2 = Poor &bull; 3 = Fair &bull; 4 = Good &bull; 5 = Excellent &nbsp;|&nbsp; Prot. = Protected under local tree ordinance
   </p>
 
   <!-- ========== REPORT BODY ========== -->
@@ -552,7 +768,7 @@ export async function GET(
   <div class="cert-page">
     <h2 class="section-title">Arborist Certification</h2>
     <div class="cert-box">
-      <h2>Certification Statement</h2>
+      <h2><span class="cert-icon">${isCertified ? "\u2713" : "\u2726"}</span>Certification Statement</h2>
       <p>
         I, the undersigned, certify that I have personally inspected the tree(s) described in this
         report and that the information contained herein is accurate to the best of my professional
@@ -569,8 +785,8 @@ export async function GET(
         ${
           isCertified
             ? `
-        <p><strong>Electronically Signed:</strong> <span class="signature-line">${esc(report.eSignatureText || "")}</span></p>
-        <p><strong>Name:</strong> ${esc(arborist.name)}</p>
+        <p><strong>Electronically Signed:</strong><span class="signature-line">${esc(report.eSignatureText || "")}</span></p>
+        <p style="margin-top:12px;"><strong>Name:</strong> ${esc(arborist.name)}</p>
         <p><strong>ISA Certification #:</strong> ${esc(arborist.isaCertificationNum)}</p>
         ${arborist.companyName ? `<p><strong>Company:</strong> ${esc(arborist.companyName)}</p>` : ""}
         <p><strong>Date Certified:</strong> ${
@@ -586,16 +802,12 @@ export async function GET(
         <p style="color: #999; font-style: italic;">
           This report has not yet been certified. The certification signature will appear here once the arborist certifies the report.
         </p>
-        <p style="margin-top: 20px;"><strong>Arborist:</strong> ${esc(arborist.name)}</p>
+        <p style="margin-top: 24px;"><strong>Arborist:</strong> ${esc(arborist.name)}</p>
         <p><strong>ISA Certification #:</strong> ${esc(arborist.isaCertificationNum)}</p>
         ${arborist.companyName ? `<p><strong>Company:</strong> ${esc(arborist.companyName)}</p>` : ""}`
         }
       </div>
     </div>
-  </div>
-
-  <div class="page-footer">
-    ${esc(arborist.companyName || arborist.name)} &bull; ${esc(property.address)}, ${esc(property.city)} &bull; ${dateStr}
   </div>
 </body>
 </html>`;
@@ -614,9 +826,18 @@ export async function GET(
       margin: {
         top: "0.75in",
         right: "1in",
-        bottom: "0.75in",
+        bottom: "1in",
         left: "1in",
       },
+      displayHeaderFooter: true,
+      headerTemplate: '<div></div>',
+      footerTemplate: `
+        <div style="width:100%; font-size:8px; font-family:Helvetica,Arial,sans-serif; color:#999; padding:0 0.6in; display:flex; justify-content:space-between; align-items:center;">
+          <span>${esc(footerCompany)}</span>
+          <span>${esc(footerAddress)}</span>
+          <span>Page <span class="pageNumber"></span></span>
+        </div>
+      `,
     });
 
     await browser.close();
@@ -661,4 +882,22 @@ function fmtEnum(value: string | undefined | null): string {
   return value
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function riskRowBg(rawValue: string): string {
+  const map: Record<string, string> = {
+    improbable: "#f7f9f5",
+    possible: "#fff8e1",
+    probable: "#fff3e0",
+    imminent: "#ffebee",
+    very_low: "#f7f9f5",
+    low: "#e8f5e9",
+    medium: "#fff8e1",
+    high: "#fff3e0",
+    negligible: "#f7f9f5",
+    minor: "#e8f5e9",
+    significant: "#fff3e0",
+    severe: "#ffebee",
+  };
+  return map[rawValue] || "#ffffff";
 }
