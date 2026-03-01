@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { requireArborist } from "@/lib/auth";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { format } from "date-fns";
@@ -93,6 +94,11 @@ export default async function PropertiesPage() {
                             <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">
                               {property.address}
                             </h3>
+                            {property.address === "123 Sample Street" && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground border-muted-foreground/30 shrink-0">
+                                Sample
+                              </Badge>
+                            )}
                             {latestReport ? (
                               <StatusBadge status={latestReport.status} />
                             ) : (

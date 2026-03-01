@@ -451,6 +451,13 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         </div>
       </div>
 
+      {/* Sample property banner */}
+      {property.address === "123 Sample Street" && (
+        <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-700">
+          This is a sample property to help you explore TreeCertify. Feel free to generate a report, try the certification flow, or delete it when you&apos;re ready.
+        </div>
+      )}
+
       {/* Construction Encroachment: Project Info Card */}
       {reportType === "construction_encroachment" && (
         <Card>

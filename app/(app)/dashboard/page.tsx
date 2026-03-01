@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { requireArborist } from "@/lib/auth";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import {
@@ -192,9 +193,16 @@ export default async function DashboardPage() {
                         <MapPin className="h-4 w-4 text-emerald-600" />
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-gray-900">
-                          {property.address}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-sm font-medium text-gray-900">
+                            {property.address}
+                          </p>
+                          {property.address === "123 Sample Street" && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground border-muted-foreground/30 shrink-0">
+                              Sample
+                            </Badge>
+                          )}
+                        </div>
                         <p className="truncate text-xs text-gray-500">
                           {property.city}, {property.county} County
                         </p>
@@ -228,6 +236,19 @@ export default async function DashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* CTA for new users with only the sample property */}
+      {recentProperties.length > 0 && recentProperties.length <= 1 && (
+        <div className="text-center py-6 text-sm text-muted-foreground">
+          <p>The sample property above shows what a completed assessment looks like.</p>
+          <p className="mt-1">
+            Ready to start?{" "}
+            <Link href="/properties/new" className="text-emerald-600 font-medium hover:underline">
+              Create your first property &rarr;
+            </Link>
+          </p>
+        </div>
+      )}
     </div>
   );
 }
