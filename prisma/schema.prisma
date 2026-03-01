@@ -1,0 +1,191 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Arborist {
+  id                  String   @id @default(cuid())
+  name                String
+  email               String   @unique
+  isaCertificationNum String
+  isaExpirationDate   DateTime
+  companyName         String?
+  phone               String?
+  citiesServed        String   @default("[]") // JSON array stored as string for SQLite
+
+  // Branding & profile fields
+  companyLogoUrl   String?
+  companyAddress   String?
+  companyPhone     String?
+  companyEmail     String?
+  companyWebsite   String?
+  licenseNumbers   String?
+  signatureName    String?
+
+  createdAt DateTime @default(now())
+
+  properties Property[]
+  reports    Report[]
+}
+
+model Property {
+  id          String @id @default(cuid())
+  arboristId  String
+  address     String
+  city        String
+  state       String @default("CA")
+  zip         String?
+  county      String @default("San Mateo")
+  parcelNumber String?
+  lat         Float?
+  lng         Float?
+  lotSizeSqft Float?
+
+  homeownerName  String?
+  homeownerEmail String?
+  homeownerPhone String?
+
+  // Report type drives the entire workflow
+  reportType         String   @default("health_assessment")
+
+  // Construction encroachment project fields
+  projectDescription String?
+  permitNumber       String?
+  developerName      String?
+  architectName      String?
+
+  status    String   @default("active") // active, archived
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  arborist           Arborist             @relation(fields: [arboristId], references: [id])
+  trees              TreeRecord[]
+  reports            Report[]
+  propertyAudioNotes PropertyAudioNote[]
+}
+
+model TreeRecord {
+  id         String @id @default(cuid())
+  propertyId String
+  treeNumber Int    // auto-increment per property (1, 2, 3...)
+
+  pinLat Float?
+  pinLng Float?
+
+  speciesCommon     String   @default("")
+  speciesScientific String   @default("")
+  dbhInches         Float    @default(0)
+  heightFt          Float?
+  canopySpreadFt    Float?
+  conditionRating   Int      @default(0) // 1-5 scale
+  healthNotes       String?
+  structuralNotes   String?
+
+  isProtected        Boolean @default(false)
+  protectionReason   String?
+  recommendedAction  String  @default("retain") // retain, remove, prune, monitor
+  mitigationRequired String?
+
+  // Type-specific assessment data (JSON string, parsed per reportType)
+  typeSpecificData String?
+
+  photos String @default("[]") // DEPRECATED - use treePhotos relation instead
+  status String @default("draft") // draft, assessed, certified
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  property       Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  treePhotos     TreePhoto[]
+  treeAudioNotes TreeAudioNote[]
+}
+
+model TreePhoto {
+  id           String   @id @default(cuid())
+  treeRecordId String
+  filename     String
+  url          String
+  caption      String?
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  // Annotation fields
+  originalFilename String?
+  originalUrl      String?
+  isAnnotated      Boolean @default(false)
+
+  treeRecord TreeRecord @relation(fields: [treeRecordId], references: [id], onDelete: Cascade)
+}
+
+model TreeAudioNote {
+  id                   String   @id @default(cuid())
+  treeRecordId         String
+  filename             String
+  audioUrl             String
+  rawTranscription     String?
+  cleanedTranscription String?
+  durationSeconds      Float?
+  status               String   @default("uploading")
+  errorMessage         String?
+  createdAt            DateTime @default(now())
+
+  treeRecord TreeRecord @relation(fields: [treeRecordId], references: [id], onDelete: Cascade)
+}
+
+model PropertyAudioNote {
+  id                   String   @id @default(cuid())
+  propertyId           String
+  filename             String
+  audioUrl             String
+  rawTranscription     String?
+  cleanedTranscription String?
+  durationSeconds      Float?
+  status               String   @default("uploading")
+  errorMessage         String?
+  createdAt            DateTime @default(now())
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
+
+model MunicipalOrdinance {
+  id        String @id @default(cuid())
+  cityName  String @unique
+  state     String @default("CA")
+
+  protectedSpecies              String @default("[]") // JSON array with per-species DBH thresholds
+  defaultDbhThresholdNative     Float?
+  defaultDbhThresholdNonnative  Float?
+  certifierRequirement          String? // e.g. "ISA Certified Only"
+  mitigationRules               String @default("{}") // JSON
+  heritageTreeRules             String @default("{}") // JSON
+  permitProcessNotes            String?
+  ordinanceUrl                  String?
+  codeReference                 String?
+  lastUpdated                   DateTime @default(now())
+}
+
+model Report {
+  id         String @id @default(cuid())
+  propertyId String
+  arboristId String
+
+  reportType     String // removal_permit, construction_encroachment, health_assessment, pre_listing
+  aiDraftContent String? // markdown
+  finalContent   String? // markdown after edits
+  citySections   String  @default("{}") // JSON
+  eSignatureText String?
+  certifiedAt    DateTime?
+  pdfUrl         String?
+
+  status String @default("draft") // draft, review, certified, filed
+
+  property Property @relation(fields: [propertyId], references: [id])
+  arborist Arborist @relation(fields: [arboristId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
