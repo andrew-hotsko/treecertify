@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { renderMarkdownToHtml } from "@/lib/markdown";
+import puppeteer from "puppeteer";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  let browser;
   try {
     const report = await prisma.report.findUnique({
       where: { id: params.id },
@@ -181,7 +183,12 @@ export async function GET(
       ${traqRows}`;
     }
 
-    // Build the full HTML document
+    // Draft watermark as absolutely-positioned element (not CSS ::after which doesn't work in Puppeteer PDF)
+    const draftWatermark = !isCertified
+      ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 120pt; font-weight: bold; color: rgba(200, 200, 200, 0.15); letter-spacing: 20px; pointer-events: none; z-index: 0; white-space: nowrap;">DRAFT</div>`
+      : "";
+
+    // Build the full HTML document (no toolbar, no body::after watermark)
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -189,76 +196,17 @@ export async function GET(
   <title>Arborist Report \u2014 ${esc(property.address)}, ${esc(property.city)}</title>
   <style>
     /* ---- Base ---- */
-    @page {
-      size: letter;
-      margin: 0.75in 1in;
-    }
-    @media print {
-      body { margin: 0; padding: 0; }
-      .no-print { display: none !important; }
-      .page-break { page-break-before: always; }
-    }
-    @media screen {
-      body { max-width: 8.5in; margin: 0 auto; padding: 0.5in 1in; }
-    }
     * { box-sizing: border-box; }
     body {
       font-family: 'Georgia', 'Times New Roman', serif;
       color: #1a1a1a;
       font-size: 10.5pt;
       line-height: 1.55;
+      margin: 0;
+      padding: 0;
+      position: relative;
     }
-
-    /* ---- Draft watermark ---- */
-    ${
-      !isCertified
-        ? `
-    body::after {
-      content: "DRAFT";
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) rotate(-45deg);
-      font-size: 120pt;
-      font-weight: bold;
-      color: rgba(200, 200, 200, 0.15);
-      letter-spacing: 20px;
-      pointer-events: none;
-      z-index: 0;
-    }`
-        : ""
-    }
-
-    /* ---- Toolbar ---- */
-    .no-print {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      padding: 10px 16px;
-      background: #1a1a1a;
-      color: white;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      font-size: 13px;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-    .no-print button, .no-print a {
-      background: white;
-      color: #1a1a1a;
-      border: none;
-      padding: 6px 20px;
-      font-size: 13px;
-      cursor: pointer;
-      border-radius: 4px;
-      font-weight: 600;
-      text-decoration: none;
-      font-family: system-ui, sans-serif;
-    }
-    .no-print button:hover, .no-print a:hover { background: #e5e5e5; }
+    .page-break { page-break-before: always; }
 
     /* ==== COVER PAGE ==== */
     .cover-page {
@@ -268,6 +216,7 @@ export async function GET(
       align-items: center;
       min-height: 9in;
       text-align: center;
+      position: relative;
     }
     .cover-logo { max-height: 80px; width: auto; margin-bottom: 24px; }
     .cover-company {
@@ -390,24 +339,6 @@ export async function GET(
     .inventory-table tr.alt { background: #f7f7f7; }
     .inventory-table td.center,
     .inventory-table th.center { text-align: center; }
-
-    /* ---- Meta table ---- */
-    .meta-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 12px 0;
-      font-size: 9.5pt;
-    }
-    .meta-table td {
-      padding: 5px 10px;
-      border: 1px solid #ddd;
-    }
-    .meta-table .label-cell {
-      background: #f0f0f0;
-      font-weight: bold;
-      width: 22%;
-      color: #333;
-    }
 
     /* ---- Photo Documentation ---- */
     .photo-group { margin-bottom: 20px; page-break-inside: avoid; }
@@ -539,12 +470,7 @@ export async function GET(
   </style>
 </head>
 <body>
-  <!-- Toolbar -->
-  <div class="no-print">
-    <span>Arborist Report${!isCertified ? " (DRAFT)" : ""}</span>
-    <button onclick="window.print()">Print / Save as PDF</button>
-    <a href="/properties/${property.id}/report">&larr; Back to Report</a>
-  </div>
+  ${draftWatermark}
 
   <!-- ========== COVER PAGE ========== -->
   <div class="cover-page">
@@ -674,9 +600,34 @@ export async function GET(
 </body>
 </html>`;
 
-    return new NextResponse(html, {
+    // Render HTML to PDF using Puppeteer
+    browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+
+    const pdfBuffer = await page.pdf({
+      format: "Letter",
+      printBackground: true,
+      margin: {
+        top: "0.75in",
+        right: "1in",
+        bottom: "0.75in",
+        left: "1in",
+      },
+    });
+
+    await browser.close();
+    browser = undefined;
+
+    const filename = `Arborist_Report_${property.address.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
+
+    return new NextResponse(Buffer.from(pdfBuffer), {
       headers: {
-        "Content-Type": "text/html; charset=utf-8",
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${filename}"`,
       },
     });
   } catch (error) {
@@ -685,6 +636,10 @@ export async function GET(
       { error: "Failed to generate PDF" },
       { status: 500 }
     );
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
   }
 }
 

@@ -30,6 +30,7 @@ import {
   Clock,
   AlertTriangle,
   ShieldCheck,
+  Share2,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -659,9 +660,14 @@ export default function PropertyReportPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() =>
-                window.open(`/api/reports/${report.id}/pdf`, "_blank")
-              }
+              onClick={() => {
+                const a = document.createElement("a");
+                a.href = `/api/reports/${report.id}/pdf`;
+                a.download = "";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+              }}
             >
               <Download className="h-3.5 w-3.5 mr-1.5" />
               PDF
@@ -669,12 +675,51 @@ export default function PropertyReportPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() =>
-                window.open(`/api/reports/${report.id}/word`, "_blank")
-              }
+              onClick={() => {
+                const a = document.createElement("a");
+                a.href = `/api/reports/${report.id}/word`;
+                a.download = "";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+              }}
             >
               <FileDown className="h-3.5 w-3.5 mr-1.5" />
               Word
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const pdfUrl = `/api/reports/${report.id}/pdf`;
+                if (navigator.share) {
+                  try {
+                    const res = await fetch(pdfUrl);
+                    const blob = await res.blob();
+                    const file = new File(
+                      [blob],
+                      `report-${report.id}.pdf`,
+                      { type: "application/pdf" }
+                    );
+                    await navigator.share({
+                      title: `Tree Report — ${property?.address ?? ""}`,
+                      files: [file],
+                    });
+                  } catch {
+                    // User cancelled or share failed — silent
+                  }
+                } else {
+                  const a = document.createElement("a");
+                  a.href = pdfUrl;
+                  a.download = "";
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                }
+              }}
+            >
+              <Share2 className="h-3.5 w-3.5 mr-1.5" />
+              Share
             </Button>
           </div>
         </div>

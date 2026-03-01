@@ -26,6 +26,7 @@ import {
   ClipboardList,
   Download,
   FileDown,
+  Share2,
 } from "lucide-react";
 
 // Dynamically import PropertyMap with SSR disabled (Mapbox GL needs window/DOM)
@@ -376,26 +377,63 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() =>
-                      window.open(
-                        `/api/reports/${property.reports[0].id}/pdf`,
-                        "_blank"
-                      )
-                    }
+                    onClick={() => {
+                      const a = document.createElement("a");
+                      a.href = `/api/reports/${property.reports[0].id}/pdf`;
+                      a.download = "";
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                    }}
                   >
                     <Download className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() =>
-                      window.open(
-                        `/api/reports/${property.reports[0].id}/word`,
-                        "_blank"
-                      )
-                    }
+                    onClick={() => {
+                      const a = document.createElement("a");
+                      a.href = `/api/reports/${property.reports[0].id}/word`;
+                      a.download = "";
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                    }}
                   >
                     <FileDown className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      const pdfUrl = `/api/reports/${property.reports[0].id}/pdf`;
+                      if (navigator.share) {
+                        try {
+                          const res = await fetch(pdfUrl);
+                          const blob = await res.blob();
+                          const file = new File(
+                            [blob],
+                            `report-${property.reports[0].id}.pdf`,
+                            { type: "application/pdf" }
+                          );
+                          await navigator.share({
+                            title: `Tree Report — ${property.address}`,
+                            files: [file],
+                          });
+                        } catch {
+                          // User cancelled or share failed
+                        }
+                      } else {
+                        const a = document.createElement("a");
+                        a.href = pdfUrl;
+                        a.download = "";
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                      }
+                    }}
+                  >
+                    <Share2 className="h-3.5 w-3.5" />
                   </Button>
                 </>
               )}
