@@ -7,13 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   MapPin,
   ArrowLeft,
   Loader2,
@@ -27,20 +20,31 @@ import Link from "next/link";
 import { REPORT_TYPES } from "@/lib/report-types";
 import { cn } from "@/lib/utils";
 
-const CITIES = [
-  "Palo Alto",
-  "Menlo Park",
-  "Atherton",
-  "Woodside",
-  "Portola Valley",
-];
-
 const COUNTY_MAP: Record<string, string> = {
   "Palo Alto": "Santa Clara",
+  "Los Altos": "Santa Clara",
+  "Los Altos Hills": "Santa Clara",
+  "Mountain View": "Santa Clara",
+  "Sunnyvale": "Santa Clara",
+  "Cupertino": "Santa Clara",
+  "Saratoga": "Santa Clara",
+  "Los Gatos": "Santa Clara",
+  "San Jose": "Santa Clara",
   "Menlo Park": "San Mateo",
-  Atherton: "San Mateo",
-  Woodside: "San Mateo",
+  "Atherton": "San Mateo",
+  "Woodside": "San Mateo",
   "Portola Valley": "San Mateo",
+  "Redwood City": "San Mateo",
+  "San Carlos": "San Mateo",
+  "Belmont": "San Mateo",
+  "San Mateo": "San Mateo",
+  "Hillsborough": "San Mateo",
+  "Burlingame": "San Mateo",
+  "Foster City": "San Mateo",
+  "Half Moon Bay": "San Mateo",
+  "Pacifica": "San Mateo",
+  "Daly City": "San Mateo",
+  "South San Francisco": "San Mateo",
 };
 
 const ICON_MAP = {
@@ -83,14 +87,13 @@ const COLOR_MAP: Record<string, { border: string; bg: string; ring: string; icon
 
 export default function NewPropertyPage() {
   const router = useRouter();
-  const [step, setStep] = useState<1 | 2>(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Step 1: Report type
+  // Report type
   const [reportType, setReportType] = useState<string | null>(null);
 
-  // Step 2: Property details
+  // Property details
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [county, setCounty] = useState("");
@@ -108,7 +111,10 @@ export default function NewPropertyPage() {
 
   const handleCityChange = (value: string) => {
     setCity(value);
-    setCounty(COUNTY_MAP[value] || "San Mateo");
+    const matchedCounty = COUNTY_MAP[value.trim()];
+    if (matchedCounty) {
+      setCounty(matchedCounty);
+    }
   };
 
   const handleSubmit = async () => {
@@ -195,320 +201,252 @@ export default function NewPropertyPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground">New Property</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {step === 1
-            ? "Select the type of report you'll be creating for this property."
-            : "Enter the property address to get started with the satellite map view."}
+          Select a report type and enter the property address to get started.
         </p>
       </div>
 
-      {/* Step indicator */}
-      <div className="flex items-center gap-2 mb-6">
-        <div
-          className={cn(
-            "flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold",
-            step === 1
-              ? "bg-emerald-700 text-white"
-              : "bg-emerald-100 text-emerald-700"
-          )}
-        >
-          {step > 1 ? <Check className="h-4 w-4" /> : "1"}
+      <div className="space-y-6">
+        {/* Report Type Selection */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {REPORT_TYPES.map((rt) => {
+            const Icon = ICON_MAP[rt.icon];
+            const colors = COLOR_MAP[rt.color] || COLOR_MAP.green;
+            const selected = reportType === rt.id;
+
+            return (
+              <button
+                key={rt.id}
+                onClick={() => setReportType(rt.id)}
+                className={cn(
+                  "relative text-left p-5 rounded-lg border-2 border-l-4 transition-all",
+                  colors.border,
+                  selected
+                    ? `${colors.bg} ring-2 ${colors.ring} border-transparent`
+                    : "bg-white hover:bg-gray-50 border-border"
+                )}
+              >
+                {selected && (
+                  <div
+                    className={cn(
+                      "absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center",
+                      colors.check
+                    )}
+                  >
+                    <Check className="h-3.5 w-3.5 text-white" />
+                  </div>
+                )}
+                <Icon className={cn("h-7 w-7 mb-3", colors.icon)} />
+                <h3 className="font-semibold text-sm text-foreground">
+                  {rt.label}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  {rt.description}
+                </p>
+              </button>
+            );
+          })}
         </div>
-        <span className={cn("text-sm font-medium", step === 1 ? "text-foreground" : "text-muted-foreground")}>
-          Report Type
-        </span>
-        <div className="w-8 h-px bg-border" />
-        <div
-          className={cn(
-            "flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold",
-            step === 2
-              ? "bg-emerald-700 text-white"
-              : "bg-muted text-muted-foreground"
-          )}
-        >
-          2
-        </div>
-        <span className={cn("text-sm font-medium", step === 2 ? "text-foreground" : "text-muted-foreground")}>
-          Property Details
-        </span>
-      </div>
 
-      {/* ============ STEP 1: Report Type Selection ============ */}
-      {step === 1 && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {REPORT_TYPES.map((rt) => {
-              const Icon = ICON_MAP[rt.icon];
-              const colors = COLOR_MAP[rt.color] || COLOR_MAP.green;
-              const selected = reportType === rt.id;
+        {/* Property Address */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <MapPin className="h-4 w-4 text-emerald-600" />
+              Property Location
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="address">Street Address *</Label>
+              <Input
+                id="address"
+                placeholder="123 Main St"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="mt-1"
+              />
+            </div>
 
-              return (
-                <button
-                  key={rt.id}
-                  onClick={() => setReportType(rt.id)}
-                  className={cn(
-                    "relative text-left p-5 rounded-lg border-2 border-l-4 transition-all",
-                    colors.border,
-                    selected
-                      ? `${colors.bg} ring-2 ${colors.ring} border-transparent`
-                      : "bg-white hover:bg-gray-50 border-border"
-                  )}
-                >
-                  {selected && (
-                    <div
-                      className={cn(
-                        "absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center",
-                        colors.check
-                      )}
-                    >
-                      <Check className="h-3.5 w-3.5 text-white" />
-                    </div>
-                  )}
-                  <Icon className={cn("h-7 w-7 mb-3", colors.icon)} />
-                  <h3 className="font-semibold text-sm text-foreground">
-                    {rt.label}
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    {rt.description}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>City *</Label>
+                <Input
+                  placeholder="e.g., Palo Alto"
+                  value={city}
+                  onChange={(e) => handleCityChange(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>County</Label>
+                <Input
+                  value={county}
+                  onChange={(e) => setCounty(e.target.value)}
+                  className="mt-1"
+                  placeholder="e.g., San Mateo"
+                />
+              </div>
+            </div>
 
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" asChild>
-              <Link href="/properties">Cancel</Link>
-            </Button>
-            <Button
-              onClick={() => setStep(2)}
-              disabled={!reportType}
-              className="bg-emerald-700 hover:bg-emerald-600"
-            >
-              Continue
-            </Button>
-          </div>
-        </div>
-      )}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="zip">ZIP Code</Label>
+                <Input
+                  id="zip"
+                  placeholder="94301"
+                  value={zip}
+                  onChange={(e) => setZip(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="apn">APN / Parcel Number</Label>
+                <Input
+                  id="apn"
+                  placeholder="132-40-001"
+                  value={parcelNumber}
+                  onChange={(e) => setParcelNumber(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* ============ STEP 2: Property Details ============ */}
-      {step === 2 && (
-        <div className="space-y-6">
-          {/* Property Address */}
+        {/* Construction encroachment project info */}
+        {reportType === "construction_encroachment" && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <MapPin className="h-4 w-4 text-emerald-600" />
-                Property Location
+                <HardHat className="h-4 w-4 text-blue-600" />
+                Project Information
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="address">Street Address *</Label>
+                <Label htmlFor="projectDescription">Project Description</Label>
                 <Input
-                  id="address"
-                  placeholder="123 Main St"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>City *</Label>
-                  <Select value={city} onValueChange={handleCityChange}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select city" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CITIES.map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {c}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>County</Label>
-                  <Input
-                    value={county}
-                    readOnly
-                    className="mt-1 bg-muted"
-                    placeholder="Auto-filled"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="zip">ZIP Code</Label>
-                  <Input
-                    id="zip"
-                    placeholder="94301"
-                    value={zip}
-                    onChange={(e) => setZip(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="apn">APN / Parcel Number</Label>
-                  <Input
-                    id="apn"
-                    placeholder="132-40-001"
-                    value={parcelNumber}
-                    onChange={(e) => setParcelNumber(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Construction encroachment project info */}
-          {reportType === "construction_encroachment" && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <HardHat className="h-4 w-4 text-blue-600" />
-                  Project Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="projectDescription">Project Description</Label>
-                  <Input
-                    id="projectDescription"
-                    placeholder="New addition, foundation work, etc."
-                    value={projectDescription}
-                    onChange={(e) => setProjectDescription(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="permitNumber">Permit Number</Label>
-                    <Input
-                      id="permitNumber"
-                      placeholder="BP-2024-001234"
-                      value={permitNumber}
-                      onChange={(e) => setPermitNumber(e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="developerName">Developer / Contractor</Label>
-                    <Input
-                      id="developerName"
-                      placeholder="ABC Construction"
-                      value={developerName}
-                      onChange={(e) => setDeveloperName(e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="architectName">Architect</Label>
-                  <Input
-                    id="architectName"
-                    placeholder="Jane Smith, AIA"
-                    value={architectName}
-                    onChange={(e) => setArchitectName(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Homeowner Info (optional) */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                Homeowner Information{" "}
-                <span className="text-muted-foreground font-normal text-sm">
-                  (Optional)
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="homeownerName">Name</Label>
-                <Input
-                  id="homeownerName"
-                  placeholder="John Smith"
-                  value={homeownerName}
-                  onChange={(e) => setHomeownerName(e.target.value)}
+                  id="projectDescription"
+                  placeholder="New addition, foundation work, etc."
+                  value={projectDescription}
+                  onChange={(e) => setProjectDescription(e.target.value)}
                   className="mt-1"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="homeownerEmail">Email</Label>
+                  <Label htmlFor="permitNumber">Permit Number</Label>
                   <Input
-                    id="homeownerEmail"
-                    type="email"
-                    placeholder="john@example.com"
-                    value={homeownerEmail}
-                    onChange={(e) => setHomeownerEmail(e.target.value)}
+                    id="permitNumber"
+                    placeholder="BP-2024-001234"
+                    value={permitNumber}
+                    onChange={(e) => setPermitNumber(e.target.value)}
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="homeownerPhone">Phone</Label>
+                  <Label htmlFor="developerName">Developer / Contractor</Label>
                   <Input
-                    id="homeownerPhone"
-                    placeholder="(650) 555-0100"
-                    value={homeownerPhone}
-                    onChange={(e) => setHomeownerPhone(e.target.value)}
+                    id="developerName"
+                    placeholder="ABC Construction"
+                    value={developerName}
+                    onChange={(e) => setDeveloperName(e.target.value)}
                     className="mt-1"
                   />
                 </div>
               </div>
+              <div>
+                <Label htmlFor="architectName">Architect</Label>
+                <Input
+                  id="architectName"
+                  placeholder="Jane Smith, AIA"
+                  value={architectName}
+                  onChange={(e) => setArchitectName(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
             </CardContent>
           </Card>
+        )}
 
-          {/* Error display */}
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              {error}
+        {/* Homeowner Info (optional) */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              Homeowner Information{" "}
+              <span className="text-muted-foreground font-normal text-sm">
+                (Optional)
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="homeownerName">Name</Label>
+              <Input
+                id="homeownerName"
+                placeholder="John Smith"
+                value={homeownerName}
+                onChange={(e) => setHomeownerName(e.target.value)}
+                className="mt-1"
+              />
             </div>
-          )}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="homeownerEmail">Email</Label>
+                <Input
+                  id="homeownerEmail"
+                  type="email"
+                  placeholder="john@example.com"
+                  value={homeownerEmail}
+                  onChange={(e) => setHomeownerEmail(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="homeownerPhone">Phone</Label>
+                <Input
+                  id="homeownerPhone"
+                  placeholder="(650) 555-0100"
+                  value={homeownerPhone}
+                  onChange={(e) => setHomeownerPhone(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Submit */}
-          <div className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={() => setStep(1)}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-            <div className="flex gap-3">
-              <Button variant="outline" asChild>
-                <Link href="/properties">Cancel</Link>
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={!isValid || submitting}
-                className="bg-emerald-700 hover:bg-emerald-600"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <MapPin className="h-4 w-4 mr-2" />
-                    Create &amp; Open Map
-                  </>
-                )}
-              </Button>
-            </div>
+        {/* Error display */}
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {error}
           </div>
+        )}
+
+        {/* Submit */}
+        <div className="flex justify-end gap-3">
+          <Button variant="outline" asChild>
+            <Link href="/properties">Cancel</Link>
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={!isValid || submitting}
+            className="bg-emerald-700 hover:bg-emerald-600"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              <>
+                <MapPin className="h-4 w-4 mr-2" />
+                Create &amp; Open Map
+              </>
+            )}
+          </Button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

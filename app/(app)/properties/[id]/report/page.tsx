@@ -293,6 +293,18 @@ export default function PropertyReportPage() {
     };
   }, [report, isCertified, content, saveReport]);
 
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   // Refresh "saved X ago" text
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -574,89 +586,93 @@ export default function PropertyReportPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* View mode toggle */}
+            {/* Edit actions */}
             {!isCertified && (
-              <div className="flex rounded-lg border bg-muted p-0.5">
-                <button
-                  onClick={() => setViewMode("editor")}
-                  className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                    viewMode === "editor"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
+              <>
+                {/* View mode toggle */}
+                <div className="flex rounded-lg border bg-muted p-0.5">
+                  <button
+                    onClick={() => setViewMode("editor")}
+                    className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                      viewMode === "editor"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Pencil className="h-3 w-3" />
+                    Editor
+                  </button>
+                  <button
+                    onClick={() => setViewMode("preview")}
+                    className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                      viewMode === "preview"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Eye className="h-3 w-3" />
+                    Preview
+                  </button>
+                </div>
+
+                {/* Regenerate */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={regenerateReport}
+                  disabled={generating}
                 >
-                  <Pencil className="h-3 w-3" />
-                  Editor
-                </button>
-                <button
-                  onClick={() => setViewMode("preview")}
-                  className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                    viewMode === "preview"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
+                  <RefreshCw
+                    className={`h-3.5 w-3.5 mr-1.5 ${generating ? "animate-spin" : ""}`}
+                  />
+                  Regenerate
+                </Button>
+
+                {/* Save */}
+                {viewMode === "editor" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => saveReport(false)}
+                    disabled={saving || !hasUnsavedChanges}
+                  >
+                    <Save className="h-3.5 w-3.5 mr-1.5" />
+                    {saving ? "Saving..." : "Save"}
+                  </Button>
+                )}
+
+                {/* Certify */}
+                <Button
+                  size="sm"
+                  className="bg-emerald-700 hover:bg-emerald-600"
+                  onClick={() => setShowCertifyPanel(true)}
                 >
-                  <Eye className="h-3 w-3" />
-                  Preview
-                </button>
-              </div>
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                  Certify
+                </Button>
+
+                <Separator orientation="vertical" className="h-6" />
+              </>
             )}
 
-            {/* Regenerate */}
-            {!isCertified && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={regenerateReport}
-                disabled={generating}
-              >
-                <RefreshCw
-                  className={`h-3.5 w-3.5 mr-1.5 ${generating ? "animate-spin" : ""}`}
-                />
-                Regenerate
-              </Button>
-            )}
-
-            {/* Save */}
-            {!isCertified && viewMode === "editor" && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => saveReport(false)}
-                disabled={saving || !hasUnsavedChanges}
-              >
-                <Save className="h-3.5 w-3.5 mr-1.5" />
-                {saving ? "Saving..." : "Save"}
-              </Button>
-            )}
-
-            {/* Certify */}
-            {!isCertified && (
-              <Button
-                size="sm"
-                className="bg-emerald-700 hover:bg-emerald-600"
-                onClick={() => setShowCertifyPanel(true)}
-              >
-                <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                Certify
-              </Button>
-            )}
-
-            {/* Unlock */}
+            {/* Certified actions */}
             {isCertified && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={unlockReport}
-                disabled={unlocking}
-              >
-                <Unlock className="h-3.5 w-3.5 mr-1.5" />
-                {unlocking ? "Unlocking..." : "Unlock & Revise"}
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={unlockReport}
+                  disabled={unlocking}
+                >
+                  <Unlock className="h-3.5 w-3.5 mr-1.5" />
+                  {unlocking ? "Unlocking..." : "Unlock & Revise"}
+                </Button>
+
+                <Separator orientation="vertical" className="h-6" />
+              </>
             )}
 
-            {/* Export buttons */}
-            <Separator orientation="vertical" className="h-6" />
+            {/* Export actions — always visible */}
             <Button
               variant="outline"
               size="sm"

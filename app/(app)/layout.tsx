@@ -25,7 +25,7 @@ export default async function AppLayout({
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
+      <Sidebar arboristName={arborist.name} isaCertNum={arborist.isaCertificationNum} />
       <main className="pl-64">
         <div className="mx-auto max-w-7xl px-6 py-8">{children}</div>
       </main>

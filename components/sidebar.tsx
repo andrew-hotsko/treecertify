@@ -36,7 +36,12 @@ const navItems = [
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  arboristName: string;
+  isaCertNum: string;
+}
+
+export function Sidebar({ arboristName, isaCertNum }: SidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -93,9 +98,9 @@ export function Sidebar() {
             <User className="h-5 w-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">Alex Rivera</p>
+            <p className="text-sm font-medium truncate">{arboristName}</p>
             <p className="text-xs text-[hsl(var(--sidebar-foreground))]/50 truncate">
-              ISA WE-12345A
+              ISA {isaCertNum}
             </p>
           </div>
         </div>
