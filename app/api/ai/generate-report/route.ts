@@ -171,6 +171,28 @@ function formatTypeSpecificBlock(
   }
 }
 
+function mockHealthNotes(t: TreeRecordData): string {
+  if (t.healthNotes) return t.healthNotes;
+  if (t.conditionRating >= 4)
+    return "The tree presents a full, well-distributed crown with no visible signs of disease, pest infestation, or nutritional deficiency. Foliage color and density are appropriate for the species.";
+  if (t.conditionRating === 3)
+    return "The tree shows moderate crown thinning and minor dieback in the upper canopy. No significant pest or disease issues were observed, though continued monitoring is warranted.";
+  if (t.conditionRating >= 1)
+    return "The tree exhibits significant decline including extensive crown dieback, reduced foliage density, and signs of stress. Further diagnostic evaluation may be warranted to determine the underlying cause.";
+  return "The tree is dead with no viable foliage or cambial activity detected.";
+}
+
+function mockStructuralNotes(t: TreeRecordData): string {
+  if (t.structuralNotes) return t.structuralNotes;
+  if (t.conditionRating >= 4)
+    return "The trunk and primary scaffold branches are structurally sound with no visible cavities, cracks, or significant included bark. The root flare appears stable with no signs of root plate failure.";
+  if (t.conditionRating === 3)
+    return "Minor structural concerns were noted including moderate co-dominant stems and minor deadwood in the upper crown. These do not represent an imminent hazard but should be addressed through maintenance pruning.";
+  if (t.conditionRating >= 1)
+    return "Significant structural defects were observed including evidence of internal decay, compromised branch attachments, and reduced structural integrity. The defects present an elevated risk that should be addressed.";
+  return "Structural assessment is not applicable for a dead tree. The standing dead tree may present a hazard and should be evaluated for removal.";
+}
+
 function generateMockReport(
   property: PropertyData,
   trees: TreeRecordData[],
@@ -188,51 +210,55 @@ function generateMockReport(
   const treeCount = trees.length;
   const protectedCount = trees.filter((t) => t.isProtected).length;
 
-  // Build tree inventory table
-  const treeTableHeader = `| Tree # | Common Name | Scientific Name | DBH (in) | Height (ft) | Canopy (ft) | Condition | Protected | Action |`;
-  const treeTableDivider = `|--------|-------------|-----------------|----------|-------------|-------------|-----------|-----------|--------|`;
-  const treeTableRows = trees
-    .map(
-      (t) =>
-        `| ${t.treeNumber} | ${t.speciesCommon} | ${t.speciesScientific ? `*${t.speciesScientific}*` : "N/A"} | ${t.dbhInches} | ${t.heightFt ?? "N/M"} | ${t.canopySpreadFt ?? "N/M"} | ${t.conditionRating}/5 | ${t.isProtected ? "Yes" : "No"} | ${t.recommendedAction} |`
-    )
-    .join("\n");
-
-  // Build individual tree assessment sections
+  // Build individual tree assessment sections with condition-varied text
   const individualAssessments = trees
     .map((t) => {
-      const conditionDesc =
-        t.conditionRating >= 4
-          ? "good to excellent"
-          : t.conditionRating >= 3
-          ? "fair"
-          : "poor to declining";
+      const conditionLabels: Record<number, string> = {
+        0: "Dead", 1: "Critical", 2: "Poor", 3: "Fair", 4: "Good", 5: "Excellent",
+      };
+      const conditionDesc = conditionLabels[t.conditionRating] || `${t.conditionRating}/5`;
+      const dims = [
+        `${t.dbhInches}-inch DBH`,
+        t.heightFt ? `approximately ${t.heightFt} feet in height` : null,
+        t.canopySpreadFt ? `with a canopy spread of ${t.canopySpreadFt} feet` : null,
+      ].filter(Boolean).join(", ");
 
-      return `### Tree #${t.treeNumber} - ${t.speciesCommon}${t.speciesScientific ? ` (*${t.speciesScientific}*)` : ""}
+      const bottomLine =
+        t.recommendedAction === "retain"
+          ? `The ${t.speciesCommon} should be retained and preserved as a healthy contributor to the urban canopy.`
+          : t.recommendedAction === "remove"
+          ? `Removal of this ${t.speciesCommon} is recommended due to ${t.conditionRating <= 2 ? "its compromised health and structural condition" : "the factors identified in this assessment"}.${t.isProtected ? ` A removal permit is required from the City of ${property.city} prior to removal.` : ""}`
+          : t.recommendedAction === "prune"
+          ? `Pruning in accordance with ANSI A300 standards is recommended to address the identified structural concerns.`
+          : `Continued monitoring at 6\u201312 month intervals by a certified arborist is recommended to track progression of the noted conditions.`;
+
+      return `### Tree #${t.treeNumber} \u2014 ${t.speciesCommon}${t.speciesScientific ? ` (*${t.speciesScientific}*)` : ""}
+
+The ${t.speciesCommon} is a ${dims} specimen located on the subject property.
 
 **Condition Rating: ${t.conditionRating}/5 (${conditionDesc})**
 
-**Health Notes:** ${t.healthNotes || "The tree exhibits typical characteristics for its species and age class. No significant health defects were noted during the visual assessment. Crown density, leaf color, and twig growth appear within normal ranges."}
+**Health Observations:** ${mockHealthNotes(t)}
 
-**Structural Notes:** ${t.structuralNotes || "The tree's structural integrity was evaluated for defects including cavities, included bark, codominant stems, decay, cracks, and root plate stability. No significant structural defects were identified that would warrant immediate concern."}
+**Structural Assessment:** ${mockStructuralNotes(t)}
 
-${t.conditionRating >= 4 ? "The tree is in good to excellent condition and is expected to provide continued benefits to the property and community." : t.conditionRating >= 3 ? "The tree is in fair condition. Continued monitoring is recommended to track any changes in health or structural stability." : "The tree is in poor condition. Remedial action may be necessary to address the identified health and/or structural concerns."}`;
+${bottomLine}`;
     })
     .join("\n\n");
 
-  // Build per-tree recommendation summaries
+  // Build per-tree recommendation summaries with specific standards references
   const recommendationSummaries = trees
     .map((t) => {
       const actionDesc =
         t.recommendedAction === "retain"
-          ? `Retain and preserve. The tree is in ${t.conditionRating >= 4 ? "good" : t.conditionRating >= 3 ? "fair" : "declining"} condition and continues to provide aesthetic, environmental, and ecological benefits. A routine maintenance pruning program should be implemented.`
+          ? `Retain and preserve. The ${t.dbhInches}-inch ${t.speciesCommon} is in ${t.conditionRating >= 4 ? "good to excellent" : t.conditionRating >= 3 ? "fair" : "declining"} condition and continues to provide aesthetic, environmental, and ecological benefits. A routine maintenance pruning program per ANSI A300 standards should be implemented.`
           : t.recommendedAction === "remove"
-          ? `Removal is recommended. ${t.conditionRating <= 2 ? "The tree's declining health and/or structural deficiencies present an unacceptable level of risk." : "The proposed removal should be evaluated against applicable municipal ordinance requirements."}${t.isProtected ? ` As a protected tree, a removal permit must be obtained from the City of ${property.city} prior to any removal work.` : ""}`
+          ? `Removal is recommended. ${t.conditionRating <= 2 ? "The tree's declining health and structural deficiencies present an unacceptable level of risk that cannot be adequately mitigated through pruning or other remedial measures." : "The proposed removal should be evaluated against applicable municipal ordinance requirements."}${t.isProtected ? ` As a protected tree under the ${property.city} municipal ordinance, a removal permit must be obtained prior to any removal work.` : ""}`
           : t.recommendedAction === "prune"
-          ? `Pruning is recommended to address identified structural concerns and/or improve clearance. All pruning should be performed in accordance with ANSI A300 pruning standards and ISA Best Management Practices.`
-          : `Continued monitoring at 6-12 month intervals is recommended. Any significant changes in condition should be evaluated by a certified arborist.`;
+          ? `Pruning is recommended to address identified structural concerns and improve clearance. All pruning work shall be performed in accordance with ANSI A300 pruning standards and ISA Best Management Practices by a qualified tree care provider.`
+          : `Continued monitoring at 6\u201312 month intervals is recommended. Any significant changes in health or structural condition should be evaluated by an ISA Certified Arborist.`;
 
-      return `- **Tree #${t.treeNumber} (${t.speciesCommon}):** ${actionDesc}`;
+      return `- **Tree #${t.treeNumber} (${t.speciesCommon}, ${t.dbhInches}" DBH):** ${actionDesc}`;
     })
     .join("\n");
 
@@ -260,7 +286,7 @@ ${t.conditionRating >= 4 ? "The tree is in good to excellent condition and is ex
         .join("\n")
     : "No mitigation is required at this time based on the current assessment and recommended actions.";
 
-  return `# Arborist ${reportTypeLabel} Report
+  return `# ${reportTypeLabel}
 
 **Date:** ${date}
 **Property Address:** ${property.address}
@@ -273,31 +299,23 @@ ${t.conditionRating >= 4 ? "The tree is in good to excellent condition and is ex
 
 ## 1. Assignment and Purpose
 
-This report has been prepared to provide a professional arborist assessment of ${treeCount} tree${treeCount !== 1 ? "s" : ""} located at ${property.address}, ${property.city}, ${state}. The purpose of this ${reportTypeLabel.toLowerCase()} is to evaluate each tree's health, structural condition, and protected status in accordance with applicable municipal ordinances and ISA (International Society of Arboriculture) standards.
+This report has been prepared to provide a professional arborist assessment of ${treeCount} tree${treeCount !== 1 ? "s" : ""} located at ${property.address}, ${property.city}, ${state}. The purpose of this ${reportTypeLabel.toLowerCase()} is to evaluate each tree's health, structural condition, and protected status in accordance with applicable municipal ordinances and ISA (International Society of Arboriculture) standards. All trees were assessed from ground level using ISA Tree Risk Assessment (TRAQ) methodology.
 
 ---
 
-## 2. Tree Inventory
+## 2. Site Observations
 
-${treeTableHeader}
-${treeTableDivider}
-${treeTableRows}
+The subject trees are located on the property at ${property.address}. The surrounding site conditions were evaluated for factors that may impact tree health and stability, including soil compaction, grade changes, construction activity, and proximity to structures.${property.siteObservations ? ` ${property.siteObservations}` : ""}
 
 ---
 
-## 3. Site Observations
-
-The subject trees are located on the property at ${property.address}. The surrounding site conditions were evaluated for factors that may impact tree health and stability, including soil compaction, grade changes, construction activity, and proximity to structures. All trees were visually assessed from ground level in accordance with ISA Tree Risk Assessment standards (TRAQ methodology).
-
----
-
-## 4. Individual Tree Assessments
+## 3. Individual Tree Assessments
 
 ${individualAssessments}
 
 ---
 
-## 5. Protected Status Summary
+## 4. Protected Status Summary
 
 **Protected Trees:** ${protectedCount} of ${treeCount} total
 
@@ -305,23 +323,15 @@ ${protectedDetails}
 
 ---
 
-## 6. Recommendations
+## 5. Recommendations
 
 ${recommendationSummaries}
 
 ---
 
-## 7. Mitigation Requirements
+## 6. Mitigation Requirements
 
 ${mitigationContent}
-
----
-
-## 8. Arborist Certification Statement
-
-I, the undersigned, certify that this report represents my professional opinion based on my education, training, and experience as an ISA Certified Arborist. The observations and recommendations contained herein are based on a visual assessment of the subject trees conducted from ground level. No warranty is made, expressed, or implied, regarding the future health, structural stability, or safety of the subject trees.
-
-This report has been prepared in accordance with the standards and guidelines of the International Society of Arboriculture (ISA) and applicable ANSI A300 standards.
 
 ---
 
@@ -467,18 +477,22 @@ Boilerplate Introduction (use this as the opening for the Assignment and Purpose
 ${template.aiPromptAdditions}`
         : "";
 
-      const sectionsList = template
-        ? template.requiredSections
-            .map((s, i) => `${i + 1}. **${s}**`)
-            .join("\n")
-        : `1. **Assignment and Purpose** - State the purpose and scope covering all ${treeCount} trees
-2. **Tree Inventory** - Markdown table with all trees: Tree #, Common Name, Scientific Name, DBH, Height, Canopy Spread, Condition, Protected, Recommended Action
-3. **Site Observations** - Describe the site context and assessment methodology
-4. **Individual Tree Assessments** - A subsection per tree with condition rating, health notes, and structural notes
-5. **Protected Status Summary** - How many of the ${treeCount} trees are protected, with code references for each
-6. **Recommendations** - Per-tree recommended action summary
-7. **Mitigation Requirements** - Required mitigation per the city ordinance for any protected trees being removed
-8. **Arborist Certification Statement** - Standard ISA certification language`;
+      // Filter out sections handled by the PDF template
+      const excludedSections = ["Tree Inventory", "Arborist Certification Statement"];
+      const filteredSections = template
+        ? template.requiredSections.filter((s) => !excludedSections.includes(s))
+        : [
+            "Assignment and Purpose",
+            "Site Observations",
+            "Individual Tree Assessments",
+            "Protected Status Summary",
+            "Recommendations",
+            "Mitigation Requirements",
+          ];
+
+      const sectionsList = filteredSections
+        .map((s, i) => `${i + 1}. **${s}**`)
+        .join("\n");
 
       const systemPrompt = `You are an expert ISA Certified Arborist preparing a professional ${reportTypeLabel} report for a property with ${treeCount} tree${treeCount !== 1 ? "s" : ""}. Follow ISA report formatting standards and best practices for arborist reports filed with California municipalities.
 ${boilerplateBlock}
@@ -528,11 +542,24 @@ When trees have photos on file, reference them in the individual assessments as 
 
 When a Scope of Assignment is provided, use it to write the "Scope of Assignment" section describing the purpose, limitations, and scope of the assessment. When Site Observations are provided, weave them into the Site Observations section along with any additional observations from the tree data.
 
-Use professional arborist terminology. Reference specific municipal code sections where applicable. The report should be thorough and suitable for submission to the City of ${property.city}.`;
+Use professional arborist terminology. Reference specific municipal code sections where applicable. The report should be thorough and suitable for submission to the City of ${property.city}.
+
+IMPORTANT: Do NOT include a "Tree Inventory" section or table in the generated report — the PDF template generates its own formatted tree inventory table separately. Do NOT include an "Arborist Certification Statement" section — the certification is handled separately in the PDF template with the arborist's e-signature. End the report after the final content section (typically Mitigation Requirements or Recommendations).
+
+CRITICAL WRITING GUIDELINES:
+- Write in the professional third person. Never use "I" or "we" — use "the consulting arborist" or passive voice.
+- Be specific. Never write generic filler like "typical characteristics for its species." Instead, describe the actual observations: crown density percentage, specific defects observed, or note that no defects were found.
+- When no health notes or structural notes were provided by the arborist, infer reasonable observations from the condition rating and species. A Coast Live Oak rated 4/5 should have different observations than a Valley Oak rated 2/5.
+- Vary your language between tree assessments. Do not use the same sentence structure or phrases for multiple trees.
+- Reference specific tree care standards: ANSI A300, ISA Best Management Practices, ISA TRAQ methodology.
+- For protected trees, always cite the specific municipal code section if ordinance data is available.
+- For removal recommendations, always include the required findings under the applicable ordinance.
+- Use measurements provided (DBH, height, canopy spread) in the narrative. Don't just list them — incorporate them naturally: "The 20-inch DBH Valley Oak..." not "DBH: 20 inches."
+- End each individual tree assessment with a clear, one-sentence bottom line: what should be done with this tree and why.`;
 
       const message = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 4096,
+        max_tokens: 8192,
         messages: [
           {
             role: "user",
