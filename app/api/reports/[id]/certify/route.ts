@@ -52,3 +52,52 @@ export async function POST(
     );
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params;
+
+    const existing = await prisma.report.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Report not found" },
+        { status: 404 }
+      );
+    }
+
+    if (existing.status !== "certified") {
+      return NextResponse.json(
+        { error: "Report is not certified" },
+        { status: 400 }
+      );
+    }
+
+    const report = await prisma.report.update({
+      where: { id },
+      data: {
+        eSignatureText: null,
+        certifiedAt: null,
+        status: "review",
+      },
+    });
+
+    await prisma.treeRecord.updateMany({
+      where: { propertyId: report.propertyId },
+      data: { status: "assessed" },
+    });
+
+    return NextResponse.json(report);
+  } catch (error) {
+    console.error("Error uncertifying report:", error);
+    return NextResponse.json(
+      { error: "Failed to uncertify report" },
+      { status: 500 }
+    );
+  }
+}

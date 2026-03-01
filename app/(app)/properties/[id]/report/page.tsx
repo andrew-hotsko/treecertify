@@ -1,32 +1,40 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/status-badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ReportPreview } from "@/components/report-preview";
+import { renderMarkdownToHtml } from "@/lib/markdown";
+import { getReportTypeConfig } from "@/lib/report-types";
 import {
   ArrowLeft,
   Sparkles,
   Save,
-  ShieldCheck,
   CheckCircle2,
   Loader2,
   Download,
-  FileText,
+  FileDown,
   Eye,
   Pencil,
   Lock,
-  FileDown,
+  Unlock,
+  RefreshCw,
+  List,
+  Clock,
+  AlertTriangle,
+  ShieldCheck,
 } from "lucide-react";
-import { ReportPreview } from "@/components/report-preview";
-import { getReportTypeConfig } from "@/lib/report-types";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface TreeRecord {
   id: string;
@@ -65,33 +73,109 @@ interface Report {
   status: string;
 }
 
+interface ArboristInfo {
+  name: string;
+  companyName: string | null;
+  isaCertificationNum: string;
+  companyLogoUrl?: string | null;
+  companyAddress?: string | null;
+  companyPhone?: string | null;
+  companyEmail?: string | null;
+  companyWebsite?: string | null;
+  signatureName?: string | null;
+}
+
+interface Section {
+  id: string;
+  title: string;
+  level: number;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function extractSections(markdown: string): Section[] {
+  const sections: Section[] = [];
+  for (const line of markdown.split("\n")) {
+    if (line.startsWith("### ")) {
+      const title = line.slice(4).trim();
+      sections.push({ id: slugify(title), title, level: 3 });
+    } else if (line.startsWith("## ")) {
+      const title = line.slice(3).trim();
+      sections.push({ id: slugify(title), title, level: 2 });
+    } else if (line.startsWith("# ")) {
+      const title = line.slice(2).trim();
+      sections.push({ id: slugify(title), title, level: 1 });
+    }
+  }
+  return sections;
+}
+
+function timeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 10) return "just now";
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ago`;
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export default function PropertyReportPage() {
   const params = useParams();
   const propertyId = params.id as string;
 
+  // Data state
   const [property, setProperty] = useState<Property | null>(null);
   const [report, setReport] = useState<Report | null>(null);
-  const [arborist, setArborist] = useState<{
-    name: string;
-    companyName: string | null;
-    isaCertificationNum: string;
-    companyLogoUrl?: string | null;
-    companyAddress?: string | null;
-    companyPhone?: string | null;
-    companyEmail?: string | null;
-    companyWebsite?: string | null;
-  } | null>(null);
+  const [arborist, setArborist] = useState<ArboristInfo | null>(null);
   const [reportType, setReportType] = useState("");
   const [content, setContent] = useState("");
-  const [signatureText, setSignatureText] = useState("");
-  const [showCertifyForm, setShowCertifyForm] = useState(false);
-  const [viewMode, setViewMode] = useState<"preview" | "edit">("preview");
+  const [previewHtml, setPreviewHtml] = useState("");
 
+  // Certification state
+  const [signatureText, setSignatureText] = useState("");
+  const [certifyAgreed, setCertifyAgreed] = useState(false);
+  const [showCertifyPanel, setShowCertifyPanel] = useState(false);
+
+  // UI state
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [certifying, setCertifying] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showSectionNav, setShowSectionNav] = useState(true);
+  const [viewMode, setViewMode] = useState<"editor" | "preview">("editor");
+
+  // Refs
+  const previewRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSaveRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const savedContentRef = useRef("");
+  const lastSavedRef = useRef<Date | null>(null);
+
+  // Derived state
+  const isCertified = report?.status === "certified";
+  const sections = useMemo(() => extractSections(content), [content]);
+
+  // -------------------------------------------------------------------------
+  // Load data
+  // -------------------------------------------------------------------------
 
   useEffect(() => {
     async function loadData() {
@@ -114,10 +198,12 @@ export default function PropertyReportPage() {
         if (data.reports && data.reports.length > 0) {
           const r = data.reports[0];
           setReport(r);
-          setContent(r.finalContent || r.aiDraftContent || "");
+          const c = r.finalContent || r.aiDraftContent || "";
+          setContent(c);
+          savedContentRef.current = c;
+          setPreviewHtml(renderMarkdownToHtml(c));
           setReportType(r.reportType);
-          // Start in preview mode when report exists
-          setViewMode("preview");
+          setViewMode(r.status === "certified" ? "preview" : "editor");
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load");
@@ -127,6 +213,95 @@ export default function PropertyReportPage() {
     }
     loadData();
   }, [propertyId]);
+
+  // -------------------------------------------------------------------------
+  // Debounced preview (500ms)
+  // -------------------------------------------------------------------------
+
+  const updatePreview = useCallback((md: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setPreviewHtml(renderMarkdownToHtml(md));
+    }, 500);
+  }, []);
+
+  // -------------------------------------------------------------------------
+  // Content change handler
+  // -------------------------------------------------------------------------
+
+  const handleContentChange = useCallback(
+    (value: string) => {
+      setContent(value);
+      setHasUnsavedChanges(value !== savedContentRef.current);
+      updatePreview(value);
+    },
+    [updatePreview]
+  );
+
+  // -------------------------------------------------------------------------
+  // Save report
+  // -------------------------------------------------------------------------
+
+  const saveReport = useCallback(
+    async (silent = false) => {
+      if (!report || isCertified) return;
+      if (!silent) setSaving(true);
+      try {
+        const res = await fetch(`/api/reports/${report.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            finalContent: content,
+            status: report.status === "draft" ? "review" : report.status,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to save");
+        const updated = await res.json();
+        setReport(updated);
+        savedContentRef.current = content;
+        setHasUnsavedChanges(false);
+        const now = new Date();
+        setLastSaved(now);
+        lastSavedRef.current = now;
+      } catch (err) {
+        if (!silent) {
+          setError(err instanceof Error ? err.message : "Save failed");
+        }
+      } finally {
+        if (!silent) setSaving(false);
+      }
+    },
+    [report, isCertified, content]
+  );
+
+  // -------------------------------------------------------------------------
+  // Auto-save every 30s
+  // -------------------------------------------------------------------------
+
+  useEffect(() => {
+    if (!report || isCertified) return;
+
+    autoSaveRef.current = setInterval(() => {
+      if (savedContentRef.current !== content) {
+        saveReport(true);
+      }
+    }, 30000);
+
+    return () => {
+      if (autoSaveRef.current) clearInterval(autoSaveRef.current);
+    };
+  }, [report, isCertified, content, saveReport]);
+
+  // Refresh "saved X ago" text
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 15000);
+    return () => clearInterval(t);
+  }, []);
+
+  // -------------------------------------------------------------------------
+  // Generate report
+  // -------------------------------------------------------------------------
 
   const generateReport = async () => {
     setGenerating(true);
@@ -143,9 +318,11 @@ export default function PropertyReportPage() {
       }
       const newReport = await res.json();
       setReport(newReport);
-      setContent(newReport.aiDraftContent || "");
-      // Auto-switch to preview after generation
-      setViewMode("preview");
+      const c = newReport.aiDraftContent || "";
+      setContent(c);
+      savedContentRef.current = c;
+      setPreviewHtml(renderMarkdownToHtml(c));
+      setViewMode("editor");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
     } finally {
@@ -153,29 +330,31 @@ export default function PropertyReportPage() {
     }
   };
 
-  const saveReport = async () => {
-    if (!report) return;
-    setSaving(true);
+  const regenerateReport = () => {
+    if (
+      !window.confirm(
+        "Regenerating will replace the current AI draft. Your edits will be lost. Continue?"
+      )
+    )
+      return;
+    generateReport();
+  };
+
+  // -------------------------------------------------------------------------
+  // Certify report
+  // -------------------------------------------------------------------------
+
+  const certifyReport = async () => {
+    if (!report || !signatureText.trim() || !certifyAgreed) return;
+    setCertifying(true);
     try {
-      const res = await fetch(`/api/reports/${report.id}`, {
+      // Save content first
+      await fetch(`/api/reports/${report.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ finalContent: content, status: "review" }),
       });
-      if (!res.ok) throw new Error("Failed to save");
-      const updated = await res.json();
-      setReport(updated);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
-    } finally {
-      setSaving(false);
-    }
-  };
 
-  const certifyReport = async () => {
-    if (!report || !signatureText.trim()) return;
-    setCertifying(true);
-    try {
       const res = await fetch(`/api/reports/${report.id}/certify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -184,13 +363,66 @@ export default function PropertyReportPage() {
       if (!res.ok) throw new Error("Failed to certify");
       const updated = await res.json();
       setReport(updated);
-      setShowCertifyForm(false);
+      setShowCertifyPanel(false);
+      setViewMode("preview");
+      savedContentRef.current = content;
+      setHasUnsavedChanges(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Certification failed");
     } finally {
       setCertifying(false);
     }
   };
+
+  // -------------------------------------------------------------------------
+  // Unlock (uncertify) report
+  // -------------------------------------------------------------------------
+
+  const unlockReport = async () => {
+    if (
+      !window.confirm(
+        "Unlocking will revert the report to review status. The certification will be removed. Continue?"
+      )
+    )
+      return;
+
+    if (!report) return;
+    setUnlocking(true);
+    try {
+      const res = await fetch(`/api/reports/${report.id}/certify`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to unlock");
+      const updated = await res.json();
+      setReport(updated);
+      setViewMode("editor");
+      setSignatureText("");
+      setCertifyAgreed(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unlock failed");
+    } finally {
+      setUnlocking(false);
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Section nav click — scroll preview to heading
+  // -------------------------------------------------------------------------
+
+  const scrollToSection = (sectionId: string) => {
+    if (previewRef.current) {
+      const heading = previewRef.current.querySelector(
+        `[data-section-id="${sectionId}"]`
+      );
+      if (heading) {
+        heading.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Render: Loading
+  // -------------------------------------------------------------------------
 
   if (loading) {
     return (
@@ -208,337 +440,585 @@ export default function PropertyReportPage() {
     );
   }
 
-  const isCertified = report?.status === "certified";
-  const protectedCount = property.trees.filter((t) => t.isProtected).length;
+  // -------------------------------------------------------------------------
+  // Render: No report yet — generate UI
+  // -------------------------------------------------------------------------
+
+  if (!report) {
+    return (
+      <div>
+        <Link
+          href={`/properties/${propertyId}`}
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Property
+        </Link>
+
+        <div className="max-w-2xl mx-auto mt-8">
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              <div className="text-center">
+                <Sparkles className="h-10 w-10 text-blue-600 mx-auto mb-3" />
+                <h2 className="text-xl font-bold">Generate AI Report</h2>
+                <p className="text-muted-foreground mt-1">
+                  {property.address}, {property.city}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-sm font-medium">Report Type:</span>
+                <Badge variant="outline">
+                  {getReportTypeConfig(reportType)?.label ||
+                    reportType
+                      .replace(/_/g, " ")
+                      .replace(/\b\w/g, (c) => c.toUpperCase())}
+                </Badge>
+              </div>
+
+              <div className="rounded-lg bg-blue-50 border border-blue-100 p-4 text-sm text-blue-800">
+                <p className="font-medium mb-2">
+                  The AI will generate a comprehensive report including:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-blue-700">
+                  <li>Scope of Assignment &amp; Site Observations</li>
+                  <li>
+                    Tree Inventory table ({property.trees.length} trees)
+                  </li>
+                  <li>Individual Tree Assessments</li>
+                  <li>Recommendations &amp; Mitigation</li>
+                  <li>Arborist Certification Statement</li>
+                </ul>
+              </div>
+
+              <Button
+                onClick={generateReport}
+                disabled={generating || property.trees.length === 0}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generating Report...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Generate AI Draft
+                  </>
+                )}
+              </Button>
+
+              {property.trees.length === 0 && (
+                <p className="text-sm text-amber-600 text-center">
+                  Add at least one tree before generating a report.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Render: Report exists — editor / preview
+  // -------------------------------------------------------------------------
+
+  const signatureNameMatch =
+    arborist?.signatureName &&
+    signatureText.trim().toLowerCase() ===
+      arborist.signatureName.trim().toLowerCase();
 
   return (
-    <div>
-      <Link
-        href={`/properties/${propertyId}`}
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Property
-      </Link>
-
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
+    <div className="flex flex-col h-[calc(100vh-64px)]">
+      {/* ---- Header Bar ---- */}
+      <div className="flex-none border-b bg-background px-4 py-3">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">Report Editor</h1>
-            {report && <StatusBadge status={report.status} />}
-          </div>
-          <p className="text-muted-foreground mt-1">
-            {property.address}, {property.city} &mdash; {property.trees.length}{" "}
-            tree{property.trees.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {report && !isCertified && viewMode === "edit" && (
-            <Button variant="outline" onClick={saveReport} disabled={saving}>
-              <Save className="h-4 w-4 mr-2" />
-              {saving ? "Saving..." : "Save Draft"}
-            </Button>
-          )}
-          {report && !isCertified && viewMode === "preview" && (
-            <Button
-              className="bg-emerald-700 hover:bg-emerald-600"
-              onClick={() => setShowCertifyForm(true)}
+            <Link
+              href={`/properties/${propertyId}`}
+              className="text-muted-foreground hover:text-foreground"
             >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Certify
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold">Report Editor</h1>
+                <StatusBadge status={report.status} />
+                <Badge variant="outline" className="text-xs">
+                  {getReportTypeConfig(report.reportType)?.label ||
+                    report.reportType
+                      .replace(/_/g, " ")
+                      .replace(/\b\w/g, (c) => c.toUpperCase())}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                <span>
+                  {property.address}, {property.city}
+                </span>
+                {lastSaved && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Saved {timeAgo(lastSaved)}
+                  </span>
+                )}
+                {hasUnsavedChanges && (
+                  <span className="text-amber-600 font-medium">
+                    Unsaved changes
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* View mode toggle */}
+            {!isCertified && (
+              <div className="flex rounded-lg border bg-muted p-0.5">
+                <button
+                  onClick={() => setViewMode("editor")}
+                  className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                    viewMode === "editor"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Pencil className="h-3 w-3" />
+                  Editor
+                </button>
+                <button
+                  onClick={() => setViewMode("preview")}
+                  className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                    viewMode === "preview"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Eye className="h-3 w-3" />
+                  Preview
+                </button>
+              </div>
+            )}
+
+            {/* Regenerate */}
+            {!isCertified && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={regenerateReport}
+                disabled={generating}
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 mr-1.5 ${generating ? "animate-spin" : ""}`}
+                />
+                Regenerate
+              </Button>
+            )}
+
+            {/* Save */}
+            {!isCertified && viewMode === "editor" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => saveReport(false)}
+                disabled={saving || !hasUnsavedChanges}
+              >
+                <Save className="h-3.5 w-3.5 mr-1.5" />
+                {saving ? "Saving..." : "Save"}
+              </Button>
+            )}
+
+            {/* Certify */}
+            {!isCertified && (
+              <Button
+                size="sm"
+                className="bg-emerald-700 hover:bg-emerald-600"
+                onClick={() => setShowCertifyPanel(true)}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                Certify
+              </Button>
+            )}
+
+            {/* Unlock */}
+            {isCertified && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={unlockReport}
+                disabled={unlocking}
+              >
+                <Unlock className="h-3.5 w-3.5 mr-1.5" />
+                {unlocking ? "Unlocking..." : "Unlock & Revise"}
+              </Button>
+            )}
+
+            {/* Export buttons */}
+            <Separator orientation="vertical" className="h-6" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                window.open(`/api/reports/${report.id}/pdf`, "_blank")
+              }
+            >
+              <Download className="h-3.5 w-3.5 mr-1.5" />
+              PDF
             </Button>
-          )}
-          {isCertified && (
-            <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-sm px-3 py-1.5">
-              <CheckCircle2 className="h-4 w-4 mr-1.5" />
-              Certified
-            </Badge>
-          )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                window.open(`/api/reports/${report.id}/word`, "_blank")
+              }
+            >
+              <FileDown className="h-3.5 w-3.5 mr-1.5" />
+              Word
+            </Button>
+          </div>
         </div>
       </div>
 
+      {/* ---- Error Bar ---- */}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 mb-6">
+        <div className="flex-none border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
           {error}
+          <button
+            onClick={() => setError(null)}
+            className="ml-auto text-red-500 hover:text-red-700"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2">
-          {!report ? (
-            // Generate Report UI
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-blue-600" />
-                  Generate AI Report
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Label>Report Type:</Label>
-                  <Badge variant="outline">
-                    {getReportTypeConfig(reportType)?.label ||
-                      reportType
-                        .replace(/_/g, " ")
-                        .replace(/\b\w/g, (c) => c.toUpperCase())}
-                  </Badge>
-                </div>
-
-                <div className="rounded-lg bg-blue-50 border border-blue-100 p-4 text-sm text-blue-800">
-                  <p className="font-medium mb-2">
-                    The AI will generate a multi-tree report including:
-                  </p>
-                  <ul className="list-disc list-inside space-y-1 text-blue-700">
-                    <li>Assignment &amp; Purpose</li>
-                    <li>Tree Inventory table ({property.trees.length} trees)</li>
-                    <li>Individual Tree Assessments</li>
-                    <li>Protected Status Summary</li>
-                    <li>Recommendations &amp; Mitigation</li>
-                    <li>Arborist Certification Statement</li>
-                  </ul>
-                </div>
-
-                <Button
-                  onClick={generateReport}
-                  disabled={generating || property.trees.length === 0}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                >
-                  {generating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Generating Report...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Generate AI Draft
-                    </>
-                  )}
-                </Button>
-
-                {property.trees.length === 0 && (
-                  <p className="text-sm text-amber-600 text-center">
-                    Add at least one tree to the property before generating a
-                    report.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            // Report with Preview / Edit Tabs
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-emerald-600" />
-                  <CardTitle>Report Content</CardTitle>
-                  <Badge variant="outline" className="ml-auto">
-                    {getReportTypeConfig(report.reportType)?.label ||
-                      report.reportType
-                        .replace(/_/g, " ")
-                        .replace(/\b\w/g, (c) => c.toUpperCase())}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Tabs
-                  value={viewMode}
-                  onValueChange={(v) => setViewMode(v as "preview" | "edit")}
-                >
-                  <TabsList className="mb-4">
-                    <TabsTrigger value="preview" className="gap-1.5">
-                      <Eye className="h-3.5 w-3.5" />
-                      Preview
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="edit"
-                      disabled={isCertified}
-                      className="gap-1.5"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                      Edit
-                    </TabsTrigger>
-                  </TabsList>
-
-                  {/* Preview Tab */}
-                  <TabsContent value="preview">
-                    <ReportPreview
-                      content={content}
-                      property={property}
-                      trees={property.trees}
-                      arborist={arborist}
-                      reportType={report.reportType}
-                      certifiedAt={report.certifiedAt}
-                      eSignatureText={report.eSignatureText}
-                    />
-                  </TabsContent>
-
-                  {/* Edit Tab */}
-                  <TabsContent value="edit">
-                    {isCertified ? (
-                      <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 mb-3">
-                        <Lock className="h-4 w-4 shrink-0" />
-                        This report has been certified and cannot be edited.
-                      </div>
-                    ) : (
-                      <>
-                        <Textarea
-                          value={content}
-                          onChange={(e) => setContent(e.target.value)}
-                          className="min-h-[600px] font-mono text-sm leading-relaxed"
-                        />
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Tip: Use Markdown formatting &mdash; # headings,
-                          **bold**, *italic*, - lists, | tables |
-                        </p>
-                      </>
-                    )}
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Certify Form */}
-          {showCertifyForm && !isCertified && (
-            <Card className="mt-6 border-emerald-200">
-              <CardContent className="pt-6">
-                <h3 className="font-semibold text-lg mb-3">
-                  Certify This Report
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  By certifying, you confirm that you have reviewed this report
-                  and that the information is accurate to the best of your
-                  professional knowledge. Your ISA certification number and
-                  timestamp will be attached.
-                </p>
-                <div className="space-y-3">
-                  <div>
-                    <Label>Electronic Signature (type your full name)</Label>
-                    <Input
-                      placeholder="e.g., Alex Rivera, ISA WE-12345A"
-                      value={signatureText}
-                      onChange={(e) => setSignatureText(e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={certifyReport}
-                      disabled={!signatureText.trim() || certifying}
-                      className="bg-emerald-700 hover:bg-emerald-600"
-                    >
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      {certifying ? "Certifying..." : "Certify Report"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowCertifyForm(false)}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Certification Details */}
-          {isCertified && report && (
-            <Card className="mt-6 border-emerald-200">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2 text-emerald-700 mb-2">
-                  <CheckCircle2 className="h-5 w-5" />
-                  <span className="font-semibold">Report Certified</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Electronically signed by: {report.eSignatureText}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Certified on:{" "}
-                  {report.certifiedAt
-                    ? new Date(report.certifiedAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "N/A"}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Right Sidebar */}
-        <div className="space-y-6">
-          {/* Tree Inventory */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold">
-                Tree Inventory
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {property.trees.map((tree) => (
-                  <div
-                    key={tree.id}
-                    className="flex items-center gap-2 text-sm"
+      {/* ---- Main Content ---- */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Section Navigation Sidebar */}
+        {sections.length > 0 && showSectionNav && viewMode === "editor" && (
+          <div className="flex-none w-48 border-r bg-muted/30 overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-3 py-2 border-b">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Sections
+              </span>
+              <button
+                onClick={() => setShowSectionNav(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <List className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <ScrollArea className="flex-1">
+              <div className="p-2 space-y-0.5">
+                {sections.map((section, idx) => (
+                  <button
+                    key={`${section.id}-${idx}`}
+                    onClick={() => scrollToSection(section.id)}
+                    className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-accent transition-colors truncate ${
+                      section.level === 1
+                        ? "font-semibold"
+                        : section.level === 2
+                          ? "pl-4 text-muted-foreground"
+                          : "pl-6 text-muted-foreground/70"
+                    }`}
+                    title={section.title}
                   >
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">
-                      {tree.treeNumber}
-                    </span>
-                    <span className="truncate flex-1">
-                      {tree.speciesCommon || "Unidentified"}
-                    </span>
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {tree.dbhInches}&Prime;
-                    </span>
-                    {tree.isProtected && (
-                      <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                    )}
-                  </div>
+                    {section.title}
+                  </button>
                 ))}
               </div>
-              <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
-                {property.trees.length} tree
-                {property.trees.length !== 1 ? "s" : ""} &middot;{" "}
-                {protectedCount} protected
-              </div>
-            </CardContent>
-          </Card>
+            </ScrollArea>
+          </div>
+        )}
 
-          {/* Export Buttons — visible whenever report exists (ungated from certification) */}
-          {report && (
-            <div className="space-y-2">
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() =>
-                  window.open(`/api/reports/${report.id}/pdf`, "_blank")
-                }
+        {/* Toggle section nav when hidden */}
+        {!showSectionNav && viewMode === "editor" && sections.length > 0 && (
+          <button
+            onClick={() => setShowSectionNav(true)}
+            className="flex-none w-8 border-r bg-muted/30 flex items-center justify-center hover:bg-muted transition-colors"
+            title="Show section navigation"
+          >
+            <List className="h-4 w-4 text-muted-foreground" />
+          </button>
+        )}
+
+        {/* Editor + Preview (split pane) or Full Preview */}
+        {viewMode === "editor" && !isCertified ? (
+          <div className="flex-1 flex overflow-hidden">
+            {/* Markdown Editor */}
+            <div className="flex-1 flex flex-col border-r">
+              <div className="flex-none px-3 py-1.5 border-b bg-muted/30 text-xs text-muted-foreground flex items-center gap-2">
+                <Pencil className="h-3 w-3" />
+                Markdown Editor
+                <span className="ml-auto">
+                  Use # headings, **bold**, *italic*, - lists, | tables |
+                </span>
+              </div>
+              <textarea
+                value={content}
+                onChange={(e) => handleContentChange(e.target.value)}
+                className="flex-1 resize-none border-0 bg-background p-4 font-mono text-sm leading-relaxed focus:outline-none focus:ring-0"
+                spellCheck={false}
+              />
+            </div>
+
+            {/* Live Preview */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-none px-3 py-1.5 border-b bg-muted/30 text-xs text-muted-foreground flex items-center gap-2">
+                <Eye className="h-3 w-3" />
+                Live Preview
+              </div>
+              <ScrollArea className="flex-1">
+                <div
+                  ref={previewRef}
+                  className="p-6 prose prose-sm max-w-none dark:prose-invert report-live-preview"
+                >
+                  <style>{`
+                    .report-live-preview h1,
+                    .report-live-preview h2,
+                    .report-live-preview h3 {
+                      color: #2d5016;
+                      scroll-margin-top: 16px;
+                    }
+                    .dark .report-live-preview h1,
+                    .dark .report-live-preview h2,
+                    .dark .report-live-preview h3 {
+                      color: #6fcf3b;
+                    }
+                    .report-live-preview table {
+                      width: 100%;
+                      border-collapse: collapse;
+                      font-size: 0.8rem;
+                    }
+                    .report-live-preview table th {
+                      background: #2d5016;
+                      color: white;
+                      padding: 4px 8px;
+                      text-align: left;
+                    }
+                    .dark .report-live-preview table th {
+                      background: #1a3a0a;
+                    }
+                    .report-live-preview table td {
+                      padding: 4px 8px;
+                      border: 1px solid #ddd;
+                    }
+                    .dark .report-live-preview table td {
+                      border-color: #3f3f46;
+                    }
+                    .report-live-preview table tr:nth-child(even) {
+                      background: #f9f9f6;
+                    }
+                    .dark .report-live-preview table tr:nth-child(even) {
+                      background: #18181b;
+                    }
+                    .report-live-preview hr {
+                      border: none;
+                      border-top: 1px solid #ddd;
+                      margin: 16px 0;
+                    }
+                  `}</style>
+                  <div
+                    dangerouslySetInnerHTML={{ __html: addSectionIds(previewHtml) }}
+                  />
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+        ) : (
+          /* Full Preview Mode (or certified read-only) */
+          <div className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full">
+              <div className="max-w-4xl mx-auto py-6 px-4">
+                {isCertified && (
+                  <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 mb-4">
+                    <Lock className="h-4 w-4 shrink-0" />
+                    This report has been certified and is locked. Use
+                    &ldquo;Unlock &amp; Revise&rdquo; to make changes.
+                  </div>
+                )}
+                <ReportPreview
+                  content={content}
+                  property={property}
+                  trees={property.trees}
+                  arborist={arborist}
+                  reportType={report.reportType}
+                  certifiedAt={report.certifiedAt}
+                  eSignatureText={report.eSignatureText}
+                />
+              </div>
+            </ScrollArea>
+          </div>
+        )}
+      </div>
+
+      {/* ---- Certification Panel ---- */}
+      {showCertifyPanel && !isCertified && (
+        <div className="flex-none border-t bg-emerald-50/50 dark:bg-emerald-950/10 px-6 py-4">
+          <div className="max-w-3xl mx-auto">
+            <div className="flex items-center gap-2 mb-3">
+              <ShieldCheck className="h-5 w-5 text-emerald-700" />
+              <h3 className="font-semibold text-lg">Certify This Report</h3>
+              <button
+                onClick={() => {
+                  setShowCertifyPanel(false);
+                  setCertifyAgreed(false);
+                  setSignatureText("");
+                }}
+                className="ml-auto text-sm text-muted-foreground hover:text-foreground"
               >
-                <Download className="h-4 w-4 mr-2" />
-                Export PDF
-              </Button>
+                Cancel
+              </button>
+            </div>
+
+            {/* Arborist info */}
+            {arborist && (
+              <div className="flex items-center gap-4 text-sm mb-3 p-3 rounded-lg bg-white dark:bg-zinc-900 border">
+                <div>
+                  <span className="font-medium">{arborist.name}</span>
+                  <span className="text-muted-foreground ml-2">
+                    ISA #{arborist.isaCertificationNum}
+                  </span>
+                </div>
+                {arborist.companyName && (
+                  <span className="text-muted-foreground">
+                    {arborist.companyName}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Certification statement */}
+            <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border text-sm mb-3">
+              <p>
+                I certify that I have personally inspected the tree(s)
+                described in this report and that the information contained
+                herein is accurate to the best of my professional knowledge
+                and belief. I am an ISA Certified Arborist and the opinions
+                expressed are based on my professional training, experience,
+                and education.
+              </p>
+            </div>
+
+            {/* Agreement checkbox */}
+            <label className="flex items-start gap-2 text-sm mb-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={certifyAgreed}
+                onChange={(e) => setCertifyAgreed(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              <span>
+                I agree to the certification statement above and confirm all
+                information is accurate.
+              </span>
+            </label>
+
+            {/* Signature input */}
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Type your full name as electronic signature
+                  {arborist?.signatureName && (
+                    <span className="text-muted-foreground/60 ml-1">
+                      (must match: {arborist.signatureName})
+                    </span>
+                  )}
+                </label>
+                <Input
+                  placeholder="e.g., Alex Rivera"
+                  value={signatureText}
+                  onChange={(e) => setSignatureText(e.target.value)}
+                  className={
+                    signatureText.trim() &&
+                    arborist?.signatureName &&
+                    !signatureNameMatch
+                      ? "border-amber-300 focus-visible:ring-amber-400"
+                      : ""
+                  }
+                />
+                {signatureText.trim() &&
+                  arborist?.signatureName &&
+                  !signatureNameMatch && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      Signature must match your profile name:{" "}
+                      {arborist.signatureName}
+                    </p>
+                  )}
+              </div>
               <Button
-                variant="outline"
-                className="w-full"
-                onClick={() =>
-                  window.open(`/api/reports/${report.id}/word`, "_blank")
+                onClick={certifyReport}
+                disabled={
+                  !signatureText.trim() ||
+                  !certifyAgreed ||
+                  certifying ||
+                  (arborist?.signatureName ? !signatureNameMatch : false)
                 }
+                className="bg-emerald-700 hover:bg-emerald-600"
               >
-                <FileDown className="h-4 w-4 mr-2" />
-                Download Word
+                {certifying ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Certifying...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="h-4 w-4 mr-2" />
+                    Certify &amp; Lock Report
+                  </>
+                )}
               </Button>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* ---- Certified details bar ---- */}
+      {isCertified && report && (
+        <div className="flex-none border-t bg-emerald-50/50 dark:bg-emerald-950/10 px-6 py-3">
+          <div className="flex items-center gap-4 text-sm">
+            <CheckCircle2 className="h-5 w-5 text-emerald-700" />
+            <span className="font-medium text-emerald-800">
+              Certified
+            </span>
+            <span className="text-muted-foreground">
+              Signed by {report.eSignatureText}
+            </span>
+            {report.certifiedAt && (
+              <span className="text-muted-foreground">
+                on{" "}
+                {new Date(report.certifiedAt).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Adds data-section-id attributes to headings in HTML for section nav scrolling
+// ---------------------------------------------------------------------------
+
+function addSectionIds(html: string): string {
+  return html.replace(
+    /<(h[1-3])>(.*?)<\/h[1-3]>/g,
+    (match, tag, content) => {
+      const text = content.replace(/<[^>]+>/g, "");
+      const id = text
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+      return `<${tag} data-section-id="${id}">${content}</${tag}>`;
+    }
   );
 }

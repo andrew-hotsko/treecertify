@@ -15,6 +15,7 @@ import {
   ShadingType,
   BorderStyle,
   ImageRun,
+  PageBreak,
 } from "docx";
 import fs from "fs";
 import path from "path";
@@ -49,6 +50,7 @@ export async function GET(
     const property = report.property;
     const trees = property.trees;
     const arborist = report.arborist;
+    const isCertified = report.status === "certified";
 
     const reportTypeLabel = report.reportType
       .replace(/_/g, " ")
@@ -58,60 +60,26 @@ export async function GET(
       month: "long",
       day: "numeric",
     });
+    const protectedCount = trees.filter((t) => t.isProtected).length;
+
+    const conditionLabels: Record<number, string> = {
+      0: "Dead",
+      1: "Critical",
+      2: "Poor",
+      3: "Fair",
+      4: "Good",
+      5: "Excellent",
+    };
 
     // ------------------------------------------------------------------
-    // Build document sections
+    // COVER PAGE section
     // ------------------------------------------------------------------
 
-    const sections: (Paragraph | Table)[] = [];
+    const coverChildren: (Paragraph | Table)[] = [];
 
-    // ---- Company Branding Header ----
-    if (arborist.companyName) {
-      const brandingRuns: TextRun[] = [
-        new TextRun({
-          text: arborist.companyName,
-          bold: true,
-          size: 24,
-          color: "2d5016",
-        }),
-      ];
-
-      if (arborist.companyAddress) {
-        brandingRuns.push(new TextRun({ break: 1, text: arborist.companyAddress, size: 18, color: "666666" }));
-      }
-      if (arborist.companyPhone) {
-        brandingRuns.push(new TextRun({ break: 1, text: arborist.companyPhone, size: 18, color: "666666" }));
-      }
-      if (arborist.companyEmail) {
-        brandingRuns.push(new TextRun({ break: 1, text: arborist.companyEmail, size: 18, color: "666666" }));
-      }
-      if (arborist.companyWebsite) {
-        brandingRuns.push(new TextRun({ break: 1, text: arborist.companyWebsite, size: 18, color: "666666" }));
-      }
-
-      sections.push(
-        new Paragraph({
-          children: brandingRuns,
-          spacing: { after: 200 },
-        })
-      );
-
-      // Separator line
-      sections.push(
-        new Paragraph({
-          border: {
-            bottom: { style: BorderStyle.DOUBLE, size: 6, color: "2d5016" },
-          },
-          spacing: { after: 300 },
-        })
-      );
-    }
-
-    // ---- Logo (if exists on disk) ----
+    // Logo
     if (arborist.companyLogoUrl) {
       try {
-        // companyLogoUrl is like /api/uploads/arborist/{id}/{filename}
-        // resolve to disk path
         const urlParts = arborist.companyLogoUrl.replace(/^\/api\/uploads\//, "");
         const logoPath = path.join(process.cwd(), "uploads", urlParts);
 
@@ -119,140 +87,243 @@ export async function GET(
           const logoData = fs.readFileSync(logoPath);
           const ext = path.extname(logoPath).toLowerCase();
 
-          // Only embed jpg/png (docx doesn't support svg/webp natively)
           if (ext === ".png" || ext === ".jpg" || ext === ".jpeg") {
-            sections.unshift(
+            coverChildren.push(
               new Paragraph({
+                alignment: AlignmentType.CENTER,
                 children: [
                   new ImageRun({
                     data: logoData,
-                    transformation: { width: 120, height: 60 },
+                    transformation: { width: 160, height: 80 },
                     type: ext === ".png" ? "png" : "jpg",
                   }),
                 ],
-                spacing: { after: 100 },
+                spacing: { after: 200 },
               })
             );
           }
         }
       } catch {
-        // Skip logo if any error
+        // Skip logo on error
       }
     }
 
-    // ---- Report Title ----
-    sections.push(
+    // Company name
+    if (arborist.companyName) {
+      coverChildren.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({
+              text: arborist.companyName,
+              bold: true,
+              size: 28,
+              color: "333333",
+            }),
+          ],
+          spacing: { after: 40 },
+        })
+      );
+    }
+
+    // Contact info
+    const contactParts = [
+      arborist.companyAddress,
+      arborist.companyPhone,
+      arborist.companyEmail,
+      arborist.companyWebsite,
+    ].filter(Boolean);
+    if (contactParts.length > 0) {
+      coverChildren.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({
+              text: contactParts.join(" \u2022 "),
+              size: 18,
+              color: "666666",
+            }),
+          ],
+          spacing: { after: 600 },
+        })
+      );
+    }
+
+    // Separator
+    coverChildren.push(
       new Paragraph({
-        heading: HeadingLevel.TITLE,
+        alignment: AlignmentType.CENTER,
+        border: {
+          bottom: { style: BorderStyle.SINGLE, size: 6, color: "333333" },
+        },
+        spacing: { after: 600 },
+        children: [],
+      })
+    );
+
+    // Title
+    coverChildren.push(
+      new Paragraph({
         alignment: AlignmentType.CENTER,
         children: [
           new TextRun({
             text: "ARBORIST REPORT",
             bold: true,
-            size: 36,
-            color: "2d5016",
+            size: 56,
+            color: "1a1a1a",
           }),
         ],
-        spacing: { before: 200, after: 100 },
+        spacing: { after: 120 },
       })
     );
 
-    sections.push(
+    // Address
+    coverChildren.push(
       new Paragraph({
         alignment: AlignmentType.CENTER,
         children: [
-          new TextRun({
-            text: property.address,
-            size: 28,
-            bold: true,
-          }),
+          new TextRun({ text: property.address, size: 28, bold: true }),
         ],
         spacing: { after: 60 },
       })
     );
 
-    sections.push(
+    coverChildren.push(
       new Paragraph({
         alignment: AlignmentType.CENTER,
         children: [
           new TextRun({
-            text: `${property.city}, ${property.state || "CA"}${property.county ? `, ${property.county} County` : ""}`,
-            size: 20,
+            text: `${property.city}, ${property.state || "CA"}${property.county ? ` \u2014 ${property.county} County` : ""}`,
+            size: 22,
             color: "666666",
           }),
         ],
-        spacing: { after: 300 },
+        spacing: { after: 200 },
+      })
+    );
+
+    // Report type
+    coverChildren.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [
+          new TextRun({
+            text: reportTypeLabel,
+            size: 22,
+            color: "555555",
+          }),
+        ],
+        spacing: { after: 600 },
         border: {
-          bottom: { style: BorderStyle.DOUBLE, size: 6, color: "2d5016" },
+          top: { style: BorderStyle.SINGLE, size: 1, color: "999999" },
+          bottom: { style: BorderStyle.SINGLE, size: 1, color: "999999" },
+          left: { style: BorderStyle.SINGLE, size: 1, color: "999999" },
+          right: { style: BorderStyle.SINGLE, size: 1, color: "999999" },
         },
       })
     );
 
-    // ---- Meta Table ----
-    const metaRows = [
-      ["Report Type", reportTypeLabel, "Date", dateStr],
-      ["Arborist", arborist.name, "ISA #", arborist.isaCertificationNum],
-      ["Property", property.address, "APN", property.parcelNumber || "N/A"],
-      [
-        "City",
-        `${property.city}, ${property.state || "CA"} ${property.zip || ""}`.trim(),
-        "Trees Assessed",
-        String(trees.length),
-      ],
+    // Meta info
+    const metaLines = [
+      `Prepared by: ${arborist.name}, ISA #${arborist.isaCertificationNum}`,
+      `Date: ${dateStr}`,
+      `Property APN: ${property.parcelNumber || "N/A"}`,
+      `Trees Assessed: ${trees.length}${protectedCount > 0 ? ` (${protectedCount} protected)` : ""}`,
     ];
 
-    sections.push(
-      new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        rows: metaRows.map(
-          (row) =>
-            new TableRow({
-              children: row.map((cell, colIdx) =>
-                new TableCell({
-                  shading:
-                    colIdx % 2 === 0
-                      ? { type: ShadingType.SOLID, color: "f5f5f0", fill: "f5f5f0" }
-                      : undefined,
-                  children: [
-                    new Paragraph({
-                      children: [
-                        new TextRun({
-                          text: cell,
-                          bold: colIdx % 2 === 0,
-                          size: 20,
-                        }),
-                      ],
-                    }),
-                  ],
-                })
-              ),
-            })
-        ),
-      })
-    );
+    for (const line of metaLines) {
+      coverChildren.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: line, size: 20, color: "555555" })],
+          spacing: { after: 40 },
+        })
+      );
+    }
 
-    sections.push(new Paragraph({ spacing: { before: 200 } }));
+    // Draft label
+    if (!isCertified) {
+      coverChildren.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({
+              text: "DRAFT",
+              bold: true,
+              size: 32,
+              color: "999999",
+            }),
+          ],
+          spacing: { before: 400 },
+          border: {
+            top: { style: BorderStyle.SINGLE, size: 4, color: "cccccc" },
+            bottom: { style: BorderStyle.SINGLE, size: 4, color: "cccccc" },
+            left: { style: BorderStyle.SINGLE, size: 4, color: "cccccc" },
+            right: { style: BorderStyle.SINGLE, size: 4, color: "cccccc" },
+          },
+        })
+      );
+    }
+
+    // ------------------------------------------------------------------
+    // BODY section children
+    // ------------------------------------------------------------------
+
+    const bodyChildren: (Paragraph | Table)[] = [];
 
     // ---- Tree Inventory Table ----
-    sections.push(
+    bodyChildren.push(
       new Paragraph({
-        heading: HeadingLevel.HEADING_2,
+        heading: HeadingLevel.HEADING_1,
         children: [
-          new TextRun({ text: "Tree Inventory", color: "2d5016", bold: true, size: 26 }),
+          new TextRun({
+            text: "Tree Inventory",
+            bold: true,
+            size: 28,
+            color: "1a1a1a",
+            font: "Helvetica",
+          }),
         ],
-        spacing: { before: 300, after: 120 },
+        spacing: { before: 100, after: 120 },
+        border: {
+          bottom: { style: BorderStyle.SINGLE, size: 2, color: "333333" },
+        },
       })
     );
+
+    const inventoryHeaders = [
+      "Tree #",
+      "Tag",
+      "Species",
+      "DBH",
+      "Height",
+      "Canopy",
+      "Condition",
+      "Protected",
+      "Action",
+    ];
 
     const treeHeader = new TableRow({
       tableHeader: true,
-      children: ["Tree #", "Species", "DBH", "Height", "Condition", "Protected", "Action"].map(
+      children: inventoryHeaders.map(
         (h) =>
           new TableCell({
-            shading: { type: ShadingType.SOLID, color: "2d5016", fill: "2d5016" },
+            shading: {
+              type: ShadingType.SOLID,
+              color: "333333",
+              fill: "333333",
+            },
             children: [
               new Paragraph({
-                children: [new TextRun({ text: h, bold: true, color: "ffffff", size: 18 })],
+                children: [
+                  new TextRun({
+                    text: h,
+                    bold: true,
+                    color: "ffffff",
+                    size: 16,
+                    font: "Helvetica",
+                  }),
+                ],
               }),
             ],
           })
@@ -264,20 +335,43 @@ export async function GET(
         new TableRow({
           children: [
             cellParagraph(String(tree.treeNumber), AlignmentType.CENTER),
+            cellParagraph(tree.tagNumber || "\u2014"),
             cellParagraph(
               `${tree.speciesCommon}${tree.speciesScientific ? ` (${tree.speciesScientific})` : ""}`
             ),
             cellParagraph(`${tree.dbhInches}"`, AlignmentType.CENTER),
-            cellParagraph(tree.heightFt ? `${tree.heightFt}'` : "N/A", AlignmentType.CENTER),
-            cellParagraph(`${tree.conditionRating}/5`, AlignmentType.CENTER),
-            cellParagraph(tree.isProtected ? "Yes" : "No", AlignmentType.CENTER),
-            cellParagraph(tree.recommendedAction || "N/A"),
+            cellParagraph(
+              tree.heightFt ? `${tree.heightFt}'` : "N/A",
+              AlignmentType.CENTER
+            ),
+            cellParagraph(
+              tree.canopySpreadFt ? `${tree.canopySpreadFt}'` : "N/A",
+              AlignmentType.CENTER
+            ),
+            cellParagraph(
+              conditionLabels[tree.conditionRating] ??
+                String(tree.conditionRating),
+              AlignmentType.CENTER
+            ),
+            cellParagraph(
+              tree.isProtected ? "Yes" : "No",
+              AlignmentType.CENTER
+            ),
+            cellParagraph(
+              tree.recommendedAction
+                ?.replace(/_/g, " ")
+                .replace(/\b\w/g, (c: string) => c.toUpperCase()) || "N/A"
+            ),
           ].map(
             (para) =>
               new TableCell({
                 shading:
                   idx % 2 === 1
-                    ? { type: ShadingType.SOLID, color: "f9f9f6", fill: "f9f9f6" }
+                    ? {
+                        type: ShadingType.SOLID,
+                        color: "f7f7f7",
+                        fill: "f7f7f7",
+                      }
                     : undefined,
                 children: [para],
               })
@@ -285,43 +379,74 @@ export async function GET(
         })
     );
 
-    sections.push(
+    bodyChildren.push(
       new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
         rows: [treeHeader, ...treeDataRows],
       })
     );
 
-    sections.push(new Paragraph({ spacing: { before: 200 } }));
+    bodyChildren.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "Condition Scale: 0=Dead, 1=Critical, 2=Poor, 3=Fair, 4=Good, 5=Excellent",
+            size: 16,
+            color: "999999",
+            italics: true,
+          }),
+        ],
+        spacing: { before: 40, after: 200 },
+      })
+    );
+
+    // Page break before report body
+    bodyChildren.push(
+      new Paragraph({
+        children: [new PageBreak()],
+      })
+    );
 
     // ---- Report Content (markdown → docx) ----
     const contentElements = markdownToDocxElements(content);
-    sections.push(...contentElements);
+    bodyChildren.push(...contentElements);
 
     // ---- Photo Documentation ----
-    const treesWithPhotos = trees.filter((t) => t.treePhotos && t.treePhotos.length > 0);
+    const treesWithPhotos = trees.filter(
+      (t) => t.treePhotos && t.treePhotos.length > 0
+    );
     if (treesWithPhotos.length > 0) {
-      sections.push(
+      bodyChildren.push(
         new Paragraph({
-          heading: HeadingLevel.HEADING_2,
+          heading: HeadingLevel.HEADING_1,
           children: [
-            new TextRun({ text: "Photo Documentation", color: "2d5016", bold: true, size: 26 }),
+            new TextRun({
+              text: "Photo Documentation",
+              bold: true,
+              size: 28,
+              color: "1a1a1a",
+              font: "Helvetica",
+            }),
           ],
           spacing: { before: 400, after: 120 },
           pageBreakBefore: true,
+          border: {
+            bottom: { style: BorderStyle.SINGLE, size: 2, color: "333333" },
+          },
         })
       );
 
       for (const tree of treesWithPhotos) {
-        sections.push(
+        bodyChildren.push(
           new Paragraph({
-            heading: HeadingLevel.HEADING_3,
+            heading: HeadingLevel.HEADING_2,
             children: [
               new TextRun({
-                text: `Tree #${tree.treeNumber} — ${tree.speciesCommon}`,
-                color: "2d5016",
+                text: `Tree #${tree.treeNumber} \u2014 ${tree.speciesCommon}`,
                 bold: true,
-                size: 22,
+                size: 24,
+                color: "333333",
+                font: "Helvetica",
               }),
             ],
             spacing: { before: 200, after: 80 },
@@ -330,7 +455,6 @@ export async function GET(
 
         for (const photo of tree.treePhotos) {
           try {
-            // Resolve photo URL to disk path
             const urlPath = photo.url.replace(/^\/api\/uploads\//, "");
             const photoPath = path.join(process.cwd(), "uploads", urlPath);
 
@@ -338,8 +462,13 @@ export async function GET(
               const photoData = fs.readFileSync(photoPath);
               const ext = path.extname(photoPath).toLowerCase();
 
-              if (ext === ".png" || ext === ".jpg" || ext === ".jpeg" || ext === ".webp") {
-                sections.push(
+              if (
+                ext === ".png" ||
+                ext === ".jpg" ||
+                ext === ".jpeg" ||
+                ext === ".webp"
+              ) {
+                bodyChildren.push(
                   new Paragraph({
                     children: [
                       new ImageRun({
@@ -353,7 +482,7 @@ export async function GET(
                 );
 
                 if (photo.caption) {
-                  sections.push(
+                  bodyChildren.push(
                     new Paragraph({
                       children: [
                         new TextRun({
@@ -376,85 +505,144 @@ export async function GET(
       }
     }
 
-    // ---- Certification Box ----
-    if (report.status === "certified") {
-      sections.push(new Paragraph({ spacing: { before: 400 } }));
+    // ---- Certification Section ----
+    bodyChildren.push(
+      new Paragraph({
+        heading: HeadingLevel.HEADING_1,
+        children: [
+          new TextRun({
+            text: "Arborist Certification",
+            bold: true,
+            size: 28,
+            color: "1a1a1a",
+            font: "Helvetica",
+          }),
+        ],
+        spacing: { before: 400, after: 120 },
+        pageBreakBefore: true,
+        border: {
+          bottom: { style: BorderStyle.SINGLE, size: 2, color: "333333" },
+        },
+      })
+    );
 
-      sections.push(
+    bodyChildren.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "I, the undersigned, certify that I have personally inspected the tree(s) described in this report and that the information contained herein is accurate to the best of my professional knowledge and belief. I am an ISA Certified Arborist and the opinions expressed are based on my professional training, experience, and education.",
+            size: 20,
+          }),
+        ],
+        spacing: { after: 80 },
+      })
+    );
+
+    bodyChildren.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "I have no personal interest or bias with respect to the parties involved. The analysis, opinions, and conclusions stated herein are my own, and are based on current scientific procedures and facts.",
+            size: 20,
+          }),
+        ],
+        spacing: { after: 200 },
+      })
+    );
+
+    if (isCertified) {
+      bodyChildren.push(
         new Paragraph({
-          heading: HeadingLevel.HEADING_2,
           children: [
             new TextRun({
-              text: "Arborist Certification",
-              color: "2d5016",
+              text: "Electronically Signed: ",
               bold: true,
-              size: 26,
+              size: 20,
+            }),
+            new TextRun({
+              text: report.eSignatureText || "",
+              size: 20,
+              italics: true,
             }),
           ],
-          spacing: { after: 120 },
+          spacing: { after: 60 },
           border: {
-            top: { style: BorderStyle.SINGLE, size: 4, color: "2d5016" },
-            bottom: { style: BorderStyle.SINGLE, size: 4, color: "2d5016" },
-            left: { style: BorderStyle.SINGLE, size: 4, color: "2d5016" },
-            right: { style: BorderStyle.SINGLE, size: 4, color: "2d5016" },
+            top: { style: BorderStyle.SINGLE, size: 1, color: "cccccc" },
           },
-          shading: { type: ShadingType.SOLID, color: "f8faf5", fill: "f8faf5" },
         })
       );
+    }
 
-      sections.push(
+    bodyChildren.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: "Name: ", bold: true, size: 20 }),
+          new TextRun({ text: arborist.name, size: 20 }),
+        ],
+        spacing: { after: 40 },
+      })
+    );
+
+    bodyChildren.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ISA Certification #: ",
+            bold: true,
+            size: 20,
+          }),
+          new TextRun({ text: arborist.isaCertificationNum, size: 20 }),
+        ],
+        spacing: { after: 40 },
+      })
+    );
+
+    if (arborist.companyName) {
+      bodyChildren.push(
         new Paragraph({
           children: [
+            new TextRun({ text: "Company: ", bold: true, size: 20 }),
+            new TextRun({ text: arborist.companyName, size: 20 }),
+          ],
+          spacing: { after: 40 },
+        })
+      );
+    }
+
+    if (isCertified && report.certifiedAt) {
+      bodyChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: "Date Certified: ", bold: true, size: 20 }),
             new TextRun({
-              text: "I, the undersigned, certify that I have personally inspected the tree(s) described in this report and that the information contained herein is accurate to the best of my professional knowledge and belief.",
+              text: new Date(report.certifiedAt).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              }),
               size: 20,
             }),
           ],
-          spacing: { after: 120 },
         })
       );
-
-      sections.push(
+    } else {
+      bodyChildren.push(
         new Paragraph({
           children: [
-            new TextRun({ text: "Electronically signed: ", bold: true, size: 20 }),
-            new TextRun({ text: report.eSignatureText || "", size: 20 }),
+            new TextRun({
+              text: "This report has not yet been certified.",
+              size: 20,
+              color: "999999",
+              italics: true,
+            }),
           ],
-          spacing: { after: 60 },
+          spacing: { before: 80 },
         })
       );
-
-      sections.push(
-        new Paragraph({
-          children: [
-            new TextRun({ text: "ISA Certification #: ", bold: true, size: 20 }),
-            new TextRun({ text: arborist.isaCertificationNum, size: 20 }),
-          ],
-          spacing: { after: 60 },
-        })
-      );
-
-      if (report.certifiedAt) {
-        sections.push(
-          new Paragraph({
-            children: [
-              new TextRun({ text: "Date: ", bold: true, size: 20 }),
-              new TextRun({
-                text: new Date(report.certifiedAt).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                }),
-                size: 20,
-              }),
-            ],
-          })
-        );
-      }
     }
 
     // ------------------------------------------------------------------
-    // Build the Document
+    // Build the Document with two sections: cover page + body
     // ------------------------------------------------------------------
 
     const doc = new Document({
@@ -481,21 +669,69 @@ export async function GET(
               size: 22,
             },
           },
+          heading1: {
+            run: {
+              font: "Helvetica",
+              size: 28,
+              bold: true,
+              color: "1a1a1a",
+            },
+            paragraph: {
+              spacing: { before: 360, after: 120 },
+            },
+          },
+          heading2: {
+            run: {
+              font: "Helvetica",
+              size: 24,
+              bold: true,
+              color: "333333",
+            },
+            paragraph: {
+              spacing: { before: 240, after: 80 },
+            },
+          },
+          heading3: {
+            run: {
+              font: "Helvetica",
+              size: 22,
+              bold: true,
+              color: "333333",
+            },
+            paragraph: {
+              spacing: { before: 200, after: 60 },
+            },
+          },
         },
       },
       sections: [
+        // Cover page section
         {
           properties: {
             page: {
               margin: {
-                top: 1440,    // 1 inch
+                top: 1440,
                 bottom: 1440,
                 left: 1440,
                 right: 1440,
               },
             },
           },
-          children: sections,
+          children: coverChildren,
+        },
+        // Body section
+        {
+          properties: {
+            page: {
+              margin: {
+                top: 1440,
+                bottom: 1440,
+                left: 1440,
+                right: 1440,
+              },
+            },
+          },
+          children: bodyChildren,
         },
       ],
     });
@@ -535,6 +771,6 @@ function cellParagraph(
 ): Paragraph {
   return new Paragraph({
     alignment,
-    children: [new TextRun({ text, size: 18 })],
+    children: [new TextRun({ text, size: 16 })],
   });
 }

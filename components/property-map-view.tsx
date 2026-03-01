@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PropertyAudioNotes } from "@/components/property-audio-notes";
 import { getReportTypeConfig, calcTpzRadius, calcSrzRadius } from "@/lib/report-types";
 import { Textarea } from "@/components/ui/textarea";
+import { StatusBadge } from "@/components/status-badge";
 import {
   ChevronLeft,
   FileText,
@@ -23,6 +24,8 @@ import {
   HardHat,
   Loader2,
   ClipboardList,
+  Download,
+  FileDown,
 } from "lucide-react";
 
 // Dynamically import PropertyMap with SSR disabled (Mapbox GL needs window/DOM)
@@ -71,7 +74,7 @@ interface PropertyData {
   siteObservations?: string | null;
   scopeOfAssignment?: string | null;
   trees: TreeData[];
-  reports: { id: string; status: string }[];
+  reports: { id: string; status: string; reportType: string; certifiedAt?: string | null }[];
 }
 
 interface PropertyMapViewProps {
@@ -357,12 +360,54 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             <TreePine className="h-3 w-3" />
             {trees.length} tree{trees.length !== 1 ? "s" : ""}
           </Badge>
-          <Link href={`/properties/${property.id}/report`}>
-            <Button variant="outline" size="sm">
-              <FileText className="h-4 w-4" />
-              Generate Report
-            </Button>
-          </Link>
+          {property.reports && property.reports.length > 0 ? (
+            <div className="flex items-center gap-2">
+              <StatusBadge status={property.reports[0].status} />
+              <Link href={`/properties/${property.id}/report`}>
+                <Button variant="outline" size="sm">
+                  <FileText className="h-4 w-4 mr-1" />
+                  {property.reports[0].status === "certified"
+                    ? "View Report"
+                    : "Edit Report"}
+                </Button>
+              </Link>
+              {property.reports[0].status === "certified" && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      window.open(
+                        `/api/reports/${property.reports[0].id}/pdf`,
+                        "_blank"
+                      )
+                    }
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      window.open(
+                        `/api/reports/${property.reports[0].id}/word`,
+                        "_blank"
+                      )
+                    }
+                  >
+                    <FileDown className="h-3.5 w-3.5" />
+                  </Button>
+                </>
+              )}
+            </div>
+          ) : (
+            <Link href={`/properties/${property.id}/report`}>
+              <Button variant="outline" size="sm">
+                <FileText className="h-4 w-4 mr-1" />
+                Generate Report
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
