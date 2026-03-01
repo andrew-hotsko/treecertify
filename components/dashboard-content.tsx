@@ -1,0 +1,380 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  MapPin,
+  TreePine,
+  Clock,
+  FileCheck,
+  ShieldCheck,
+  ArrowRight,
+  Plus,
+} from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface DashboardTree {
+  id: string;
+  isProtected: boolean;
+}
+
+interface DashboardReport {
+  id: string;
+  status: string;
+}
+
+interface DashboardProperty {
+  id: string;
+  address: string;
+  city: string;
+  county: string;
+  reportType: string;
+  neededByDate: string | null;
+  updatedAt: string;
+  trees: DashboardTree[];
+  reports: DashboardReport[];
+}
+
+interface DashboardContentProps {
+  properties: DashboardProperty[];
+  totalTrees: number;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+type FilterStatus = "all" | "inProgress" | "draft" | "certified";
+
+function getWorkflowStatus(property: DashboardProperty) {
+  const latestReport = property.reports[0];
+  if (property.trees.length === 0)
+    return { label: "No Trees", color: "bg-gray-100 text-gray-600" };
+  if (!latestReport)
+    return { label: "Assessing", color: "bg-amber-100 text-amber-700" };
+  if (latestReport.status === "certified")
+    return { label: "Certified", color: "bg-emerald-100 text-emerald-700" };
+  return { label: "Draft", color: "bg-blue-100 text-blue-700" };
+}
+
+function getFilterCategory(property: DashboardProperty): FilterStatus {
+  const latestReport = property.reports[0];
+  if (!latestReport) return "inProgress";
+  if (latestReport.status === "certified") return "certified";
+  return "draft";
+}
+
+function getDueIndicator(neededByDate: string | null) {
+  if (!neededByDate) return null;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const due = new Date(neededByDate);
+  due.setHours(0, 0, 0, 0);
+  const daysUntil = Math.ceil(
+    (due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  if (daysUntil < 0)
+    return { label: "Overdue", className: "text-red-600 bg-red-50" };
+  if (daysUntil === 0)
+    return { label: "Due today", className: "text-amber-600 bg-amber-50" };
+  if (daysUntil <= 7)
+    return {
+      label: `Due in ${daysUntil}d`,
+      className: "text-amber-600 bg-amber-50",
+    };
+  return null;
+}
+
+function formatReportType(reportType: string) {
+  return reportType
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+export function DashboardContent({
+  properties,
+  totalTrees,
+}: DashboardContentProps) {
+  const [filter, setFilter] = useState<FilterStatus>("all");
+
+  // Compute counts
+  const counts = {
+    all: properties.length,
+    inProgress: properties.filter((p) => getFilterCategory(p) === "inProgress")
+      .length,
+    draft: properties.filter((p) => getFilterCategory(p) === "draft").length,
+    certified: properties.filter((p) => getFilterCategory(p) === "certified")
+      .length,
+  };
+
+  // Filter properties
+  const filtered =
+    filter === "all"
+      ? properties
+      : properties.filter((p) => getFilterCategory(p) === filter);
+
+  const stats = [
+    {
+      title: "In Progress",
+      value: counts.inProgress,
+      icon: Clock,
+      accent: "text-amber-600",
+      bg: "bg-amber-50",
+      filterKey: "inProgress" as FilterStatus,
+    },
+    {
+      title: "Ready to Certify",
+      value: counts.draft,
+      icon: FileCheck,
+      accent: "text-blue-600",
+      bg: "bg-blue-50",
+      filterKey: "draft" as FilterStatus,
+    },
+    {
+      title: "Certified",
+      value: counts.certified,
+      icon: ShieldCheck,
+      accent: "text-emerald-600",
+      bg: "bg-emerald-50",
+      filterKey: "certified" as FilterStatus,
+    },
+    {
+      title: "Trees Assessed",
+      value: totalTrees,
+      icon: TreePine,
+      accent: "text-emerald-600",
+      bg: "bg-emerald-50",
+      filterKey: null,
+    },
+  ];
+
+  const filters: { key: FilterStatus; label: string }[] = [
+    { key: "all", label: `All (${counts.all})` },
+    { key: "inProgress", label: `In Progress (${counts.inProgress})` },
+    { key: "draft", label: `Draft (${counts.draft})` },
+    { key: "certified", label: `Certified (${counts.certified})` },
+  ];
+
+  return (
+    <>
+      {/* Stat Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => {
+          const Icon = stat.icon;
+          const isClickable = stat.filterKey !== null;
+          const isActive = stat.filterKey === filter;
+          return (
+            <Card
+              key={stat.title}
+              className={cn(
+                isClickable && "cursor-pointer transition-colors hover:border-gray-300",
+                isActive && "ring-2 ring-emerald-500 border-emerald-500"
+              )}
+              onClick={() => {
+                if (stat.filterKey) {
+                  setFilter(filter === stat.filterKey ? "all" : stat.filterKey);
+                }
+              }}
+            >
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-gray-500">
+                  {stat.title}
+                </CardTitle>
+                <div className={`rounded-md p-2 ${stat.bg}`}>
+                  <Icon className={`h-4 w-4 ${stat.accent}`} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-gray-900">
+                  {stat.value}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Properties Card */}
+      <Card>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="text-lg font-semibold text-gray-900">
+            Properties
+          </CardTitle>
+          <Button variant="ghost" size="sm" asChild>
+            <Link
+              href="/properties"
+              className="text-emerald-600 hover:text-emerald-700"
+            >
+              View all
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
+          </Button>
+        </CardHeader>
+
+        {/* Filter Pills */}
+        <div className="px-6 pb-4">
+          <div className="flex flex-wrap gap-2">
+            {filters.map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+                  filter === f.key
+                    ? "bg-emerald-600 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <CardContent>
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="rounded-full bg-gray-50 p-3 mb-4">
+                <MapPin className="h-6 w-6 text-gray-400" />
+              </div>
+              <p className="text-sm font-medium text-gray-900">
+                {filter === "all" ? "No properties yet" : "No properties match this filter"}
+              </p>
+              {filter === "all" && (
+                <>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Start by adding your first property and pinning trees on the
+                    map.
+                  </p>
+                  <Button
+                    asChild
+                    size="sm"
+                    className="mt-4 bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <Link href="/properties/new">
+                      <Plus className="mr-2 h-4 w-4" />
+                      New Property
+                    </Link>
+                  </Button>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {filtered.map((property) => {
+                const treeCount = property.trees.length;
+                const protectedCount = property.trees.filter(
+                  (t) => t.isProtected
+                ).length;
+                const workflow = getWorkflowStatus(property);
+                const dueIndicator = getDueIndicator(property.neededByDate);
+
+                return (
+                  <Link
+                    key={property.id}
+                    href={`/properties/${property.id}`}
+                    className="flex items-center justify-between gap-4 py-3.5 px-1 rounded-lg transition-colors hover:bg-gray-50 -mx-1 first:pt-0"
+                  >
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50">
+                        <MapPin className="h-4 w-4 text-emerald-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-sm font-medium text-gray-900">
+                            {property.address}
+                          </p>
+                          {property.address === "123 Sample Street" && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] px-1.5 py-0 text-muted-foreground border-muted-foreground/30 shrink-0"
+                            >
+                              Sample
+                            </Badge>
+                          )}
+                          <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 hidden sm:inline">
+                            {formatReportType(property.reportType)}
+                          </span>
+                        </div>
+                        <p className="truncate text-xs text-gray-500">
+                          {property.city}
+                          {property.county ? `, ${property.county} County` : ""}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+                      {dueIndicator && (
+                        <span
+                          className={cn(
+                            "text-[10px] font-medium px-1.5 py-0.5 rounded hidden sm:inline",
+                            dueIndicator.className
+                          )}
+                        >
+                          {dueIndicator.label}
+                        </span>
+                      )}
+                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <TreePine className="h-3.5 w-3.5" />
+                        <span className="font-mono">{treeCount}</span>
+                        {protectedCount > 0 && (
+                          <span className="flex items-center gap-0.5 text-emerald-600">
+                            <ShieldCheck className="h-3 w-3" />
+                            {protectedCount}
+                          </span>
+                        )}
+                      </div>
+                      <span className="hidden md:inline-block text-xs text-gray-400">
+                        {format(new Date(property.updatedAt), "MMM d, yyyy")}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-[10px] font-medium px-2 py-0.5 rounded-full",
+                          workflow.color
+                        )}
+                      >
+                        {workflow.label}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* CTA for new users with only the sample property */}
+      {properties.length > 0 && properties.length <= 1 && (
+        <div className="text-center py-6 text-sm text-muted-foreground">
+          <p>
+            The sample property above shows what a completed assessment looks
+            like.
+          </p>
+          <p className="mt-1">
+            Ready to start?{" "}
+            <Link
+              href="/properties/new"
+              className="text-emerald-600 font-medium hover:underline"
+            >
+              Create your first property &rarr;
+            </Link>
+          </p>
+        </div>
+      )}
+    </>
+  );
+}

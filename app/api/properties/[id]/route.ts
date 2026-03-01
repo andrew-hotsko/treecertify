@@ -77,6 +77,9 @@ export async function PUT(
         ...(body.architectName !== undefined && { architectName: body.architectName }),
         ...(body.siteObservations !== undefined && { siteObservations: body.siteObservations }),
         ...(body.scopeOfAssignment !== undefined && { scopeOfAssignment: body.scopeOfAssignment }),
+        ...(body.neededByDate !== undefined && {
+          neededByDate: body.neededByDate ? new Date(body.neededByDate) : null,
+        }),
       },
       include: {
         trees: {

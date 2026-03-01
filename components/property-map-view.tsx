@@ -74,6 +74,7 @@ interface PropertyData {
   architectName?: string | null;
   siteObservations?: string | null;
   scopeOfAssignment?: string | null;
+  neededByDate?: string | null;
   trees: TreeData[];
   reports: { id: string; status: string; reportType: string; certifiedAt?: string | null }[];
 }
@@ -121,6 +122,9 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   );
   const [siteObservations, setSiteObservations] = useState(
     property.siteObservations ?? ""
+  );
+  const [neededByDate, setNeededByDate] = useState(
+    property.neededByDate ? property.neededByDate.split("T")[0] : ""
   );
   const [savingSiteInfo, setSavingSiteInfo] = useState(false);
 
@@ -314,6 +318,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         body: JSON.stringify({
           scopeOfAssignment: scopeOfAssignment.trim() || null,
           siteObservations: siteObservations.trim() || null,
+          neededByDate: neededByDate || null,
         }),
       });
     } catch (err) {
@@ -321,7 +326,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     } finally {
       setSavingSiteInfo(false);
     }
-  }, [property.id, scopeOfAssignment, siteObservations]);
+  }, [property.id, scopeOfAssignment, siteObservations, neededByDate]);
 
   // ---- Current side panel data ----
   const sidePanelTree = pendingPin
@@ -568,6 +573,18 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         </CardHeader>
         {siteInfoOpen && (
           <CardContent className="pt-0 px-3 md:px-6 space-y-3">
+            <div>
+              <Label htmlFor="mv-needed-by" className="text-xs">
+                Needed By
+              </Label>
+              <Input
+                id="mv-needed-by"
+                type="date"
+                value={neededByDate}
+                onChange={(e) => setNeededByDate(e.target.value)}
+                className="mt-1 w-48"
+              />
+            </div>
             <div>
               <Label htmlFor="mv-scope" className="text-xs">
                 Scope of Assignment

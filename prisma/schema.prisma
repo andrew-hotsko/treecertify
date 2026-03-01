@@ -62,6 +62,7 @@ model Property {
   // Site-level assessment fields
   siteObservations    String?
   scopeOfAssignment   String?
+  neededByDate        DateTime?
 
   status    String   @default("active") // active, archived
   createdAt DateTime @default(now())

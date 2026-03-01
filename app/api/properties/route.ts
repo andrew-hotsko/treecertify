@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
         permitNumber: body.permitNumber ?? null,
         developerName: body.developerName ?? null,
         architectName: body.architectName ?? null,
+        neededByDate: body.neededByDate ? new Date(body.neededByDate) : null,
       },
       include: {
         trees: true,

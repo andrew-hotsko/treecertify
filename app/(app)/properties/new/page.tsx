@@ -15,6 +15,7 @@ import {
   DollarSign,
   HardHat,
   Check,
+  Calendar,
 } from "lucide-react";
 import Link from "next/link";
 import { REPORT_TYPES } from "@/lib/report-types";
@@ -99,6 +100,7 @@ export default function NewPropertyPage() {
   const [county, setCounty] = useState("");
   const [zip, setZip] = useState("");
   const [parcelNumber, setParcelNumber] = useState("");
+  const [neededByDate, setNeededByDate] = useState("");
   const [homeownerName, setHomeownerName] = useState("");
   const [homeownerEmail, setHomeownerEmail] = useState("");
   const [homeownerPhone, setHomeownerPhone] = useState("");
@@ -160,6 +162,7 @@ export default function NewPropertyPage() {
           lat,
           lng,
           reportType,
+          ...(neededByDate && { neededByDate }),
           ...(homeownerName.trim() && { homeownerName: homeownerName.trim() }),
           ...(homeownerEmail.trim() && { homeownerEmail: homeownerEmail.trim() }),
           ...(homeownerPhone.trim() && { homeownerPhone: homeownerPhone.trim() }),
@@ -309,6 +312,20 @@ export default function NewPropertyPage() {
                   className="mt-1"
                 />
               </div>
+            </div>
+
+            <div>
+              <Label htmlFor="neededByDate" className="flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                Needed By Date
+              </Label>
+              <Input
+                id="neededByDate"
+                type="date"
+                value={neededByDate}
+                onChange={(e) => setNeededByDate(e.target.value)}
+                className="mt-1"
+              />
             </div>
           </CardContent>
         </Card>
