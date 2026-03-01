@@ -11,3 +11,6 @@
 
 ## Auth
 - Do not break existing authentication — all routes under /(app)/ are protected by Clerk middleware.
+
+## Session Completion
+- When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.
