@@ -128,7 +128,7 @@ export function MobileNav({ arboristName, isaCertNum, profilePhotoUrl }: MobileN
         </nav>
 
         {/* User section */}
-        <div className="border-t border-[hsl(var(--sidebar-muted))] p-4">
+        <div className="border-t border-[hsl(var(--sidebar-muted))] p-4" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}>
           <div className="flex items-center gap-3">
             {profilePhotoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element

@@ -18,6 +18,7 @@ import {
   X,
   MousePointer2,
   MoveRight,
+  Loader2,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -561,7 +562,7 @@ export function PhotoMarkupEditor({
           <div className="flex items-center justify-center bg-zinc-800 p-2 overflow-auto">
             {!loaded && (
               <div className="absolute inset-0 flex items-center justify-center bg-zinc-800 z-10">
-                <div className="text-white text-sm">Loading editor...</div>
+                <Loader2 className="h-6 w-6 animate-spin text-white" />
               </div>
             )}
             <canvas ref={canvasRef} />
