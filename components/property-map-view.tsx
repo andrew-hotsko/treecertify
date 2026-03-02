@@ -504,6 +504,24 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             <Copy className="h-3.5 w-3.5 mr-1.5" />
             <span className="hidden sm:inline">Duplicate</span>
           </Button>
+          {trees.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const a = document.createElement("a");
+                a.href = `/api/properties/${property.id}/trees/export`;
+                a.download = "";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+              }}
+              title="Export tree inventory as CSV"
+            >
+              <FileDown className="h-3.5 w-3.5 mr-1.5" />
+              <span className="hidden sm:inline">Export CSV</span>
+            </Button>
+          )}
           {property.reports && property.reports.length > 0 ? (
             <div className="flex items-center gap-2">
               <StatusBadge status={property.reports[0].status} />
