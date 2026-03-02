@@ -63,6 +63,7 @@ export async function PUT(
         ...(body.finalContent !== undefined && { finalContent: body.finalContent }),
         ...(body.status !== undefined && { status: body.status }),
         ...(body.eSignatureText !== undefined && { eSignatureText: body.eSignatureText }),
+        ...(body.reportOptions !== undefined && { reportOptions: body.reportOptions }),
       },
     });
 

@@ -30,6 +30,8 @@ interface ArboristProfile {
   companyWebsite: string | null;
   licenseNumbers: string | null;
   signatureName: string | null;
+  traqCertified: boolean;
+  additionalCerts: string | null;
 }
 
 export default function SettingsPage() {
@@ -56,6 +58,8 @@ export default function SettingsPage() {
     companyWebsite: "",
     licenseNumbers: "",
     signatureName: "",
+    traqCertified: false,
+    additionalCerts: "",
   });
 
   useEffect(() => {
@@ -77,6 +81,8 @@ export default function SettingsPage() {
           companyWebsite: data.companyWebsite || "",
           licenseNumbers: data.licenseNumbers || "",
           signatureName: data.signatureName || "",
+          traqCertified: data.traqCertified ?? false,
+          additionalCerts: data.additionalCerts || "",
         });
       } catch (err) {
         setMessage({
@@ -315,6 +321,32 @@ export default function SettingsPage() {
               onChange={(e) => updateField("signatureName", e.target.value)}
               className="mt-1"
             />
+          </div>
+          <div className="flex items-center gap-3 pt-2">
+            <input
+              type="checkbox"
+              id="traq-certified"
+              checked={form.traqCertified}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, traqCertified: e.target.checked }))
+              }
+              className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            <Label htmlFor="traq-certified" className="cursor-pointer">
+              TRAQ Qualified (ISA Tree Risk Assessment Qualification)
+            </Label>
+          </div>
+          <div>
+            <Label>Additional Certifications</Label>
+            <Input
+              placeholder="e.g., BCMA, Utility Specialist, Municipal Specialist"
+              value={form.additionalCerts}
+              onChange={(e) => updateField("additionalCerts", e.target.value)}
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Comma-separated list of additional ISA or industry certifications
+            </p>
           </div>
         </CardContent>
       </Card>

@@ -77,6 +77,12 @@ export interface RemovalPermitData {
   retentionFeasibility?: "feasible" | "not_feasible" | "feasible_with_conditions";
   retentionNotes?: string;
   estimatedRemainingLifespan?: string;
+  // Optional TRAQ fields (shown when TRAQ toggle is on)
+  likelihoodOfFailure?: "improbable" | "possible" | "probable" | "imminent";
+  likelihoodOfImpact?: "very_low" | "low" | "medium" | "high";
+  consequences?: "negligible" | "minor" | "significant" | "severe";
+  overallRiskRating?: string;
+  targetDescription?: string;
 }
 
 export interface TreeValuationData {

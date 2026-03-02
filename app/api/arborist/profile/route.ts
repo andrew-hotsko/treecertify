@@ -50,7 +50,7 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
 
     // Whitelist of updatable fields
-    const allowedFields = [
+    const allowedStringFields = [
       "name",
       "email",
       "isaCertificationNum",
@@ -62,13 +62,18 @@ export async function PUT(request: NextRequest) {
       "companyWebsite",
       "licenseNumbers",
       "signatureName",
+      "additionalCerts",
     ];
 
-    const updateData: Record<string, string | null> = {};
-    for (const field of allowedFields) {
+    const updateData: Record<string, string | boolean | null> = {};
+    for (const field of allowedStringFields) {
       if (field in body) {
         updateData[field] = body[field] ?? null;
       }
+    }
+    // Boolean fields
+    if ("traqCertified" in body) {
+      updateData.traqCertified = !!body.traqCertified;
     }
 
     const updated = await prisma.arborist.update({

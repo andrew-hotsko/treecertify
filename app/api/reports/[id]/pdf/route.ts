@@ -46,6 +46,16 @@ export async function GET(
     });
     const protectedCount = trees.filter((t) => t.isProtected).length;
 
+    // Parse report options
+    let reportOpts: Record<string, boolean> = {};
+    try {
+      reportOpts = JSON.parse(report.reportOptions || "{}");
+    } catch { /* default empty */ }
+
+    const includeTraq = reportOpts.includeTraq ?? (report.reportType === "health_assessment");
+    const includeCoverLetter = reportOpts.includeCoverLetter ?? (report.reportType === "removal_permit");
+    const includeMitigation = reportOpts.includeMitigation ?? true;
+
     // Render markdown to HTML
     const bodyHtml = renderMarkdownToHtml(content);
 
@@ -75,21 +85,6 @@ export async function GET(
       remove: "#dc2626",
       prune: "#d97706",
       monitor: "#2563eb",
-    };
-
-    // TRAQ risk color mapping
-    const riskColors: Record<string, string> = {
-      low: "#e8f5e9",
-      moderate: "#fff8e1",
-      high: "#fff3e0",
-      extreme: "#ffebee",
-    };
-
-    const riskTextColors: Record<string, string> = {
-      low: "#2e7d32",
-      moderate: "#f57f17",
-      high: "#e65100",
-      extreme: "#c62828",
     };
 
     // Tree inventory rows
@@ -142,10 +137,87 @@ export async function GET(
       )
       .join("\n");
 
-    // TRAQ appendix (health assessment only)
+    // =========================================================================
+    // COVER LETTER (removal permit only, when enabled)
+    // =========================================================================
+    let coverLetterHtml = "";
+    if (includeCoverLetter && report.reportType === "removal_permit") {
+      const removalCount = trees.filter((t) => t.recommendedAction === "remove").length;
+      const ordinance = await prisma.municipalOrdinance.findUnique({
+        where: { cityName: property.city },
+      });
+
+      coverLetterHtml = `
+  <div class="cover-letter">
+    <div class="cl-letterhead">
+      ${arborist.companyName ? `<p class="cl-company">${esc(arborist.companyName)}</p>` : ""}
+      ${arborist.companyAddress ? `<p class="cl-contact">${esc(arborist.companyAddress)}</p>` : ""}
+      <p class="cl-contact">
+        ${[arborist.companyPhone, arborist.companyEmail, arborist.companyWebsite].filter(Boolean).join(" &bull; ")}
+      </p>
+    </div>
+
+    <p class="cl-date">${dateStr}</p>
+
+    <div class="cl-recipient">
+      <p>${esc(property.city)} Planning Department</p>
+      <p>Urban Forestry / Tree Preservation</p>
+      <p>${esc(property.city)}, ${property.state || "CA"}</p>
+    </div>
+
+    <p class="cl-re">
+      <strong>RE: Tree Removal Permit Application</strong><br>
+      Property: ${esc(property.address)}, ${esc(property.city)}, ${property.state || "CA"}<br>
+      ${property.parcelNumber ? `APN: ${esc(property.parcelNumber)}<br>` : ""}
+    </p>
+
+    <p>Dear Urban Forestry Division,</p>
+
+    <p>This letter accompanies the attached Arborist Report in support of a tree removal permit application for
+    ${removalCount} tree${removalCount !== 1 ? "s" : ""} at the above-referenced property${ordinance?.codeReference ? ` pursuant to ${esc(ordinance.codeReference)}` : ""}.</p>
+
+    <p>As a certified arborist (ISA #${esc(arborist.isaCertificationNum)}), I have conducted a Level 2 Basic Assessment
+    of ${trees.length} tree${trees.length !== 1 ? "s" : ""} on the property in accordance with ISA Tree Risk Assessment
+    Qualification (TRAQ) methodology and ANSI A300 standards. The attached report provides detailed findings including
+    individual tree assessments, risk analysis, and recommendations.</p>
+
+    ${protectedCount > 0 ? `
+    <p><strong>Protected Trees:</strong> ${protectedCount} of ${trees.length} trees assessed meet the criteria for
+    protected status under the applicable municipal tree ordinance. The report includes detailed justification for
+    the requested removal${protectedCount > 1 ? "s" : ""}, including risk assessment findings, retention feasibility
+    analysis, and proposed mitigation measures as required.</p>` : ""}
+
+    <p>The enclosed report includes:</p>
+    <ul>
+      <li>Complete tree inventory with species, dimensions, and condition ratings</li>
+      <li>Individual tree health and structural assessments</li>
+      <li>Risk analysis and removal justification for each tree proposed for removal</li>
+      ${includeTraq ? "<li>ISA TRAQ Level 2 Basic Assessment forms for each tree</li>" : ""}
+      ${includeMitigation && protectedCount > 0 ? "<li>Mitigation requirements and replacement calculations</li>" : ""}
+      <li>Arborist certification and credentials</li>
+    </ul>
+
+    <p>I am available to discuss these findings or provide additional information as needed to facilitate
+    the permit review process. Please do not hesitate to contact me at the information provided above.</p>
+
+    <p>Respectfully submitted,</p>
+
+    <div class="cl-signature">
+      <p class="cl-sig-name">${esc(arborist.name)}</p>
+      <p>ISA Certified Arborist #${esc(arborist.isaCertificationNum)}</p>
+      ${arborist.companyName ? `<p>${esc(arborist.companyName)}</p>` : ""}
+    </div>
+  </div>
+  <div class="page-break"></div>
+  `;
+    }
+
+    // =========================================================================
+    // TRAQ APPENDIX — Formal ISA TRAQ Level 2 Basic Assessment forms
+    // =========================================================================
     let traqAppendix = "";
-    if (report.reportType === "health_assessment") {
-      const traqRows = trees
+    if (includeTraq && (report.reportType === "health_assessment" || report.reportType === "removal_permit")) {
+      const traqForms = trees
         .map((tree) => {
           let data: Record<string, unknown> = {};
           if (tree.typeSpecificData) {
@@ -156,73 +228,164 @@ export async function GET(
             }
           }
 
-          const likelihoodOfFailure = fmtEnum(data.likelihoodOfFailure as string);
-          const likelihoodOfImpact = fmtEnum(data.likelihoodOfImpact as string);
-          const consequences = fmtEnum(data.consequences as string);
-          const overallRisk = fmtEnum(data.overallRiskRating as string);
-          const overallRiskRaw = ((data.overallRiskRating as string) || "").toLowerCase();
-          const riskBg = riskColors[overallRiskRaw] || "#f0f0f0";
-          const riskTxt = riskTextColors[overallRiskRaw] || "#1a1a1a";
-
-          // Individual row risk coloring
           const lofRaw = ((data.likelihoodOfFailure as string) || "").toLowerCase();
           const loiRaw = ((data.likelihoodOfImpact as string) || "").toLowerCase();
           const consRaw = ((data.consequences as string) || "").toLowerCase();
-
+          const overallRisk = fmtEnum(data.overallRiskRating as string);
+          const overallRiskRaw = ((data.overallRiskRating as string) || "").toLowerCase();
           const target = (data.targetDescription as string) || "N/A";
           const maintenance = Array.isArray(data.maintenanceItems)
             ? (data.maintenanceItems as string[]).join(", ")
             : "None specified";
 
           return `
-        <div class="traq-tree avoid-break">
-          <h3>Tree #${tree.treeNumber} \u2014 ${esc(tree.speciesCommon)}${tree.speciesScientific ? ` <em>(${esc(tree.speciesScientific)})</em>` : ""}</h3>
-          <table class="traq-table">
-            <tr>
-              <td class="label-cell">Species</td>
-              <td>${esc(tree.speciesCommon)}${tree.speciesScientific ? ` (${esc(tree.speciesScientific)})` : ""}</td>
-              <td class="label-cell">DBH</td>
-              <td>${tree.dbhInches}"</td>
-            </tr>
-            <tr>
-              <td class="label-cell">Height</td>
-              <td>${tree.heightFt ? `${tree.heightFt}'` : "N/A"}</td>
-              <td class="label-cell">Condition</td>
-              <td>${conditionLabels[tree.conditionRating] ?? tree.conditionRating} (${tree.conditionRating}/5)</td>
-            </tr>
-            <tr>
-              <td class="label-cell">Target</td>
-              <td colspan="3">${esc(target)}</td>
-            </tr>
-          </table>
-          <table class="traq-matrix">
-            <thead>
-              <tr>
-                <th>Assessment Factor</th>
-                <th>Rating</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr style="background:${riskRowBg(lofRaw)};">
-                <td>Likelihood of Failure</td>
-                <td class="center">${likelihoodOfFailure}</td>
-              </tr>
-              <tr style="background:${riskRowBg(loiRaw)};">
-                <td>Likelihood of Impact</td>
-                <td class="center">${likelihoodOfImpact}</td>
-              </tr>
-              <tr style="background:${riskRowBg(consRaw)};">
-                <td>Consequences of Failure</td>
-                <td class="center">${consequences}</td>
-              </tr>
-              <tr class="risk-row" style="background:${riskBg};">
-                <td><strong>Overall Risk Rating</strong></td>
-                <td class="center"><strong style="color:${riskTxt}; font-size:10pt;">${overallRisk}</strong></td>
-              </tr>
-            </tbody>
-          </table>
-          <p class="maintenance-line"><strong>Recommended Maintenance:</strong> ${esc(maintenance)}</p>
-        </div>`;
+    <div class="traq-form avoid-break">
+      <div class="traq-header">
+        <div class="traq-header-left">
+          <h3>ISA TRAQ Level 2 \u2014 Basic Assessment</h3>
+          <p class="traq-subtitle">Tree Risk Assessment Qualification</p>
+        </div>
+        <div class="traq-header-right">
+          <p>Assessment Date: ${dateStr}</p>
+          <p>Assessor: ${esc(arborist.name)}</p>
+          <p>ISA #: ${arborist.isaCertificationNum}</p>
+        </div>
+      </div>
+
+      <div class="traq-section">
+        <div class="traq-section-header">1. Tree Information</div>
+        <table class="traq-info-table">
+          <tr>
+            <td class="traq-label">Tree #</td>
+            <td class="traq-value">${tree.treeNumber}</td>
+            <td class="traq-label">Tag #</td>
+            <td class="traq-value">${tree.tagNumber || "\u2014"}</td>
+            <td class="traq-label">Date</td>
+            <td class="traq-value">${dateStr}</td>
+          </tr>
+          <tr>
+            <td class="traq-label">Species</td>
+            <td class="traq-value" colspan="3">${esc(tree.speciesCommon)} (${esc(tree.speciesScientific || "")})</td>
+            <td class="traq-label">DBH</td>
+            <td class="traq-value">${tree.dbhInches}"</td>
+          </tr>
+          <tr>
+            <td class="traq-label">Height</td>
+            <td class="traq-value">${tree.heightFt ? tree.heightFt + "'" : "N/A"}</td>
+            <td class="traq-label">Crown Spread</td>
+            <td class="traq-value">${tree.canopySpreadFt ? tree.canopySpreadFt + "'" : "N/A"}</td>
+            <td class="traq-label">Condition</td>
+            <td class="traq-value">${conditionLabels[tree.conditionRating] ?? tree.conditionRating} (${tree.conditionRating}/5)</td>
+          </tr>
+          <tr>
+            <td class="traq-label">Location</td>
+            <td class="traq-value" colspan="5">${esc(property.address)}, ${esc(property.city)}, ${property.state || "CA"}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="traq-section">
+        <div class="traq-section-header">2. Site Factors</div>
+        <table class="traq-info-table">
+          <tr>
+            <td class="traq-label">Occupancy Rate</td>
+            <td class="traq-value">${esc((data.occupancyRate as string) || "Frequent")}</td>
+            <td class="traq-label">Land Use</td>
+            <td class="traq-value">Residential</td>
+          </tr>
+          <tr>
+            <td class="traq-label">Target(s)</td>
+            <td class="traq-value" colspan="3">${esc(target)}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="traq-section">
+        <div class="traq-section-header">3. Tree Health &amp; Structural Assessment</div>
+        <table class="traq-info-table">
+          <tr>
+            <td class="traq-label">Health Notes</td>
+            <td class="traq-value" colspan="3">${esc(tree.healthNotes || "No health defects noted.")}</td>
+          </tr>
+          <tr>
+            <td class="traq-label">Structural Notes</td>
+            <td class="traq-value" colspan="3">${esc(tree.structuralNotes || "No structural defects noted.")}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="traq-section">
+        <div class="traq-section-header">4. Risk Rating</div>
+        <table class="traq-matrix-row">
+          <tr>
+            <td class="traq-matrix-label">Likelihood of Failure</td>
+            <td class="${lofRaw === "improbable" ? "traq-selected" : "traq-cell"}">Improbable</td>
+            <td class="${lofRaw === "possible" ? "traq-selected" : "traq-cell"}">Possible</td>
+            <td class="${lofRaw === "probable" ? "traq-selected" : "traq-cell"}">Probable</td>
+            <td class="${lofRaw === "imminent" ? "traq-selected" : "traq-cell"}">Imminent</td>
+          </tr>
+        </table>
+        <table class="traq-matrix-row">
+          <tr>
+            <td class="traq-matrix-label">Likelihood of Impact</td>
+            <td class="${loiRaw === "very_low" ? "traq-selected" : "traq-cell"}">Very Low</td>
+            <td class="${loiRaw === "low" ? "traq-selected" : "traq-cell"}">Low</td>
+            <td class="${loiRaw === "medium" ? "traq-selected" : "traq-cell"}">Medium</td>
+            <td class="${loiRaw === "high" ? "traq-selected" : "traq-cell"}">High</td>
+          </tr>
+        </table>
+        <table class="traq-matrix-row">
+          <tr>
+            <td class="traq-matrix-label">Consequences</td>
+            <td class="${consRaw === "negligible" ? "traq-selected" : "traq-cell"}">Negligible</td>
+            <td class="${consRaw === "minor" ? "traq-selected" : "traq-cell"}">Minor</td>
+            <td class="${consRaw === "significant" ? "traq-selected" : "traq-cell"}">Significant</td>
+            <td class="${consRaw === "severe" ? "traq-selected" : "traq-cell"}">Severe</td>
+          </tr>
+        </table>
+        <div class="traq-overall-risk traq-risk-${overallRiskRaw || "none"}">
+          <span class="traq-risk-label">OVERALL RISK RATING:</span>
+          <span class="traq-risk-value">${overallRisk.toUpperCase()}</span>
+        </div>
+      </div>
+
+      <div class="traq-section">
+        <div class="traq-section-header">5. Recommended Action &amp; Mitigation</div>
+        <table class="traq-info-table">
+          <tr>
+            <td class="traq-label">Recommended Action</td>
+            <td class="traq-value">${fmtEnum(tree.recommendedAction)}</td>
+            <td class="traq-label">Priority</td>
+            <td class="traq-value">${fmtEnum((data.maintenancePriority as string) || "N/A")}</td>
+          </tr>
+          <tr>
+            <td class="traq-label">Timeline</td>
+            <td class="traq-value">${(data.maintenanceTimeline as string) || "N/A"}</td>
+            <td class="traq-label">Mitigation Required</td>
+            <td class="traq-value">${tree.mitigationRequired || "None"}</td>
+          </tr>
+          <tr>
+            <td class="traq-label">Maintenance Items</td>
+            <td class="traq-value" colspan="3">${esc(maintenance)}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="traq-signature">
+        <div class="traq-sig-line">
+          <span>${isCertified ? esc(report.eSignatureText || arborist.name) : "________________________"}</span>
+          <p>Assessor Signature</p>
+        </div>
+        <div class="traq-sig-line">
+          <span>${arborist.isaCertificationNum}</span>
+          <p>ISA Certification #</p>
+        </div>
+        <div class="traq-sig-line">
+          <span>${dateStr}</span>
+          <p>Date</p>
+        </div>
+      </div>
+    </div>`;
         })
         .join("\n");
 
@@ -230,8 +393,166 @@ export async function GET(
       <div class="page-break"></div>
       <h2 class="section-title">Appendix: TRAQ Risk Assessment Forms</h2>
       <p class="appendix-subtitle">ISA Tree Risk Assessment Qualification (TRAQ) \u2014 Level 2 Basic Assessment</p>
-      ${traqRows}`;
+      ${traqForms}`;
     }
+
+    // =========================================================================
+    // MITIGATION SUMMARY TABLE
+    // =========================================================================
+    let mitigationHtml = "";
+    if (includeMitigation) {
+      const protectedRemovalTrees = trees.filter(
+        (t) => t.isProtected && t.recommendedAction === "remove"
+      );
+
+      if (protectedRemovalTrees.length > 0) {
+        const ordinance = await prisma.municipalOrdinance.findUnique({
+          where: { cityName: property.city },
+        });
+
+        let mitigationRules: Record<string, unknown> = {};
+        if (ordinance?.mitigationRules) {
+          try {
+            mitigationRules = JSON.parse(ordinance.mitigationRules);
+          } catch { /* ignore */ }
+        }
+
+        const replacementRatio = (mitigationRules.replantingRatio as string) || "3:1";
+        const minBoxSize = (mitigationRules.minBoxSize as string) || "24-inch box";
+        const inLieuFeePerTree = (mitigationRules.inLieuFeePerTree as number) || null;
+
+        const ratioNum = parseInt(replacementRatio.split(":")[0]) || 3;
+
+        const rows = protectedRemovalTrees
+          .map((tree) => {
+            const replacementsRequired = ratioNum;
+            const feeTotal = inLieuFeePerTree ? inLieuFeePerTree * replacementsRequired : null;
+
+            return `
+          <tr>
+            <td class="center">#${tree.treeNumber}</td>
+            <td>${esc(tree.speciesCommon)}</td>
+            <td class="center">${tree.dbhInches}"</td>
+            <td>${esc(tree.protectionReason || "Protected")}</td>
+            <td class="center">${replacementRatio}</td>
+            <td class="center">${replacementsRequired} tree${replacementsRequired !== 1 ? "s" : ""}</td>
+            <td class="center">${minBoxSize} min.</td>
+            ${inLieuFeePerTree ? `<td class="center">$${(feeTotal!).toLocaleString()}</td>` : ""}
+          </tr>`;
+          })
+          .join("\n");
+
+        const totalReplacements = protectedRemovalTrees.length * ratioNum;
+        const totalFee = inLieuFeePerTree ? totalReplacements * inLieuFeePerTree : null;
+
+        mitigationHtml = `
+    <div class="page-break"></div>
+    <h2 class="section-title">Appendix: Mitigation Requirements Summary</h2>
+    <p class="mitigation-intro">The following mitigation is required for the removal of protected trees
+    ${ordinance?.codeReference ? `per ${esc(ordinance.codeReference)}` : "per applicable municipal tree ordinance"}.</p>
+
+    <table class="mitigation-table">
+      <thead>
+        <tr>
+          <th>Tree</th>
+          <th>Species</th>
+          <th>DBH</th>
+          <th>Protection Basis</th>
+          <th>Ratio</th>
+          <th>Replacements</th>
+          <th>Min. Size</th>
+          ${inLieuFeePerTree ? "<th>In-Lieu Fee</th>" : ""}
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+      <tfoot>
+        <tr class="mitigation-total">
+          <td colspan="5"><strong>TOTAL MITIGATION REQUIRED</strong></td>
+          <td class="center"><strong>${totalReplacements} trees</strong></td>
+          <td class="center"><strong>${minBoxSize}</strong></td>
+          ${totalFee ? `<td class="center"><strong>$${totalFee.toLocaleString()}</strong></td>` : ""}
+        </tr>
+      </tfoot>
+    </table>
+
+    ${inLieuFeePerTree ? `
+    <p class="mitigation-note">
+      <strong>Note:</strong> The property owner may elect to plant replacement trees on-site at the required ratio
+      and size, or pay the in-lieu fee of $${inLieuFeePerTree.toLocaleString()} per required replacement tree to
+      the city's tree replacement fund. Contact the city Urban Forestry division for current fee schedules and
+      approved replacement species lists.
+    </p>` : `
+    <p class="mitigation-note">
+      <strong>Note:</strong> Contact the ${esc(property.city)} Urban Forestry division for current mitigation
+      requirements, approved replacement species lists, and any applicable in-lieu fee options.
+    </p>`}
+    `;
+      }
+    }
+
+    // =========================================================================
+    // ENHANCED CREDENTIALS BLOCK
+    // =========================================================================
+    let additionalCertsArr: string[] = [];
+    try {
+      const parsed = JSON.parse(arborist.additionalCerts || "[]");
+      if (Array.isArray(parsed)) additionalCertsArr = parsed;
+    } catch {
+      // If it's a comma-separated string, split it
+      if (arborist.additionalCerts && arborist.additionalCerts !== "[]") {
+        additionalCertsArr = arborist.additionalCerts
+          .split(",")
+          .map((s: string) => s.trim())
+          .filter(Boolean);
+      }
+    }
+
+    const credentialsBlock = `
+    <div class="cert-credentials">
+      <div class="cert-credentials-header">CERTIFYING ARBORIST</div>
+      <table class="cert-credentials-table">
+        <tr>
+          <td class="cert-cred-label">Name</td>
+          <td class="cert-cred-value">${esc(arborist.name)}</td>
+        </tr>
+        <tr>
+          <td class="cert-cred-label">ISA Certification</td>
+          <td class="cert-cred-value">#${esc(arborist.isaCertificationNum)}</td>
+        </tr>
+        ${arborist.traqCertified ? `
+        <tr>
+          <td class="cert-cred-label">TRAQ Qualified</td>
+          <td class="cert-cred-value">ISA Tree Risk Assessment Qualified</td>
+        </tr>` : ""}
+        ${additionalCertsArr.length > 0 ? `
+        <tr>
+          <td class="cert-cred-label">Additional Certs</td>
+          <td class="cert-cred-value">${esc(additionalCertsArr.join(", "))}</td>
+        </tr>` : ""}
+        ${arborist.licenseNumbers ? `
+        <tr>
+          <td class="cert-cred-label">License Numbers</td>
+          <td class="cert-cred-value">${esc(arborist.licenseNumbers)}</td>
+        </tr>` : ""}
+        ${arborist.companyName ? `
+        <tr>
+          <td class="cert-cred-label">Company</td>
+          <td class="cert-cred-value">${esc(arborist.companyName)}</td>
+        </tr>` : ""}
+        ${arborist.companyPhone ? `
+        <tr>
+          <td class="cert-cred-label">Phone</td>
+          <td class="cert-cred-value">${esc(arborist.companyPhone)}</td>
+        </tr>` : ""}
+        ${arborist.companyEmail ? `
+        <tr>
+          <td class="cert-cred-label">Email</td>
+          <td class="cert-cred-value">${esc(arborist.companyEmail)}</td>
+        </tr>` : ""}
+      </table>
+    </div>`;
 
     // Draft watermark
     const draftWatermark = !isCertified
@@ -262,6 +583,48 @@ export async function GET(
     }
     .page-break { page-break-before: always; }
 
+    /* ==== COVER LETTER ==== */
+    .cover-letter {
+      font-family: Georgia, serif;
+      font-size: 10.5pt;
+      line-height: 1.6;
+      padding: 0.5in 0;
+    }
+    .cl-letterhead {
+      border-bottom: 2px solid #2d5016;
+      padding-bottom: 12px;
+      margin-bottom: 24px;
+    }
+    .cl-company {
+      font-size: 14pt;
+      font-weight: bold;
+      color: #2d5016;
+      margin: 0;
+    }
+    .cl-contact {
+      font-size: 9pt;
+      color: #666;
+      margin: 2px 0;
+    }
+    .cl-date { margin-bottom: 20px; }
+    .cl-recipient { margin-bottom: 20px; }
+    .cl-recipient p { margin: 0; }
+    .cl-re {
+      margin-bottom: 20px;
+      padding: 8px 12px;
+      border-left: 3px solid #2d5016;
+      background-color: #f8faf5;
+    }
+    .cover-letter ul { padding-left: 24px; margin: 8px 0; }
+    .cover-letter li { margin-bottom: 4px; }
+    .cl-signature { margin-top: 40px; }
+    .cl-sig-name {
+      font-weight: bold;
+      font-style: italic;
+      margin-bottom: 2px;
+    }
+    .cl-signature p { margin: 2px 0; font-size: 9.5pt; }
+
     /* ==== COVER PAGE ==== */
     .cover-page {
       display: flex;
@@ -270,8 +633,6 @@ export async function GET(
       position: relative;
       padding: 0;
     }
-
-    /* Top branding bar: logo left, company info right */
     .cover-branding {
       display: flex;
       align-items: center;
@@ -300,8 +661,6 @@ export async function GET(
       line-height: 1.5;
       font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     }
-
-    /* Centered title block */
     .cover-title-block {
       flex: 1;
       display: flex;
@@ -348,22 +707,14 @@ export async function GET(
       margin: 0 0 4px 0;
       font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     }
-    .cover-type-certified {
-      background: #2d5016;
-      color: #fff;
-    }
-    .cover-type-draft {
-      background: #e5e7eb;
-      color: #6b7280;
-    }
+    .cover-type-certified { background: #2d5016; color: #fff; }
+    .cover-type-draft { background: #e5e7eb; color: #6b7280; }
     .cover-rule-bottom {
       width: 280px;
       border: none;
       border-top: 3px double #2d5016;
       margin: 28px auto 0 auto;
     }
-
-    /* 2-column meta table */
     .cover-meta-table {
       width: 80%;
       max-width: 480px;
@@ -383,12 +734,7 @@ export async function GET(
       letter-spacing: 0.5px;
       padding-bottom: 2px;
     }
-    .cover-meta-value {
-      color: #1a1a1a;
-      font-weight: 500;
-    }
-
-    /* Cover footer area */
+    .cover-meta-value { color: #1a1a1a; font-weight: 500; }
     .cover-footer {
       text-align: center;
       padding-top: 20px;
@@ -538,72 +884,177 @@ export async function GET(
       font-style: italic;
     }
 
-    /* ---- TRAQ Appendix ---- */
+    /* ---- TRAQ Form Styles ---- */
     .appendix-subtitle {
       font-size: 9pt;
       color: #666;
       font-style: italic;
       margin: 0 0 20px 0;
     }
-    .traq-tree {
-      margin-bottom: 28px;
-      border: 1px solid #d0d0d0;
-      border-radius: 4px;
-      padding: 16px;
-      page-break-inside: avoid;
+    .traq-form {
+      page-break-before: always;
+      border: 2px solid #2d5016;
+      padding: 20px;
+      margin-top: 20px;
     }
-    .traq-tree h3 {
-      margin: 0 0 10px 0;
-      font-size: 11pt;
+    .traq-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #2d5016;
+      padding-bottom: 10px;
+      margin-bottom: 16px;
+    }
+    .traq-header h3 {
+      font-size: 14pt;
+      font-weight: bold;
       color: #2d5016;
-      border-bottom: 1px solid #e5e7eb;
-      padding-bottom: 4px;
+      margin: 0;
       font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      font-weight: 600;
     }
-    .traq-table {
+    .traq-subtitle {
+      font-size: 9pt;
+      color: #666;
+      margin: 2px 0 0 0;
+    }
+    .traq-header-right {
+      text-align: right;
+      font-size: 8.5pt;
+      color: #555;
+    }
+    .traq-header-right p { margin: 1px 0; }
+    .traq-section { margin-bottom: 12px; }
+    .traq-section-header {
+      background-color: #2d5016;
+      color: white;
+      padding: 4px 10px;
+      font-size: 9.5pt;
+      font-weight: bold;
+      font-family: Helvetica, Arial, sans-serif;
+      margin-bottom: 4px;
+    }
+    .traq-info-table {
       width: 100%;
       border-collapse: collapse;
-      margin: 0 0 10px 0;
       font-size: 9pt;
     }
-    .traq-table td {
-      padding: 5px 8px;
-      border: 1px solid #e5e7eb;
+    .traq-info-table td {
+      border: 1px solid #ccc;
+      padding: 4px 8px;
+      vertical-align: top;
     }
-    .traq-table .label-cell {
-      background: #f0f4ec;
+    .traq-label {
+      background-color: #f5f5f0;
       font-weight: 600;
       width: 20%;
-      color: #333;
+      font-size: 8.5pt;
+      color: #444;
     }
-    .traq-matrix {
+    .traq-value { font-size: 9pt; }
+    .traq-matrix-row {
       width: 100%;
       border-collapse: collapse;
-      margin: 0 0 10px 0;
+      margin-bottom: 4px;
       font-size: 9pt;
     }
-    .traq-matrix th {
-      background: #2d5016;
-      color: white;
+    .traq-matrix-row td {
+      border: 1px solid #ccc;
       padding: 5px 8px;
-      text-align: left;
+      text-align: center;
+    }
+    .traq-matrix-label {
+      background-color: #f5f5f0;
       font-weight: 600;
+      text-align: left !important;
+      width: 30%;
       font-size: 8.5pt;
     }
-    .traq-matrix td {
-      padding: 5px 8px;
-      border: 1px solid #e5e7eb;
+    .traq-cell { background-color: white; color: #666; }
+    .traq-selected {
+      background-color: #2d5016;
+      color: white;
+      font-weight: bold;
     }
-    .traq-matrix .risk-row { font-size: 10pt; }
-    .traq-matrix td.center { text-align: center; }
-    .maintenance-line {
+    .traq-overall-risk {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      margin-top: 8px;
+      border: 2px solid #333;
+      font-size: 11pt;
+    }
+    .traq-risk-label { font-weight: bold; color: #333; }
+    .traq-risk-value { font-weight: bold; font-size: 13pt; }
+    .traq-risk-low { background-color: #e8f5e9; }
+    .traq-risk-low .traq-risk-value { color: #2d5016; }
+    .traq-risk-moderate { background-color: #fff8e1; }
+    .traq-risk-moderate .traq-risk-value { color: #b8860b; }
+    .traq-risk-high { background-color: #fff3e0; }
+    .traq-risk-high .traq-risk-value { color: #e65100; }
+    .traq-risk-extreme { background-color: #ffebee; }
+    .traq-risk-extreme .traq-risk-value { color: #c62828; }
+    .traq-risk-none { background-color: #f0f0f0; }
+    .traq-risk-none .traq-risk-value { color: #666; }
+    .traq-signature {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid #ccc;
+    }
+    .traq-sig-line { text-align: center; width: 30%; }
+    .traq-sig-line span {
+      display: block;
       font-size: 9pt;
-      margin: 6px 0 0 0;
-      padding: 6px 0 0 0;
-      border-top: 1px solid #e5e7eb;
+      font-style: italic;
+      border-bottom: 1px solid #333;
+      padding-bottom: 4px;
+      margin-bottom: 2px;
+      min-height: 16px;
+    }
+    .traq-sig-line p {
+      font-size: 7.5pt;
+      color: #666;
+      margin: 2px 0 0 0;
     }
     .avoid-break { page-break-inside: avoid; }
+
+    /* ---- Mitigation Table ---- */
+    .mitigation-intro {
+      font-size: 10pt;
+      margin-bottom: 12px;
+    }
+    .mitigation-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9pt;
+      margin-bottom: 16px;
+    }
+    .mitigation-table th {
+      background-color: #2d5016;
+      color: white;
+      padding: 6px 8px;
+      text-align: left;
+      font-size: 8.5pt;
+    }
+    .mitigation-table td {
+      border: 1px solid #ddd;
+      padding: 5px 8px;
+    }
+    .mitigation-total {
+      background-color: #f5f5f0;
+      border-top: 2px solid #2d5016;
+    }
+    .mitigation-note {
+      font-size: 8.5pt;
+      color: #555;
+      font-style: italic;
+      border-left: 3px solid #eab308;
+      padding: 6px 10px;
+      background-color: #fefce8;
+    }
+    .center { text-align: center; }
 
     /* ---- Certification Page ---- */
     .cert-page {
@@ -644,10 +1095,44 @@ export async function GET(
       font-style: italic;
       margin-left: 4px;
     }
+
+    /* ---- Enhanced Credentials Block ---- */
+    .cert-credentials {
+      border: 2px solid #2d5016;
+      margin-top: 24px;
+      overflow: hidden;
+    }
+    .cert-credentials-header {
+      background-color: #2d5016;
+      color: white;
+      padding: 6px 12px;
+      font-size: 9pt;
+      font-weight: bold;
+      font-family: Helvetica, Arial, sans-serif;
+      letter-spacing: 1px;
+    }
+    .cert-credentials-table {
+      width: 100%;
+      font-size: 9.5pt;
+    }
+    .cert-credentials-table td {
+      padding: 5px 12px;
+      border-bottom: 1px solid #eee;
+    }
+    .cert-cred-label {
+      width: 30%;
+      font-weight: 600;
+      color: #555;
+      background-color: #f8faf5;
+    }
+    .cert-cred-value { color: #222; }
   </style>
 </head>
 <body>
   ${draftWatermark}
+
+  <!-- ========== COVER LETTER (removal permits) ========== -->
+  ${coverLetterHtml}
 
   <!-- ========== COVER PAGE ========== -->
   <div class="cover-page">
@@ -764,6 +1249,9 @@ export async function GET(
   <!-- ========== TRAQ APPENDIX ========== -->
   ${traqAppendix}
 
+  <!-- ========== MITIGATION SUMMARY ========== -->
+  ${mitigationHtml}
+
   <!-- ========== CERTIFICATION PAGE ========== -->
   <div class="cert-page">
     <h2 class="section-title">Arborist Certification</h2>
@@ -808,6 +1296,9 @@ export async function GET(
         }
       </div>
     </div>
+
+    <!-- Enhanced Credentials Block -->
+    ${credentialsBlock}
   </div>
 </body>
 </html>`;
@@ -882,22 +1373,4 @@ function fmtEnum(value: string | undefined | null): string {
   return value
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function riskRowBg(rawValue: string): string {
-  const map: Record<string, string> = {
-    improbable: "#f7f9f5",
-    possible: "#fff8e1",
-    probable: "#fff3e0",
-    imminent: "#ffebee",
-    very_low: "#f7f9f5",
-    low: "#e8f5e9",
-    medium: "#fff8e1",
-    high: "#fff3e0",
-    negligible: "#f7f9f5",
-    minor: "#e8f5e9",
-    significant: "#fff3e0",
-    severe: "#ffebee",
-  };
-  return map[rawValue] || "#ffffff";
 }

@@ -26,6 +26,8 @@ model Arborist {
   companyWebsite   String?
   licenseNumbers   String?
   signatureName    String?
+  traqCertified    Boolean  @default(false)
+  additionalCerts  String   @default("[]") // JSON array: ["BCMA", "Utility Specialist", etc.]
 
   createdAt DateTime @default(now())
 
@@ -188,6 +190,7 @@ model Report {
   eSignatureText String?
   certifiedAt    DateTime?
   pdfUrl         String?
+  reportOptions  String  @default("{}") // JSON — toggleable options like includeTraq, includeCoverLetter
 
   status String @default("draft") // draft, review, certified, filed
 

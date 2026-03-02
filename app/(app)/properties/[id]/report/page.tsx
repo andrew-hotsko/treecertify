@@ -16,6 +16,12 @@ import { getReportTypeConfig } from "@/lib/report-types";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
+import {
   ArrowLeft,
   Sparkles,
   Save,
@@ -34,6 +40,7 @@ import {
   ShieldCheck,
   Share2,
   Send,
+  Settings2,
   X,
 } from "lucide-react";
 
@@ -80,6 +87,13 @@ interface Report {
   eSignatureText: string | null;
   certifiedAt: string | null;
   status: string;
+  reportOptions?: string;
+}
+
+interface ReportOptions {
+  includeTraq?: boolean;
+  includeCoverLetter?: boolean;
+  includeMitigation?: boolean;
 }
 
 interface ArboristInfo {
@@ -174,6 +188,9 @@ export default function PropertyReportPage() {
   const [qualityWarnings, setQualityWarnings] = useState<string[]>([]);
   const [streamingText, setStreamingText] = useState("");
 
+  // Report options state (PDF appendix toggles)
+  const [reportOptions, setReportOptions] = useState<ReportOptions>({});
+
   // Report delivery state
   const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState("");
@@ -222,6 +239,10 @@ export default function PropertyReportPage() {
           setPreviewHtml(renderMarkdownToHtml(c));
           setReportType(r.reportType);
           setViewMode(r.status === "certified" ? "preview" : "editor");
+          // Parse report options
+          try {
+            setReportOptions(JSON.parse(r.reportOptions || "{}"));
+          } catch { /* default empty */ }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load");
@@ -568,6 +589,28 @@ export default function PropertyReportPage() {
   }, [property, report]);
 
   // -------------------------------------------------------------------------
+  // Update report options (PDF appendix toggles)
+  // -------------------------------------------------------------------------
+
+  const updateReportOptions = useCallback(
+    async (partial: Partial<ReportOptions>) => {
+      if (!report) return;
+      const updated = { ...reportOptions, ...partial };
+      setReportOptions(updated);
+      try {
+        await fetch(`/api/reports/${report.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reportOptions: JSON.stringify(updated) }),
+        });
+      } catch {
+        // Silently fail — options saved next time report is saved
+      }
+    },
+    [report, reportOptions]
+  );
+
+  // -------------------------------------------------------------------------
   // Section nav click — scroll preview to heading
   // -------------------------------------------------------------------------
 
@@ -858,6 +901,55 @@ export default function PropertyReportPage() {
                     Preview
                   </button>
                 </div>
+
+                {/* Report Options (PDF appendix toggles) */}
+                {(reportType === "health_assessment" || reportType === "removal_permit") && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Settings2 className="h-3.5 w-3.5 mr-1.5" />
+                        Report Options
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72" align="end">
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-sm">PDF Appendices</h4>
+                        <label className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-medium">TRAQ Risk Assessment Forms</p>
+                            <p className="text-xs text-muted-foreground">ISA Level 2 Basic Assessment per tree</p>
+                          </div>
+                          <Switch
+                            checked={reportOptions.includeTraq ?? (reportType === "health_assessment")}
+                            onCheckedChange={(checked) => updateReportOptions({ includeTraq: checked })}
+                          />
+                        </label>
+                        {reportType === "removal_permit" && (
+                          <label className="flex items-center justify-between gap-2">
+                            <div>
+                              <p className="text-sm font-medium">Permit Cover Letter</p>
+                              <p className="text-xs text-muted-foreground">Auto-generated letter to city</p>
+                            </div>
+                            <Switch
+                              checked={reportOptions.includeCoverLetter ?? true}
+                              onCheckedChange={(checked) => updateReportOptions({ includeCoverLetter: checked })}
+                            />
+                          </label>
+                        )}
+                        <label className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-medium">Mitigation Summary</p>
+                            <p className="text-xs text-muted-foreground">Auto-calculated replacement requirements</p>
+                          </div>
+                          <Switch
+                            checked={reportOptions.includeMitigation ?? true}
+                            onCheckedChange={(checked) => updateReportOptions({ includeMitigation: checked })}
+                          />
+                        </label>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
 
                 {/* Regenerate */}
                 <Button
