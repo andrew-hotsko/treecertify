@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -16,7 +16,7 @@ model Arborist {
   isaExpirationDate   DateTime
   companyName         String?
   phone               String?
-  citiesServed        String   @default("[]") // JSON array stored as string for SQLite
+  citiesServed        String   @default("[]") // JSON array stored as string
 
   // Branding & profile fields
   companyLogoUrl   String?
