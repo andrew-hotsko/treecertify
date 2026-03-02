@@ -155,6 +155,12 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   // Map legend
   const [showLegend, setShowLegend] = useState(false);
 
+  // Share link
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [showSharePopover, setShowSharePopover] = useState(false);
+  const [sharingLoading, setSharingLoading] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+
   // Construction encroachment project fields
   const [projectOpen, setProjectOpen] = useState(false);
   const [projectDescription, setProjectDescription] = useState(
@@ -456,6 +462,51 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
       console.error("Failed to duplicate:", err);
     }
   }, [property.city, property.scopeOfAssignment, reportType, router]);
+
+  const handleShare = useCallback(async () => {
+    setSharingLoading(true);
+    try {
+      const res = await fetch(`/api/properties/${property.id}/share`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setShareToken(data.shareToken);
+        setShowSharePopover(true);
+      }
+    } catch (err) {
+      console.error("Failed to create share link:", err);
+    } finally {
+      setSharingLoading(false);
+    }
+  }, [property.id]);
+
+  const handleRevokeShare = useCallback(async () => {
+    setSharingLoading(true);
+    try {
+      const res = await fetch(`/api/properties/${property.id}/share`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setShareToken(null);
+        setShowSharePopover(false);
+        setShareCopied(false);
+      }
+    } catch (err) {
+      console.error("Failed to revoke share link:", err);
+    } finally {
+      setSharingLoading(false);
+    }
+  }, [property.id]);
+
+  const handleCopyShareLink = useCallback(() => {
+    if (!shareToken) return;
+    const url = `${window.location.origin}/share/${shareToken}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    });
+  }, [shareToken]);
 
   // ---- Current side panel data ----
   const sidePanelTree = pendingPin
@@ -809,6 +860,17 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           </CardContent>
         )}
       </Card>
+
+      {/* Protected Trees Permit Warning Banner */}
+      {trees.some((t) => t.isProtected) && (
+        <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/20 px-4 py-3">
+          <ShieldCheck className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <p className="text-sm text-amber-800 dark:text-amber-300">
+            Protected trees on this property may require permits before work
+            begins. Check individual tree details for permit requirements.
+          </p>
+        </div>
+      )}
 
       {/* Filter Chips */}
       {trees.length > 0 && (

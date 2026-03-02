@@ -43,6 +43,7 @@ import {
   ExternalLink,
   Info,
   Copy,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -774,6 +775,34 @@ export function TreeSidePanel({
               )}
             </div>
           )}
+
+          {/* Permit Requirements — shown when tree is protected and ordinance has permit process notes */}
+          {!checkingProtection &&
+            protectionResult?.isProtected &&
+            protectionResult.ordinanceContext?.permitProcessNotes && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                    Permit Requirements
+                  </span>
+                </div>
+                <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                  {protectionResult.ordinanceContext.permitProcessNotes}
+                </p>
+                {protectionResult.ordinanceContext.ordinanceUrl && (
+                  <a
+                    href={protectionResult.ordinanceContext.ordinanceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 transition-colors"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    View Ordinance
+                  </a>
+                )}
+              </div>
+            )}
 
           {/* Arborist Override */}
           <button
