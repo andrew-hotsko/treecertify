@@ -65,22 +65,21 @@ const MAP_STYLES = [
   { id: "outdoors-v12", label: "Outdoors" },
 ];
 
-/** Color by completion status: gray → yellow → green */
+/** Color by condition rating + recommended action */
 function pinColor(pin: TreePin): string {
-  const hasSpecies = pin.speciesCommon && pin.speciesCommon.trim() !== "";
-  const hasDBH = pin.dbhInches && pin.dbhInches > 0;
-  const hasCondition = pin.conditionRating && pin.conditionRating > 0;
-  const hasNotes =
-    (pin.healthNotes && pin.healthNotes.trim() !== "") ||
-    (pin.structuralNotes && pin.structuralNotes.trim() !== "");
+  // Trees marked for removal are always red
+  if (pin.recommendedAction === "remove") return "#ef4444"; // red
 
-  if (hasSpecies && hasDBH && hasCondition && hasNotes) {
-    return "#16a34a"; // green-600 — fully assessed
+  // Color by condition rating
+  if (pin.conditionRating != null) {
+    if (pin.conditionRating <= 1) return "#ef4444"; // red (Dead / Critical)
+    if (pin.conditionRating === 2) return "#f97316"; // orange (Poor)
+    if (pin.conditionRating === 3) return "#eab308"; // yellow (Fair)
+    if (pin.conditionRating === 4) return "#84cc16"; // lime (Good)
+    if (pin.conditionRating >= 5) return "#22c55e"; // green (Excellent)
   }
-  if (hasSpecies || hasDBH) {
-    return "#eab308"; // yellow-500 — partial data
-  }
-  return "#9ca3af"; // gray-400 — just placed, no data
+
+  return "#9ca3af"; // gray — unassessed
 }
 
 function createMarkerElement(

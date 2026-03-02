@@ -1094,16 +1094,28 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-[#16a34a] border-2 border-white shadow-sm" />
-                    <span>Fully assessed</span>
+                    <span className="w-3 h-3 rounded-full bg-[#22c55e] border-2 border-white shadow-sm" />
+                    <span>Excellent</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#84cc16] border-2 border-white shadow-sm" />
+                    <span>Good</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-[#eab308] border-2 border-white shadow-sm" />
-                    <span>Partial data</span>
+                    <span>Fair</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#f97316] border-2 border-white shadow-sm" />
+                    <span>Poor</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#ef4444] border-2 border-white shadow-sm" />
+                    <span>Dead / Critical / Remove</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-[#9ca3af] border-2 border-white shadow-sm" />
-                    <span>Needs assessment</span>
+                    <span>Unassessed</span>
                   </div>
                   <div className="border-t pt-1 mt-1">
                     <div className="flex items-center gap-2">
