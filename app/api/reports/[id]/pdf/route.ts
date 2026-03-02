@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { renderMarkdownToHtml } from "@/lib/markdown";
 import puppeteer from "puppeteer";
+import fs from "fs";
+import path from "path";
 
 export async function GET(
   request: NextRequest,
@@ -125,11 +127,18 @@ export async function GET(
         <div class="photo-grid">
           ${(tree.treePhotos || [])
             .map(
-              (photo, i) => `
+              (photo: { url: string; caption?: string | null; isAnnotated?: boolean; annotatedUrl?: string | null }, i: number) => {
+                // Use annotated version if available
+                const srcUrl = photo.isAnnotated && photo.annotatedUrl ? photo.annotatedUrl : photo.url;
+                // Convert to base64 data URI so Puppeteer can render it
+                const base64 = photoToBase64(srcUrl);
+                const imgSrc = base64 || srcUrl;
+                return `
             <div class="photo-item">
-              <img src="${photo.url}" alt="Tree #${tree.treeNumber} photo ${i + 1}" />
-              <p class="photo-caption">Photo ${i + 1}${photo.caption ? ` \u2014 ${esc(photo.caption)}` : ""}</p>
-            </div>`
+              <img src="${imgSrc}" alt="Tree #${tree.treeNumber} photo ${i + 1}" />
+              <p class="photo-caption">Photo ${i + 1}${photo.caption ? ` \u2014 ${esc(photo.caption)}` : ""}${photo.isAnnotated ? " (annotated)" : ""}</p>
+            </div>`;
+              }
             )
             .join("")}
         </div>
@@ -228,147 +237,225 @@ export async function GET(
             }
           }
 
-          const lofRaw = ((data.likelihoodOfFailure as string) || "").toLowerCase();
-          const loiRaw = ((data.likelihoodOfImpact as string) || "").toLowerCase();
-          const consRaw = ((data.consequences as string) || "").toLowerCase();
+          const lof = ((data.likelihoodOfFailure as string) || "").toLowerCase();
+          const loi = ((data.likelihoodOfImpact as string) || "").toLowerCase();
+          const con = ((data.consequences as string) || "").toLowerCase();
           const overallRisk = fmtEnum(data.overallRiskRating as string);
           const overallRiskRaw = ((data.overallRiskRating as string) || "").toLowerCase();
-          const target = (data.targetDescription as string) || "N/A";
+          const target = (data.targetDescription as string) || "";
+          const targetZone = (data.targetZone as string) || "";
+          const occupancy = (data.occupancyRate as string) || "Frequent";
           const maintenance = Array.isArray(data.maintenanceItems)
             ? (data.maintenanceItems as string[]).join(", ")
             : "None specified";
 
+          // Checkbox helper
+          const chk = (val: string, match: string) => val === match ? "\u2611" : "\u2610";
+
+          // Compute Matrix 1 result: Likelihood of Failure & Impact
+          const m1Lookup: Record<string, Record<string, string>> = {
+            imminent:   { very_low: "Unlikely",  low: "Somewhat likely", medium: "Likely",          high: "Very likely" },
+            probable:   { very_low: "Unlikely",  low: "Unlikely",        medium: "Somewhat likely",  high: "Likely" },
+            possible:   { very_low: "Unlikely",  low: "Unlikely",        medium: "Unlikely",         high: "Somewhat likely" },
+            improbable: { very_low: "Unlikely",  low: "Unlikely",        medium: "Unlikely",         high: "Unlikely" },
+          };
+          const failureAndImpact = (lof && loi) ? (m1Lookup[lof]?.[loi] || "N/A") : "N/A";
+          const faiKey = failureAndImpact.toLowerCase().replace(/ /g, "_");
+
+          // Compute Matrix 2 result: Risk Rating
+          const m2Lookup: Record<string, Record<string, string>> = {
+            very_likely:     { negligible: "Low", minor: "Moderate", significant: "High",     severe: "Extreme" },
+            likely:          { negligible: "Low", minor: "Moderate", significant: "High",     severe: "High" },
+            somewhat_likely: { negligible: "Low", minor: "Low",      significant: "Moderate", severe: "Moderate" },
+            unlikely:        { negligible: "Low", minor: "Low",      significant: "Low",      severe: "Low" },
+          };
+          const computedRisk = (faiKey && con) ? (m2Lookup[faiKey]?.[con] || overallRisk) : overallRisk;
+
+          // Matrix cell highlight helper
+          const m1Cell = (rowKey: string, colKey: string) => {
+            const isActive = lof === rowKey && loi === colKey;
+            return isActive ? 'class="matrix-active"' : '';
+          };
+          const m2Cell = (rowKey: string, colKey: string) => {
+            const isActive = faiKey === rowKey && con === colKey;
+            return isActive ? 'class="matrix-active"' : '';
+          };
+
           return `
-    <div class="traq-form avoid-break">
+    <div class="traq-form">
+      <!-- Header -->
       <div class="traq-header">
-        <div class="traq-header-left">
-          <h3>ISA TRAQ Level 2 \u2014 Basic Assessment</h3>
-          <p class="traq-subtitle">Tree Risk Assessment Qualification</p>
+        <h3>ISA TRAQ Level 2 \u2014 Basic Assessment</h3>
+        <p class="traq-subtitle">Tree Risk Assessment Qualification</p>
+      </div>
+
+      <!-- Assessor/Tree Info -->
+      <table class="traq-info-table">
+        <tr>
+          <td class="traq-label">Assessor</td>
+          <td>${esc(arborist.name)} (ISA #${esc(arborist.isaCertificationNum)})</td>
+          <td class="traq-label">Date</td>
+          <td>${dateStr}</td>
+        </tr>
+        <tr>
+          <td class="traq-label">Address</td>
+          <td colspan="3">${esc(property.address)}, ${esc(property.city)}, ${property.state || "CA"}</td>
+        </tr>
+        <tr>
+          <td class="traq-label">Tree Species</td>
+          <td>${esc(tree.speciesCommon)}${tree.speciesScientific ? ` <em>(${esc(tree.speciesScientific)})</em>` : ""}</td>
+          <td class="traq-label">Tree #</td>
+          <td>${tree.treeNumber}${tree.tagNumber ? ` (Tag: ${esc(tree.tagNumber)})` : ""}</td>
+        </tr>
+        <tr>
+          <td class="traq-label">DBH</td>
+          <td>${tree.dbhInches}"</td>
+          <td class="traq-label">Height</td>
+          <td>${tree.heightFt ? tree.heightFt + "'" : "N/A"}</td>
+        </tr>
+        <tr>
+          <td class="traq-label">Crown Spread</td>
+          <td>${tree.canopySpreadFt ? tree.canopySpreadFt + "'" : "N/A"}</td>
+          <td class="traq-label">Condition</td>
+          <td>${conditionLabels[tree.conditionRating] ?? tree.conditionRating} (${tree.conditionRating}/5)</td>
+        </tr>
+      </table>
+
+      <!-- Targets -->
+      <div class="traq-section-header">Targets</div>
+      <table class="traq-target-table">
+        <thead>
+          <tr><th>#</th><th>Target Description</th><th>Target Zone</th><th>Occupancy Rate</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>${esc(target || "\u2014")}</td>
+            <td>${esc(targetZone || "\u2014")}</td>
+            <td>${esc(occupancy)}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Tree Health & Structural Assessment -->
+      <div class="traq-section-header">Tree Health &amp; Structural Assessment</div>
+      <table class="traq-data-table">
+        <tr>
+          <td class="traq-label">Tree Health</td>
+          <td>
+            ${chk(String(tree.conditionRating <= 1 ? 1 : 0), "1")} Dead/Dying &nbsp;
+            ${chk(String(tree.conditionRating === 2 ? 1 : 0), "1")} Poor &nbsp;
+            ${chk(String(tree.conditionRating === 3 ? 1 : 0), "1")} Fair &nbsp;
+            ${chk(String(tree.conditionRating >= 4 ? 1 : 0), "1")} Good
+          </td>
+        </tr>
+        <tr>
+          <td class="traq-label">Health Notes</td>
+          <td>${esc(tree.healthNotes || "No health defects noted.")}</td>
+        </tr>
+        <tr>
+          <td class="traq-label">Structural Notes</td>
+          <td>${esc(tree.structuralNotes || "No structural defects noted.")}</td>
+        </tr>
+      </table>
+
+      <!-- Risk Rating -->
+      <div class="traq-section-header">Risk Rating</div>
+      <table class="traq-risk-table">
+        <tr>
+          <td class="traq-label">Likelihood of Failure</td>
+          <td>
+            ${chk(lof, "improbable")} Improbable &nbsp;
+            ${chk(lof, "possible")} Possible &nbsp;
+            ${chk(lof, "probable")} Probable &nbsp;
+            ${chk(lof, "imminent")} Imminent
+          </td>
+        </tr>
+        <tr>
+          <td class="traq-label">Likelihood of Impact</td>
+          <td>
+            ${chk(loi, "very_low")} Very Low &nbsp;
+            ${chk(loi, "low")} Low &nbsp;
+            ${chk(loi, "medium")} Medium &nbsp;
+            ${chk(loi, "high")} High
+          </td>
+        </tr>
+        <tr>
+          <td class="traq-label">Consequences</td>
+          <td>
+            ${chk(con, "negligible")} Negligible &nbsp;
+            ${chk(con, "minor")} Minor &nbsp;
+            ${chk(con, "significant")} Significant &nbsp;
+            ${chk(con, "severe")} Severe
+          </td>
+        </tr>
+      </table>
+
+      <!-- Overall Risk -->
+      <div class="traq-overall-risk traq-risk-${overallRiskRaw || "none"}">
+        <strong>OVERALL RISK RATING:</strong>
+        <span class="traq-risk-value">${(computedRisk || overallRisk || "N/A").toUpperCase()}</span>
+      </div>
+
+      <!-- ISA Matrices (reference) -->
+      <div class="traq-matrices">
+        <div class="matrix-pair">
+          <div class="matrix">
+            <p class="matrix-title">Matrix 1: Likelihood of Failure &amp; Impact</p>
+            <table class="matrix-table">
+              <thead>
+                <tr><th>Failure \u2193 / Impact \u2192</th><th>Very Low</th><th>Low</th><th>Medium</th><th>High</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Imminent</td><td ${m1Cell("imminent","very_low")}>Unlikely</td><td ${m1Cell("imminent","low")}>Somewhat</td><td ${m1Cell("imminent","medium")}>Likely</td><td ${m1Cell("imminent","high")}>Very likely</td></tr>
+                <tr><td>Probable</td><td ${m1Cell("probable","very_low")}>Unlikely</td><td ${m1Cell("probable","low")}>Unlikely</td><td ${m1Cell("probable","medium")}>Somewhat</td><td ${m1Cell("probable","high")}>Likely</td></tr>
+                <tr><td>Possible</td><td ${m1Cell("possible","very_low")}>Unlikely</td><td ${m1Cell("possible","low")}>Unlikely</td><td ${m1Cell("possible","medium")}>Unlikely</td><td ${m1Cell("possible","high")}>Somewhat</td></tr>
+                <tr><td>Improbable</td><td ${m1Cell("improbable","very_low")}>Unlikely</td><td ${m1Cell("improbable","low")}>Unlikely</td><td ${m1Cell("improbable","medium")}>Unlikely</td><td ${m1Cell("improbable","high")}>Unlikely</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="matrix">
+            <p class="matrix-title">Matrix 2: Risk Rating</p>
+            <table class="matrix-table">
+              <thead>
+                <tr><th>F&amp;I \u2193 / Conseq. \u2192</th><th>Negligible</th><th>Minor</th><th>Significant</th><th>Severe</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Very likely</td><td ${m2Cell("very_likely","negligible")}>Low</td><td ${m2Cell("very_likely","minor")}>Moderate</td><td ${m2Cell("very_likely","significant")}>High</td><td ${m2Cell("very_likely","severe")}>Extreme</td></tr>
+                <tr><td>Likely</td><td ${m2Cell("likely","negligible")}>Low</td><td ${m2Cell("likely","minor")}>Moderate</td><td ${m2Cell("likely","significant")}>High</td><td ${m2Cell("likely","severe")}>High</td></tr>
+                <tr><td>Somewhat likely</td><td ${m2Cell("somewhat_likely","negligible")}>Low</td><td ${m2Cell("somewhat_likely","minor")}>Low</td><td ${m2Cell("somewhat_likely","significant")}>Moderate</td><td ${m2Cell("somewhat_likely","severe")}>Moderate</td></tr>
+                <tr><td>Unlikely</td><td ${m2Cell("unlikely","negligible")}>Low</td><td ${m2Cell("unlikely","minor")}>Low</td><td ${m2Cell("unlikely","significant")}>Low</td><td ${m2Cell("unlikely","severe")}>Low</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div class="traq-header-right">
-          <p>Assessment Date: ${dateStr}</p>
-          <p>Assessor: ${esc(arborist.name)}</p>
-          <p>ISA #: ${arborist.isaCertificationNum}</p>
-        </div>
       </div>
 
-      <div class="traq-section">
-        <div class="traq-section-header">1. Tree Information</div>
-        <table class="traq-info-table">
-          <tr>
-            <td class="traq-label">Tree #</td>
-            <td class="traq-value">${tree.treeNumber}</td>
-            <td class="traq-label">Tag #</td>
-            <td class="traq-value">${tree.tagNumber || "\u2014"}</td>
-            <td class="traq-label">Date</td>
-            <td class="traq-value">${dateStr}</td>
-          </tr>
-          <tr>
-            <td class="traq-label">Species</td>
-            <td class="traq-value" colspan="3">${esc(tree.speciesCommon)} (${esc(tree.speciesScientific || "")})</td>
-            <td class="traq-label">DBH</td>
-            <td class="traq-value">${tree.dbhInches}"</td>
-          </tr>
-          <tr>
-            <td class="traq-label">Height</td>
-            <td class="traq-value">${tree.heightFt ? tree.heightFt + "'" : "N/A"}</td>
-            <td class="traq-label">Crown Spread</td>
-            <td class="traq-value">${tree.canopySpreadFt ? tree.canopySpreadFt + "'" : "N/A"}</td>
-            <td class="traq-label">Condition</td>
-            <td class="traq-value">${conditionLabels[tree.conditionRating] ?? tree.conditionRating} (${tree.conditionRating}/5)</td>
-          </tr>
-          <tr>
-            <td class="traq-label">Location</td>
-            <td class="traq-value" colspan="5">${esc(property.address)}, ${esc(property.city)}, ${property.state || "CA"}</td>
-          </tr>
-        </table>
-      </div>
+      <!-- Recommended Action & Mitigation -->
+      <div class="traq-section-header">Recommended Action &amp; Mitigation</div>
+      <table class="traq-data-table">
+        <tr>
+          <td class="traq-label">Recommended Action</td>
+          <td>${fmtEnum(tree.recommendedAction)}</td>
+          <td class="traq-label">Priority</td>
+          <td>${fmtEnum((data.maintenancePriority as string) || "N/A")}</td>
+        </tr>
+        <tr>
+          <td class="traq-label">Timeline</td>
+          <td>${(data.maintenanceTimeline as string) || "N/A"}</td>
+          <td class="traq-label">Mitigation</td>
+          <td>${tree.mitigationRequired || "None"}</td>
+        </tr>
+        <tr>
+          <td class="traq-label">Maintenance Items</td>
+          <td colspan="3">${esc(maintenance)}</td>
+        </tr>
+      </table>
 
-      <div class="traq-section">
-        <div class="traq-section-header">2. Site Factors</div>
-        <table class="traq-info-table">
-          <tr>
-            <td class="traq-label">Occupancy Rate</td>
-            <td class="traq-value">${esc((data.occupancyRate as string) || "Frequent")}</td>
-            <td class="traq-label">Land Use</td>
-            <td class="traq-value">Residential</td>
-          </tr>
-          <tr>
-            <td class="traq-label">Target(s)</td>
-            <td class="traq-value" colspan="3">${esc(target)}</td>
-          </tr>
-        </table>
-      </div>
-
-      <div class="traq-section">
-        <div class="traq-section-header">3. Tree Health &amp; Structural Assessment</div>
-        <table class="traq-info-table">
-          <tr>
-            <td class="traq-label">Health Notes</td>
-            <td class="traq-value" colspan="3">${esc(tree.healthNotes || "No health defects noted.")}</td>
-          </tr>
-          <tr>
-            <td class="traq-label">Structural Notes</td>
-            <td class="traq-value" colspan="3">${esc(tree.structuralNotes || "No structural defects noted.")}</td>
-          </tr>
-        </table>
-      </div>
-
-      <div class="traq-section">
-        <div class="traq-section-header">4. Risk Rating</div>
-        <table class="traq-matrix-row">
-          <tr>
-            <td class="traq-matrix-label">Likelihood of Failure</td>
-            <td class="${lofRaw === "improbable" ? "traq-selected" : "traq-cell"}">Improbable</td>
-            <td class="${lofRaw === "possible" ? "traq-selected" : "traq-cell"}">Possible</td>
-            <td class="${lofRaw === "probable" ? "traq-selected" : "traq-cell"}">Probable</td>
-            <td class="${lofRaw === "imminent" ? "traq-selected" : "traq-cell"}">Imminent</td>
-          </tr>
-        </table>
-        <table class="traq-matrix-row">
-          <tr>
-            <td class="traq-matrix-label">Likelihood of Impact</td>
-            <td class="${loiRaw === "very_low" ? "traq-selected" : "traq-cell"}">Very Low</td>
-            <td class="${loiRaw === "low" ? "traq-selected" : "traq-cell"}">Low</td>
-            <td class="${loiRaw === "medium" ? "traq-selected" : "traq-cell"}">Medium</td>
-            <td class="${loiRaw === "high" ? "traq-selected" : "traq-cell"}">High</td>
-          </tr>
-        </table>
-        <table class="traq-matrix-row">
-          <tr>
-            <td class="traq-matrix-label">Consequences</td>
-            <td class="${consRaw === "negligible" ? "traq-selected" : "traq-cell"}">Negligible</td>
-            <td class="${consRaw === "minor" ? "traq-selected" : "traq-cell"}">Minor</td>
-            <td class="${consRaw === "significant" ? "traq-selected" : "traq-cell"}">Significant</td>
-            <td class="${consRaw === "severe" ? "traq-selected" : "traq-cell"}">Severe</td>
-          </tr>
-        </table>
-        <div class="traq-overall-risk traq-risk-${overallRiskRaw || "none"}">
-          <span class="traq-risk-label">OVERALL RISK RATING:</span>
-          <span class="traq-risk-value">${overallRisk.toUpperCase()}</span>
-        </div>
-      </div>
-
-      <div class="traq-section">
-        <div class="traq-section-header">5. Recommended Action &amp; Mitigation</div>
-        <table class="traq-info-table">
-          <tr>
-            <td class="traq-label">Recommended Action</td>
-            <td class="traq-value">${fmtEnum(tree.recommendedAction)}</td>
-            <td class="traq-label">Priority</td>
-            <td class="traq-value">${fmtEnum((data.maintenancePriority as string) || "N/A")}</td>
-          </tr>
-          <tr>
-            <td class="traq-label">Timeline</td>
-            <td class="traq-value">${(data.maintenanceTimeline as string) || "N/A"}</td>
-            <td class="traq-label">Mitigation Required</td>
-            <td class="traq-value">${tree.mitigationRequired || "None"}</td>
-          </tr>
-          <tr>
-            <td class="traq-label">Maintenance Items</td>
-            <td class="traq-value" colspan="3">${esc(maintenance)}</td>
-          </tr>
-        </table>
+      <!-- Inspection limitations & Signature -->
+      <div class="traq-footer-note">
+        <p>Inspection limitations: Visual assessment from ground level. Tools: N/A</p>
+        <p>Data: \u2611 Final &nbsp; \u2610 Preliminary</p>
       </div>
 
       <div class="traq-signature">
@@ -889,103 +976,83 @@ export async function GET(
       font-size: 9pt;
       color: #666;
       font-style: italic;
-      margin: 0 0 20px 0;
+      margin: 0 0 12px 0;
     }
     .traq-form {
+      page-break-inside: avoid;
       page-break-before: always;
-      border: 2px solid #2d5016;
-      padding: 20px;
-      margin-top: 20px;
+      border: 1.5px solid #3d5c2e;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font-size: 9px;
+      line-height: 1.3;
     }
     .traq-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      border-bottom: 2px solid #2d5016;
-      padding-bottom: 10px;
-      margin-bottom: 16px;
+      text-align: center;
+      margin-bottom: 8px;
+      border-bottom: 1.5px solid #3d5c2e;
+      padding-bottom: 6px;
     }
     .traq-header h3 {
-      font-size: 14pt;
-      font-weight: bold;
-      color: #2d5016;
+      font-size: 13px;
       margin: 0;
+      color: #3d5c2e;
       font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     }
     .traq-subtitle {
-      font-size: 9pt;
+      font-size: 9px;
       color: #666;
       margin: 2px 0 0 0;
     }
-    .traq-header-right {
-      text-align: right;
-      font-size: 8.5pt;
-      color: #555;
-    }
-    .traq-header-right p { margin: 1px 0; }
-    .traq-section { margin-bottom: 12px; }
     .traq-section-header {
-      background-color: #2d5016;
+      background: #3d5c2e;
       color: white;
-      padding: 4px 10px;
-      font-size: 9.5pt;
-      font-weight: bold;
+      font-weight: 700;
+      font-size: 9px;
+      padding: 3px 8px;
+      margin: 8px 0 4px 0;
+      border-radius: 2px;
       font-family: Helvetica, Arial, sans-serif;
-      margin-bottom: 4px;
     }
-    .traq-info-table {
+    .traq-info-table, .traq-data-table, .traq-target-table, .traq-risk-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 9pt;
+      margin-bottom: 4px;
     }
-    .traq-info-table td {
-      border: 1px solid #ccc;
-      padding: 4px 8px;
+    .traq-info-table td, .traq-data-table td, .traq-target-table td, .traq-target-table th, .traq-risk-table td {
+      padding: 3px 6px;
+      border: 0.5px solid #ddd;
+      font-size: 9px;
       vertical-align: top;
     }
     .traq-label {
-      background-color: #f5f5f0;
-      font-weight: 600;
-      width: 20%;
-      font-size: 8.5pt;
+      font-weight: 700;
+      width: 120px;
+      background: #f8f8f8;
+      white-space: nowrap;
+      font-size: 8.5px;
       color: #444;
     }
-    .traq-value { font-size: 9pt; }
-    .traq-matrix-row {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 4px;
-      font-size: 9pt;
-    }
-    .traq-matrix-row td {
-      border: 1px solid #ccc;
-      padding: 5px 8px;
-      text-align: center;
-    }
-    .traq-matrix-label {
-      background-color: #f5f5f0;
-      font-weight: 600;
-      text-align: left !important;
-      width: 30%;
-      font-size: 8.5pt;
-    }
-    .traq-cell { background-color: white; color: #666; }
-    .traq-selected {
-      background-color: #2d5016;
-      color: white;
-      font-weight: bold;
+    .traq-target-table th {
+      background: #f0f0f0;
+      font-size: 8px;
+      font-weight: 700;
+      text-align: left;
+      padding: 2px 6px;
     }
     .traq-overall-risk {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 12px;
-      margin-top: 8px;
-      border: 2px solid #333;
-      font-size: 11pt;
+      border: 2px solid #3d5c2e;
+      padding: 6px 12px;
+      margin: 8px 0;
+      text-align: center;
+      font-size: 11px;
     }
-    .traq-risk-label { font-weight: bold; color: #333; }
-    .traq-risk-value { font-weight: bold; font-size: 13pt; }
+    .traq-risk-value {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-left: 8px;
+    }
     .traq-risk-low { background-color: #e8f5e9; }
     .traq-risk-low .traq-risk-value { color: #2d5016; }
     .traq-risk-moderate { background-color: #fff8e1; }
@@ -996,28 +1063,73 @@ export async function GET(
     .traq-risk-extreme .traq-risk-value { color: #c62828; }
     .traq-risk-none { background-color: #f0f0f0; }
     .traq-risk-none .traq-risk-value { color: #666; }
+
+    /* Matrices side by side */
+    .traq-matrices { margin: 6px 0; }
+    .matrix-pair { display: flex; gap: 8px; }
+    .matrix { flex: 1; }
+    .matrix-title {
+      font-size: 8px;
+      font-weight: 700;
+      margin: 0 0 2px 0;
+      text-align: center;
+    }
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7px;
+    }
+    .matrix-table th, .matrix-table td {
+      padding: 1px 3px;
+      border: 0.5px solid #ccc;
+      text-align: center;
+    }
+    .matrix-table th {
+      background: #f0f0f0;
+      font-weight: 700;
+    }
+    .matrix-table td:first-child, .matrix-table th:first-child {
+      text-align: left;
+      font-weight: 600;
+      width: 70px;
+    }
+    /* Highlight the active cell in the matrix */
+    .matrix-active {
+      background-color: #3d5c2e;
+      color: white;
+      font-weight: 700;
+    }
+
     .traq-signature {
       display: flex;
       justify-content: space-between;
-      margin-top: 16px;
-      padding-top: 12px;
+      margin-top: 8px;
+      padding-top: 6px;
       border-top: 1px solid #ccc;
     }
     .traq-sig-line { text-align: center; width: 30%; }
     .traq-sig-line span {
       display: block;
-      font-size: 9pt;
+      font-size: 9px;
       font-style: italic;
       border-bottom: 1px solid #333;
-      padding-bottom: 4px;
+      padding-bottom: 2px;
       margin-bottom: 2px;
-      min-height: 16px;
+      min-height: 14px;
     }
     .traq-sig-line p {
-      font-size: 7.5pt;
+      font-size: 7px;
       color: #666;
       margin: 2px 0 0 0;
     }
+    .traq-footer-note {
+      margin-top: 6px;
+      font-size: 8px;
+      color: #666;
+      border-top: 0.5px solid #ddd;
+      padding-top: 4px;
+    }
+    .traq-footer-note p { margin: 1px 0; }
     .avoid-break { page-break-inside: avoid; }
 
     /* ---- Mitigation Table ---- */
@@ -1139,7 +1251,7 @@ export async function GET(
     <!-- Top branding bar -->
     <div class="cover-branding">
       <div class="cover-brand-left">
-        ${arborist.companyLogoUrl ? `<img src="${arborist.companyLogoUrl}" alt="Logo" class="cover-logo" />` : ""}
+        ${arborist.companyLogoUrl ? `<img src="${photoToBase64(arborist.companyLogoUrl) || arborist.companyLogoUrl}" alt="Logo" class="cover-logo" />` : ""}
         ${arborist.companyName ? `<div class="cover-company-name">${esc(arborist.companyName)}</div>` : `<div class="cover-company-name">${esc(arborist.name)}</div>`}
       </div>
       <div class="cover-brand-right">
@@ -1373,4 +1485,33 @@ function fmtEnum(value: string | undefined | null): string {
   return value
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Convert a serving URL like /api/uploads/trees/{id}/photos/{file}
+ * to a base64 data URI by reading the file from disk.
+ */
+function photoToBase64(photoUrl: string): string | null {
+  try {
+    // Strip the /api/uploads/ prefix to get the relative path within uploads/
+    const relativePath = photoUrl.replace(/^\/api\/uploads\//, "");
+    const uploadsRoot = path.join(process.cwd(), "uploads");
+    const photoPath = path.resolve(uploadsRoot, relativePath);
+
+    // Security: prevent path traversal
+    if (!photoPath.startsWith(uploadsRoot)) return null;
+    if (!fs.existsSync(photoPath)) return null;
+
+    const photoData = fs.readFileSync(photoPath);
+    const ext = path.extname(photoPath).toLowerCase();
+    const mimeType =
+      ext === ".png" ? "image/png" :
+      ext === ".webp" ? "image/webp" :
+      ext === ".heic" ? "image/heic" :
+      "image/jpeg";
+
+    return `data:${mimeType};base64,${photoData.toString("base64")}`;
+  } catch {
+    return null;
+  }
 }

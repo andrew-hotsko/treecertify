@@ -99,6 +99,7 @@ function createMarkerElement(
   wrapper.style.justifyContent = "center";
   wrapper.style.cursor = "pointer";
   wrapper.style.position = "relative";
+  wrapper.style.overflow = "visible";
 
   const el = document.createElement("div");
   el.style.width = `${pinSize}px`;
@@ -337,6 +338,7 @@ export function PropertyMap({
       const marker = new mapboxgl.Marker({
         element: el,
         draggable: interactive,
+        anchor: 'center',
       })
         .setLngLat([pin.lng, pin.lat])
         .addTo(map);
