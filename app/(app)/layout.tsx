@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { Sidebar } from "@/components/sidebar";
 import { MobileNav } from "@/components/mobile-nav";
+import { ConnectivityIndicator } from "@/components/connectivity-indicator";
 
 export default async function AppLayout({
   children,
@@ -26,8 +27,9 @@ export default async function AppLayout({
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar arboristName={arborist.name} isaCertNum={arborist.isaCertificationNum} />
-      <MobileNav arboristName={arborist.name} isaCertNum={arborist.isaCertificationNum} />
+      <ConnectivityIndicator />
+      <Sidebar arboristName={arborist.name} isaCertNum={arborist.isaCertificationNum} profilePhotoUrl={arborist.profilePhotoUrl ?? undefined} />
+      <MobileNav arboristName={arborist.name} isaCertNum={arborist.isaCertificationNum} profilePhotoUrl={arborist.profilePhotoUrl ?? undefined} />
       <main className="pl-0 md:pl-64">
         <div className="mx-auto max-w-7xl px-4 md:px-6 pt-16 md:pt-8 pb-8">{children}</div>
       </main>

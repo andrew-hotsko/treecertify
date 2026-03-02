@@ -53,11 +53,13 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -211,6 +213,52 @@ export default function SettingsPage() {
     }
   };
 
+  const uploadPhoto = async (file: File) => {
+    setUploadingPhoto(true);
+    setMessage(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/arborist/photo", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Upload failed");
+      }
+      const data = await res.json();
+      setProfile((prev) =>
+        prev ? { ...prev, profilePhotoUrl: data.url } : prev
+      );
+      setMessage({ type: "success", text: "Profile photo uploaded successfully" });
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Upload failed",
+      });
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const deletePhoto = async () => {
+    setMessage(null);
+    try {
+      const res = await fetch("/api/arborist/photo", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      setProfile((prev) =>
+        prev ? { ...prev, profilePhotoUrl: null } : prev
+      );
+      setMessage({ type: "success", text: "Profile photo removed" });
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Delete failed",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -237,6 +285,72 @@ export default function SettingsPage() {
           {message.text}
         </div>
       )}
+
+      {/* Profile Photo */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Camera className="h-5 w-5 text-emerald-600" />
+            Profile Photo
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-6">
+            <div className="relative shrink-0">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-dashed border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 overflow-hidden">
+                {profile?.profilePhotoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={profile.profilePhotoUrl}
+                    alt="Profile photo"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <User className="h-8 w-8 text-zinc-300 dark:text-zinc-600" />
+                )}
+              </div>
+              {profile?.profilePhotoUrl && (
+                <button
+                  onClick={deletePhoto}
+                  className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
+                  title="Remove photo"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+            <div className="space-y-2">
+              <input
+                type="file"
+                ref={photoInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) uploadPhoto(file);
+                  e.target.value = "";
+                }}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploadingPhoto}
+              >
+                {uploadingPhoto ? (
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-1.5" />
+                )}
+                {uploadingPhoto ? "Uploading..." : "Upload Photo"}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Square image recommended &bull; Max 10 MB
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Company Logo */}
       <Card className="mb-6">

@@ -26,9 +26,10 @@ const navItems = [
 interface MobileNavProps {
   arboristName: string;
   isaCertNum: string;
+  profilePhotoUrl?: string;
 }
 
-export function MobileNav({ arboristName, isaCertNum }: MobileNavProps) {
+export function MobileNav({ arboristName, isaCertNum, profilePhotoUrl }: MobileNavProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -129,9 +130,18 @@ export function MobileNav({ arboristName, isaCertNum }: MobileNavProps) {
         {/* User section */}
         <div className="border-t border-[hsl(var(--sidebar-muted))] p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[hsl(var(--sidebar-muted))]">
-              <User className="h-5 w-5" />
-            </div>
+            {profilePhotoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profilePhotoUrl}
+                alt={arboristName}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[hsl(var(--sidebar-muted))]">
+                <User className="h-5 w-5" />
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{arboristName}</p>
               <p className="text-xs text-[hsl(var(--sidebar-foreground))]/50 truncate">
