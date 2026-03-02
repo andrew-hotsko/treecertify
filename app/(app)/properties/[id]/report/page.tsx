@@ -172,6 +172,9 @@ export default function PropertyReportPage() {
   const [signatureText, setSignatureText] = useState("");
   const [certifyAgreed, setCertifyAgreed] = useState(false);
   const [showCertifyPanel, setShowCertifyPanel] = useState(false);
+  const [certifyStep, setCertifyStep] = useState(1); // 1=Review, 2=Attest, 3=Sign
+  const [reviewChecked, setReviewChecked] = useState(false);
+  const [certifySuccess, setCertifySuccess] = useState(false);
 
   // UI state
   const [loading, setLoading] = useState(true);
@@ -183,7 +186,7 @@ export default function PropertyReportPage() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showSectionNav, setShowSectionNav] = useState(true);
-  const [viewMode, setViewMode] = useState<"editor" | "preview">("editor");
+  const [viewMode, setViewMode] = useState<"edit" | "split" | "preview">("split");
   const [showQualityDialog, setShowQualityDialog] = useState(false);
   const [qualityWarnings, setQualityWarnings] = useState<string[]>([]);
   const [streamingText, setStreamingText] = useState("");
@@ -238,7 +241,7 @@ export default function PropertyReportPage() {
           savedContentRef.current = c;
           setPreviewHtml(renderMarkdownToHtml(c));
           setReportType(r.reportType);
-          setViewMode(r.status === "certified" ? "preview" : "editor");
+          setViewMode(r.status === "certified" ? "preview" : "split");
           // Parse report options
           try {
             setReportOptions(JSON.parse(r.reportOptions || "{}"));
@@ -462,7 +465,7 @@ export default function PropertyReportPage() {
                 setContent(accumulated);
                 savedContentRef.current = accumulated;
                 setPreviewHtml(renderMarkdownToHtml(accumulated));
-                setViewMode("editor");
+                setViewMode("split");
               } else if (payload.type === "error") {
                 throw new Error(payload.error || "Streaming error");
               }
@@ -481,7 +484,7 @@ export default function PropertyReportPage() {
         setContent(c);
         savedContentRef.current = c;
         setPreviewHtml(renderMarkdownToHtml(c));
-        setViewMode("editor");
+        setViewMode("split");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
@@ -524,10 +527,15 @@ export default function PropertyReportPage() {
       if (!res.ok) throw new Error("Failed to certify");
       const updated = await res.json();
       setReport(updated);
-      setShowCertifyPanel(false);
-      setViewMode("preview");
+      setCertifySuccess(true);
       savedContentRef.current = content;
       setHasUnsavedChanges(false);
+      // Auto-close after 3 seconds
+      setTimeout(() => {
+        setShowCertifyPanel(false);
+        setViewMode("preview");
+        setCertifySuccess(false);
+      }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Certification failed");
     } finally {
@@ -556,7 +564,7 @@ export default function PropertyReportPage() {
       if (!res.ok) throw new Error("Failed to unlock");
       const updated = await res.json();
       setReport(updated);
-      setViewMode("editor");
+      setViewMode("split");
       setSignatureText("");
       setCertifyAgreed(false);
     } catch (err) {
@@ -876,18 +884,28 @@ export default function PropertyReportPage() {
             {/* Edit actions */}
             {!isCertified && (
               <>
-                {/* View mode toggle */}
+                {/* View mode toggle: Edit / Split / Preview */}
                 <div className="flex rounded-lg border bg-muted p-0.5">
                   <button
-                    onClick={() => setViewMode("editor")}
+                    onClick={() => setViewMode("edit")}
                     className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                      viewMode === "editor"
+                      viewMode === "edit"
                         ? "bg-background text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <Pencil className="h-3 w-3" />
-                    Editor
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => setViewMode("split")}
+                    className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                      viewMode === "split"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Split
                   </button>
                   <button
                     onClick={() => setViewMode("preview")}
@@ -965,7 +983,7 @@ export default function PropertyReportPage() {
                 </Button>
 
                 {/* Save */}
-                {viewMode === "editor" && (
+                {(viewMode === "edit" || viewMode === "split") && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -981,7 +999,14 @@ export default function PropertyReportPage() {
                 <Button
                   size="sm"
                   className="bg-emerald-700 hover:bg-emerald-600"
-                  onClick={() => setShowCertifyPanel(true)}
+                  onClick={() => {
+                    setCertifyStep(1);
+                    setReviewChecked(false);
+                    setCertifyAgreed(false);
+                    setSignatureText("");
+                    setCertifySuccess(false);
+                    setShowCertifyPanel(true);
+                  }}
                 >
                   <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
                   Certify
@@ -1103,7 +1128,7 @@ export default function PropertyReportPage() {
       {/* ---- Main Content ---- */}
       <div className="flex-1 flex overflow-hidden">
         {/* Section Navigation Sidebar */}
-        {sections.length > 0 && showSectionNav && viewMode === "editor" && (
+        {sections.length > 0 && showSectionNav && (viewMode === "edit" || viewMode === "split") && (
           <div className="flex-none w-48 border-r bg-muted/30 overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-3 py-2 border-b">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -1140,7 +1165,7 @@ export default function PropertyReportPage() {
         )}
 
         {/* Toggle section nav when hidden */}
-        {!showSectionNav && viewMode === "editor" && sections.length > 0 && (
+        {!showSectionNav && (viewMode === "edit" || viewMode === "split") && sections.length > 0 && (
           <button
             onClick={() => setShowSectionNav(true)}
             className="flex-none w-8 border-r bg-muted/30 flex items-center justify-center hover:bg-muted transition-colors"
@@ -1150,28 +1175,33 @@ export default function PropertyReportPage() {
           </button>
         )}
 
-        {/* Editor + Preview (split pane) or Full Preview */}
-        {viewMode === "editor" && !isCertified ? (
+        {/* Editor + Preview layout based on viewMode */}
+        {(viewMode === "edit" || viewMode === "split") && !isCertified ? (
           <div className="flex-1 flex overflow-hidden">
-            {/* Markdown Editor */}
-            <div className="flex-1 flex flex-col border-r">
-              <div className="flex-none px-3 py-1.5 border-b bg-muted/30 text-xs text-muted-foreground flex items-center gap-2">
-                <Pencil className="h-3 w-3" />
-                Markdown Editor
-                <span className="ml-auto">
-                  Use # headings, **bold**, *italic*, - lists, | tables |
-                </span>
+            {/* Markdown Editor — full width in edit mode, 35% in split */}
+            {(viewMode === "edit" || viewMode === "split") && (
+              <div className={`flex flex-col border-r ${viewMode === "split" ? "w-[35%]" : "flex-1"}`}>
+                <div className="flex-none px-3 py-1.5 border-b bg-muted/30 text-xs text-muted-foreground flex items-center gap-2">
+                  <Pencil className="h-3 w-3" />
+                  Markdown Editor
+                  {viewMode === "edit" && (
+                    <span className="ml-auto">
+                      Use # headings, **bold**, *italic*, - lists, | tables |
+                    </span>
+                  )}
+                </div>
+                <textarea
+                  value={content}
+                  onChange={(e) => handleContentChange(e.target.value)}
+                  className="flex-1 resize-none border-0 bg-background p-4 font-mono text-sm leading-relaxed focus:outline-none focus:ring-0"
+                  spellCheck={false}
+                />
               </div>
-              <textarea
-                value={content}
-                onChange={(e) => handleContentChange(e.target.value)}
-                className="flex-1 resize-none border-0 bg-background p-4 font-mono text-sm leading-relaxed focus:outline-none focus:ring-0"
-                spellCheck={false}
-              />
-            </div>
+            )}
 
-            {/* Live Preview */}
-            <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Live Preview — 65% in split mode */}
+            {viewMode === "split" && (
+            <div className="w-[65%] flex flex-col overflow-hidden">
               <div className="flex-none px-3 py-1.5 border-b bg-muted/30 text-xs text-muted-foreground flex items-center gap-2">
                 <Eye className="h-3 w-3" />
                 Live Preview
@@ -1232,6 +1262,7 @@ export default function PropertyReportPage() {
                 </div>
               </ScrollArea>
             </div>
+            )}
           </div>
         ) : (
           /* Full Preview Mode (or certified read-only) */
@@ -1260,124 +1291,228 @@ export default function PropertyReportPage() {
         )}
       </div>
 
-      {/* ---- Certification Panel ---- */}
+      {/* ---- Certification Ceremony Dialog ---- */}
       {showCertifyPanel && !isCertified && (
-        <div className="flex-none border-t bg-emerald-50/50 dark:bg-emerald-950/10 px-6 py-4">
-          <div className="max-w-3xl mx-auto">
-            <div className="flex items-center gap-2 mb-3">
-              <ShieldCheck className="h-5 w-5 text-emerald-700" />
-              <h3 className="font-semibold text-lg">Certify This Report</h3>
-              <button
-                onClick={() => {
-                  setShowCertifyPanel(false);
-                  setCertifyAgreed(false);
-                  setSignatureText("");
-                }}
-                className="ml-auto text-sm text-muted-foreground hover:text-foreground"
-              >
-                Cancel
-              </button>
-            </div>
-
-            {/* Arborist info */}
-            {arborist && (
-              <div className="flex items-center gap-4 text-sm mb-3 p-3 rounded-lg bg-white dark:bg-zinc-900 border">
-                <div>
-                  <span className="font-medium">{arborist.name}</span>
-                  <span className="text-muted-foreground ml-2">
-                    ISA #{arborist.isaCertificationNum}
-                  </span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-full max-w-lg mx-4">
+            <CardContent className="p-6 space-y-4">
+              {/* Success state */}
+              {certifySuccess ? (
+                <div className="text-center py-8 space-y-4">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 mb-2">
+                    <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-emerald-800">Report Certified</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Your report has been certified and locked. You can now download or share it.
+                  </p>
                 </div>
-                {arborist.companyName && (
-                  <span className="text-muted-foreground">
-                    {arborist.companyName}
-                  </span>
-                )}
-              </div>
-            )}
+              ) : (
+                <>
+                  {/* Header with step indicator */}
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <ShieldCheck className="h-5 w-5 text-emerald-700" />
+                      Certify Report
+                    </h3>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowCertifyPanel(false)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
 
-            {/* Certification statement */}
-            <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border text-sm mb-3">
-              <p>
-                I certify that I have personally inspected the tree(s)
-                described in this report and that the information contained
-                herein is accurate to the best of my professional knowledge
-                and belief. I am an ISA Certified Arborist and the opinions
-                expressed are based on my professional training, experience,
-                and education.
-              </p>
-            </div>
+                  {/* Step indicator */}
+                  <div className="flex items-center gap-2">
+                    {[1, 2, 3].map((step) => (
+                      <div key={step} className="flex items-center gap-2 flex-1">
+                        <div
+                          className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                            certifyStep >= step
+                              ? "bg-emerald-600 text-white"
+                              : "bg-gray-200 text-gray-500"
+                          }`}
+                        >
+                          {step}
+                        </div>
+                        <span className={`text-xs font-medium ${certifyStep >= step ? "text-foreground" : "text-muted-foreground"}`}>
+                          {step === 1 ? "Review" : step === 2 ? "Attest" : "Sign"}
+                        </span>
+                        {step < 3 && <div className={`flex-1 h-0.5 ${certifyStep > step ? "bg-emerald-600" : "bg-gray-200"}`} />}
+                      </div>
+                    ))}
+                  </div>
 
-            {/* Agreement checkbox */}
-            <label className="flex items-start gap-2 text-sm mb-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={certifyAgreed}
-                onChange={(e) => setCertifyAgreed(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-              />
-              <span>
-                I agree to the certification statement above and confirm all
-                information is accurate.
-              </span>
-            </label>
+                  {/* Step 1: Review */}
+                  {certifyStep === 1 && (
+                    <div className="space-y-3">
+                      <div className="rounded-lg border p-4 space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Property</span>
+                          <span className="font-medium">{property?.address}, {property?.city}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Report Type</span>
+                          <span className="font-medium">
+                            {getReportTypeConfig(reportType)?.label || reportType}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Trees Assessed</span>
+                          <span className="font-medium">{property?.trees.length || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Arborist</span>
+                          <span className="font-medium">{arborist?.name} (ISA #{arborist?.isaCertificationNum})</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Date</span>
+                          <span className="font-medium">{new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</span>
+                        </div>
+                      </div>
 
-            {/* Signature input */}
-            <div className="flex items-end gap-3">
-              <div className="flex-1">
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Type your full name as electronic signature
-                  {arborist?.signatureName && (
-                    <span className="text-muted-foreground/60 ml-1">
-                      (must match: {arborist.signatureName})
-                    </span>
+                      <label className="flex items-start gap-2 text-sm cursor-pointer p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={reviewChecked}
+                          onChange={(e) => setReviewChecked(e.target.checked)}
+                          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span>I have reviewed the report content and all tree data is accurate.</span>
+                      </label>
+
+                      <div className="flex justify-end">
+                        <Button
+                          onClick={() => setCertifyStep(2)}
+                          disabled={!reviewChecked}
+                          className="bg-emerald-700 hover:bg-emerald-600"
+                        >
+                          Next: Attestation
+                        </Button>
+                      </div>
+                    </div>
                   )}
-                </label>
-                <Input
-                  placeholder="e.g., Alex Rivera"
-                  value={signatureText}
-                  onChange={(e) => setSignatureText(e.target.value)}
-                  className={
-                    signatureText.trim() &&
-                    arborist?.signatureName &&
-                    !signatureNameMatch
-                      ? "border-amber-300 focus-visible:ring-amber-400"
-                      : ""
-                  }
-                />
-                {signatureText.trim() &&
-                  arborist?.signatureName &&
-                  !signatureNameMatch && (
-                    <p className="text-xs text-amber-600 mt-1">
-                      Signature must match your profile name:{" "}
-                      {arborist.signatureName}
-                    </p>
+
+                  {/* Step 2: Attestation */}
+                  {certifyStep === 2 && (
+                    <div className="space-y-3">
+                      <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-sm leading-relaxed">
+                        <p className="font-semibold text-emerald-900 mb-2">Professional Certification Statement</p>
+                        <p className="text-emerald-800">
+                          I certify that I have personally inspected the tree(s) described in this report and
+                          that the information contained herein is accurate to the best of my professional
+                          knowledge and belief. I am an ISA Certified Arborist and the opinions expressed are
+                          based on my professional training, experience, and education. This report was
+                          prepared in accordance with ISA standards and accepted arboricultural practices.
+                        </p>
+                      </div>
+
+                      <label className="flex items-start gap-2 text-sm cursor-pointer p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={certifyAgreed}
+                          onChange={(e) => setCertifyAgreed(e.target.checked)}
+                          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span>I agree to the above certification statement and confirm all information is accurate.</span>
+                      </label>
+
+                      <div className="flex justify-between">
+                        <Button variant="outline" onClick={() => setCertifyStep(1)}>
+                          Back
+                        </Button>
+                        <Button
+                          onClick={() => setCertifyStep(3)}
+                          disabled={!certifyAgreed}
+                          className="bg-emerald-700 hover:bg-emerald-600"
+                        >
+                          Next: Sign
+                        </Button>
+                      </div>
+                    </div>
                   )}
-              </div>
-              <Button
-                onClick={certifyReport}
-                disabled={
-                  !signatureText.trim() ||
-                  !certifyAgreed ||
-                  certifying ||
-                  (arborist?.signatureName ? !signatureNameMatch : false)
-                }
-                className="bg-emerald-700 hover:bg-emerald-600"
-              >
-                {certifying ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Certifying...
-                  </>
-                ) : (
-                  <>
-                    <Lock className="h-4 w-4 mr-2" />
-                    Certify &amp; Lock Report
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+
+                  {/* Step 3: Electronic Signature */}
+                  {certifyStep === 3 && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-sm font-medium mb-1.5 block">
+                          Electronic Signature
+                          {arborist?.signatureName && (
+                            <span className="text-muted-foreground font-normal ml-1">
+                              (type: {arborist.signatureName})
+                            </span>
+                          )}
+                        </label>
+                        <Input
+                          placeholder="Type your full name"
+                          value={signatureText}
+                          onChange={(e) => setSignatureText(e.target.value)}
+                          className={`text-lg ${
+                            signatureText.trim() &&
+                            arborist?.signatureName &&
+                            !signatureNameMatch
+                              ? "border-amber-300 focus-visible:ring-amber-400"
+                              : ""
+                          }`}
+                          autoFocus
+                        />
+                        {signatureText.trim() &&
+                          arborist?.signatureName &&
+                          !signatureNameMatch && (
+                            <p className="text-xs text-amber-600 mt-1">
+                              Must match: {arborist.signatureName}
+                            </p>
+                          )}
+                      </div>
+
+                      {/* Signature preview */}
+                      {signatureText.trim() && (
+                        <div className="p-4 rounded-lg border bg-white text-center">
+                          <p className="text-2xl italic text-gray-800" style={{ fontFamily: "Georgia, serif" }}>
+                            {signatureText}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between">
+                        <Button variant="outline" onClick={() => setCertifyStep(2)}>
+                          Back
+                        </Button>
+                        <Button
+                          onClick={certifyReport}
+                          disabled={
+                            !signatureText.trim() ||
+                            !certifyAgreed ||
+                            certifying ||
+                            (arborist?.signatureName ? !signatureNameMatch : false)
+                          }
+                          className="bg-emerald-700 hover:bg-emerald-600"
+                        >
+                          {certifying ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Certifying...
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="h-4 w-4 mr-2" />
+                              Certify &amp; Lock Report
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
 

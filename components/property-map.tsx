@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -58,6 +58,12 @@ const CONDITION_LABELS: Record<number, string> = {
   4: "Good",
   5: "Excellent",
 };
+
+const MAP_STYLES = [
+  { id: "satellite-streets-v12", label: "Satellite" },
+  { id: "streets-v12", label: "Streets" },
+  { id: "outdoors-v12", label: "Outdoors" },
+];
 
 /** Color by completion status: gray → yellow → green */
 function pinColor(pin: TreePin): string {
@@ -224,8 +230,17 @@ export function PropertyMap({
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const markerClickedRef = useRef(false);
   const circleSourceIdsRef = useRef<string[]>([]);
+  const [activeStyle, setActiveStyle] = useState("satellite-streets-v12");
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+  const handleStyleChange = useCallback((styleId: string) => {
+    setActiveStyle(styleId);
+    const map = mapRef.current;
+    if (map) {
+      map.setStyle(`mapbox://styles/mapbox/${styleId}`);
+    }
+  }, []);
 
   // ---- Cleanup helper ----
   const clearMarkers = useCallback(() => {
@@ -249,8 +264,8 @@ export function PropertyMap({
 
     map.addControl(new mapboxgl.NavigationControl(), "top-right");
 
-    // Hide cluttering map labels for cleaner satellite view
-    map.on("load", () => {
+    // Hide cluttering map labels for cleaner satellite view (fires on initial load + style changes)
+    map.on("style.load", () => {
       const layersToHide = [
         "poi-label",
         "transit-label",
@@ -449,15 +464,14 @@ export function PropertyMap({
       }
     }
 
-    // If style is already loaded, sync immediately; otherwise wait
+    // Sync on initial load and every style change (so circles survive base layer switches)
+    map.on("style.load", syncCircles);
     if (map.isStyleLoaded()) {
       syncCircles();
-    } else {
-      map.on("style.load", syncCircles);
-      return () => {
-        map.off("style.load", syncCircles);
-      };
     }
+    return () => {
+      map.off("style.load", syncCircles);
+    };
   }, [circles]);
 
   // ---- No token placeholder ----
@@ -481,6 +495,22 @@ export function PropertyMap({
         className={`rounded-xl overflow-hidden ${className ?? ""}`}
         style={{ minHeight: 400 }}
       />
+      {/* Map Style Toggle */}
+      <div className="absolute top-2 right-12 z-10 flex bg-white/90 backdrop-blur-sm rounded-lg shadow-md border overflow-hidden">
+        {MAP_STYLES.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => handleStyleChange(s.id)}
+            className={`px-2.5 py-1.5 text-[10px] font-medium transition-colors ${
+              activeStyle === s.id
+                ? "bg-gray-800 text-white"
+                : "text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
       {/* Legend for circle overlays */}
       {circles && circles.length > 0 && (
         <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 text-xs shadow-md">

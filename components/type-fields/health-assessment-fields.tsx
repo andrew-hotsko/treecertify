@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { ButtonSelector } from "@/components/ui/button-selector";
 import { MultiCheckbox } from "@/components/ui/multi-checkbox";
 import {
@@ -125,17 +124,10 @@ export function HealthAssessmentFields({
           />
         </div>
 
-        {/* Auto-calculated risk rating */}
+        {/* Auto-calculated risk rating — full-width colored banner */}
         {data.overallRiskRating && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Overall Risk:</span>
-            <Badge
-              className={`border ${riskBadgeColor(data.overallRiskRating)}`}
-              variant="outline"
-            >
-              {data.overallRiskRating.charAt(0).toUpperCase() +
-                data.overallRiskRating.slice(1)}
-            </Badge>
+          <div className={`text-center py-2 rounded-lg border font-semibold text-sm ${riskBadgeColor(data.overallRiskRating)}`}>
+            Overall Risk: {data.overallRiskRating.charAt(0).toUpperCase() + data.overallRiskRating.slice(1)}
           </div>
         )}
       </div>

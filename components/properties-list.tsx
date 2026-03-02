@@ -111,6 +111,19 @@ export function PropertiesList({ properties }: PropertiesListProps) {
   const [sortKey, setSortKey] = useState<SortKey>("recent");
   const [search, setSearch] = useState("");
   const [showSort, setShowSort] = useState(false);
+  const [cityFilter, setCityFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+
+  // Derive unique cities and report types for filter dropdowns
+  const uniqueCities = useMemo(() => {
+    const cities = Array.from(new Set(properties.map((p) => p.city))).filter(Boolean).sort();
+    return cities;
+  }, [properties]);
+
+  const uniqueTypes = useMemo(() => {
+    const types = Array.from(new Set(properties.map((p) => p.reportType))).filter(Boolean).sort();
+    return types;
+  }, [properties]);
 
   // Counts
   const counts = useMemo(
@@ -133,6 +146,16 @@ export function PropertiesList({ properties }: PropertiesListProps) {
     // Filter by status
     if (filter !== "all") {
       result = result.filter((p) => getFilterCategory(p) === filter);
+    }
+
+    // Filter by city
+    if (cityFilter !== "all") {
+      result = result.filter((p) => p.city === cityFilter);
+    }
+
+    // Filter by report type
+    if (typeFilter !== "all") {
+      result = result.filter((p) => p.reportType === typeFilter);
     }
 
     // Search by address or city
@@ -173,7 +196,7 @@ export function PropertiesList({ properties }: PropertiesListProps) {
     });
 
     return result;
-  }, [properties, filter, search, sortKey]);
+  }, [properties, filter, search, sortKey, cityFilter, typeFilter]);
 
   const filters: { key: FilterStatus; label: string }[] = [
     { key: "all", label: `All (${counts.all})` },
@@ -233,6 +256,36 @@ export function PropertiesList({ properties }: PropertiesListProps) {
           )}
         </div>
       </div>
+
+      {/* City & Type Filters */}
+      {(uniqueCities.length > 1 || uniqueTypes.length > 1) && (
+        <div className="flex flex-wrap gap-2">
+          {uniqueCities.length > 1 && (
+            <select
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              className="text-xs px-2.5 py-1.5 rounded-md border bg-white text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            >
+              <option value="all">All Cities</option>
+              {uniqueCities.map((city) => (
+                <option key={city} value={city}>{city}</option>
+              ))}
+            </select>
+          )}
+          {uniqueTypes.length > 1 && (
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="text-xs px-2.5 py-1.5 rounded-md border bg-white text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            >
+              <option value="all">All Report Types</option>
+              {uniqueTypes.map((type) => (
+                <option key={type} value={type}>{formatReportType(type)}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
 
       {/* Filter Pills */}
       <div className="flex flex-wrap gap-2">

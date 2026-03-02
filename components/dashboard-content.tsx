@@ -43,9 +43,20 @@ interface DashboardProperty {
   reports: DashboardReport[];
 }
 
+interface ActivityItem {
+  id: string;
+  address: string;
+  city: string;
+  updatedAt: string;
+  treeCount: number;
+  reportStatus: string | null;
+  certifiedAt: string | null;
+}
+
 interface DashboardContentProps {
   properties: DashboardProperty[];
   totalTrees: number;
+  activityFeed?: ActivityItem[];
 }
 
 // ---------------------------------------------------------------------------
@@ -104,9 +115,23 @@ function formatReportType(reportType: string) {
 // Component
 // ---------------------------------------------------------------------------
 
+function getActivityDescription(item: ActivityItem): string {
+  if (item.certifiedAt) {
+    return "Report certified";
+  }
+  if (item.reportStatus === "draft" || item.reportStatus === "review") {
+    return "Report drafted";
+  }
+  if (item.treeCount > 0) {
+    return `${item.treeCount} tree${item.treeCount !== 1 ? "s" : ""} assessed`;
+  }
+  return "Property created";
+}
+
 export function DashboardContent({
   properties,
   totalTrees,
+  activityFeed,
 }: DashboardContentProps) {
   const [filter, setFilter] = useState<FilterStatus>("all");
 
@@ -356,6 +381,43 @@ export function DashboardContent({
           )}
         </CardContent>
       </Card>
+
+      {/* Recent Activity */}
+      {activityFeed && activityFeed.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-900">
+              Recent Activity
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {activityFeed.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/properties/${item.id}`}
+                  className="flex items-center gap-3 text-sm hover:bg-gray-50 rounded-lg p-2 -mx-2 transition-colors"
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-50">
+                    {item.certifiedAt ? (
+                      <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                    ) : (
+                      <Clock className="h-3.5 w-3.5 text-gray-400" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 truncate">{item.address}</p>
+                    <p className="text-xs text-muted-foreground">{getActivityDescription(item)}</p>
+                  </div>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {format(new Date(item.updatedAt), "MMM d")}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* CTA for new users with only the sample property */}
       {properties.length > 0 && properties.length <= 1 && (

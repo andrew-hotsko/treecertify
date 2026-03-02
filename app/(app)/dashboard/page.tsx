@@ -5,10 +5,24 @@ import { Button } from "@/components/ui/button";
 import { DashboardContent } from "@/components/dashboard-content";
 import { Plus } from "lucide-react";
 
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function getContextMessage(props: { draftCount: number; overdueCount: number; totalTrees: number }): string | null {
+  if (props.overdueCount > 0) return `You have ${props.overdueCount} overdue ${props.overdueCount === 1 ? "report" : "reports"} to finish.`;
+  if (props.draftCount > 0) return `${props.draftCount} ${props.draftCount === 1 ? "report is" : "reports are"} ready to certify.`;
+  if (props.totalTrees === 0) return "Get started by creating a property and pinning trees on the map.";
+  return null;
+}
+
 export default async function DashboardPage() {
   const arborist = await requireArborist();
 
-  const [allProperties, totalTrees] = await Promise.all([
+  const [allProperties, totalTrees, recentActivity] = await Promise.all([
     prisma.property.findMany({
       where: { arboristId: arborist.id },
       orderBy: { updatedAt: "desc" },
@@ -28,7 +42,48 @@ export default async function DashboardPage() {
     prisma.treeRecord.count({
       where: { property: { arboristId: arborist.id } },
     }),
+    // Recent activity: last 5 updated properties
+    prisma.property.findMany({
+      where: { arboristId: arborist.id },
+      orderBy: { updatedAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        address: true,
+        city: true,
+        updatedAt: true,
+        _count: { select: { trees: true } },
+        reports: {
+          select: { status: true, certifiedAt: true },
+          orderBy: { updatedAt: "desc" },
+          take: 1,
+        },
+      },
+    }),
   ]);
+
+  // Compute contextual stats
+  const draftCount = allProperties.filter(
+    (p) => p.reports[0] && p.reports[0].status !== "certified"
+  ).length;
+  const now = new Date();
+  const overdueCount = allProperties.filter((p) => {
+    const due = p.neededByDate;
+    return due && new Date(due) < now && (!p.reports[0] || p.reports[0].status !== "certified");
+  }).length;
+
+  const greeting = getGreeting();
+  const contextMessage = getContextMessage({ draftCount, overdueCount, totalTrees });
+
+  const activityFeed = recentActivity.map((p) => ({
+    id: p.id,
+    address: p.address,
+    city: p.city,
+    updatedAt: p.updatedAt.toISOString(),
+    treeCount: p._count.trees,
+    reportStatus: p.reports[0]?.status || null,
+    certifiedAt: p.reports[0]?.certifiedAt?.toISOString() || null,
+  }));
 
   return (
     <div className="space-y-8">
@@ -36,12 +91,17 @@ export default async function DashboardPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">
-            Welcome back, {arborist.name.split(" ")[0]}
+            {greeting}, {arborist.name.split(" ")[0]}
           </h1>
           <p className="mt-1 text-sm text-gray-500 truncate">
             ISA #{arborist.isaCertificationNum} &middot;{" "}
             {arborist.companyName ?? "Independent Arborist"}
           </p>
+          {contextMessage && (
+            <p className="mt-1 text-sm text-emerald-600 font-medium">
+              {contextMessage}
+            </p>
+          )}
         </div>
         <Button
           asChild
@@ -57,6 +117,7 @@ export default async function DashboardPage() {
       <DashboardContent
         properties={JSON.parse(JSON.stringify(allProperties))}
         totalTrees={totalTrees}
+        activityFeed={activityFeed}
       />
     </div>
   );
