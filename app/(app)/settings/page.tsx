@@ -14,6 +14,9 @@ import {
   User,
   Globe,
   ImageIcon,
+  FileText,
+  X,
+  Camera,
 } from "lucide-react";
 
 interface ArboristProfile {
@@ -32,6 +35,17 @@ interface ArboristProfile {
   signatureName: string | null;
   traqCertified: boolean;
   additionalCerts: string | null;
+  reportDefaults?: string | null;
+  profilePhotoUrl?: string | null;
+}
+
+interface ReportDefaults {
+  includeTraq: boolean;
+  includeCoverLetter: boolean;
+  includePhotos: boolean;
+  includeAppendix: boolean;
+  defaultReportType: string;
+  companyDisclaimer: string;
 }
 
 export default function SettingsPage() {
@@ -62,6 +76,17 @@ export default function SettingsPage() {
     additionalCerts: "",
   });
 
+  const defaultReportDefaults: ReportDefaults = {
+    includeTraq: true,
+    includeCoverLetter: true,
+    includePhotos: true,
+    includeAppendix: true,
+    defaultReportType: "health_assessment",
+    companyDisclaimer: "",
+  };
+
+  const [reportDefaults, setReportDefaults] = useState<ReportDefaults>(defaultReportDefaults);
+
   useEffect(() => {
     async function load() {
       try {
@@ -84,6 +109,20 @@ export default function SettingsPage() {
           traqCertified: data.traqCertified ?? false,
           additionalCerts: data.additionalCerts || "",
         });
+        // Parse report defaults
+        try {
+          const parsed = JSON.parse(data.reportDefaults || "{}");
+          setReportDefaults({
+            includeTraq: parsed.includeTraq ?? true,
+            includeCoverLetter: parsed.includeCoverLetter ?? true,
+            includePhotos: parsed.includePhotos ?? true,
+            includeAppendix: parsed.includeAppendix ?? true,
+            defaultReportType: parsed.defaultReportType || "health_assessment",
+            companyDisclaimer: parsed.companyDisclaimer || "",
+          });
+        } catch {
+          // Use defaults if parsing fails
+        }
       } catch (err) {
         setMessage({
           type: "error",
@@ -107,7 +146,10 @@ export default function SettingsPage() {
       const res = await fetch("/api/arborist/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          reportDefaults: JSON.stringify(reportDefaults),
+        }),
       });
       if (!res.ok) throw new Error("Failed to save");
       const updated = await res.json();
@@ -406,6 +448,96 @@ export default function SettingsPage() {
                 className="mt-1"
               />
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Report Defaults */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FileText className="h-5 w-5 text-emerald-600" />
+            Report Defaults
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* Toggle switches */}
+          <div className="space-y-3">
+            {[
+              { key: "includeTraq" as const, label: "Include TRAQ Assessment" },
+              { key: "includeCoverLetter" as const, label: "Include Cover Letter" },
+              { key: "includePhotos" as const, label: "Include Photo Appendix" },
+              { key: "includeAppendix" as const, label: "Include Tree Data Appendix" },
+            ].map(({ key, label }) => (
+              <div key={key} className="flex items-center justify-between">
+                <Label className="cursor-pointer" htmlFor={`rd-${key}`}>
+                  {label}
+                </Label>
+                <button
+                  id={`rd-${key}`}
+                  type="button"
+                  role="switch"
+                  aria-checked={reportDefaults[key]}
+                  onClick={() =>
+                    setReportDefaults((prev) => ({
+                      ...prev,
+                      [key]: !prev[key],
+                    }))
+                  }
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${
+                    reportDefaults[key] ? "bg-emerald-500" : "bg-gray-200"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform duration-200 ease-in-out ${
+                      reportDefaults[key] ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Default report type */}
+          <div>
+            <Label htmlFor="default-report-type">Default Report Type</Label>
+            <select
+              id="default-report-type"
+              value={reportDefaults.defaultReportType}
+              onChange={(e) =>
+                setReportDefaults((prev) => ({
+                  ...prev,
+                  defaultReportType: e.target.value,
+                }))
+              }
+              className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="health_assessment">Health Assessment</option>
+              <option value="removal_permit">Removal Permit</option>
+              <option value="tree_valuation">Tree Valuation</option>
+              <option value="construction_encroachment">Construction &amp; Encroachment</option>
+            </select>
+          </div>
+
+          {/* Company disclaimer */}
+          <div>
+            <Label htmlFor="company-disclaimer">Company Disclaimer</Label>
+            <textarea
+              id="company-disclaimer"
+              rows={3}
+              placeholder="Optional disclaimer text to appear in report footers..."
+              value={reportDefaults.companyDisclaimer}
+              onChange={(e) =>
+                setReportDefaults((prev) => ({
+                  ...prev,
+                  companyDisclaimer: e.target.value,
+                }))
+              }
+              className="mt-1 flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              This text will appear as a footer disclaimer on generated reports
+            </p>
           </div>
         </CardContent>
       </Card>

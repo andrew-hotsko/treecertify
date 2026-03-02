@@ -63,6 +63,7 @@ export async function PUT(request: NextRequest) {
       "licenseNumbers",
       "signatureName",
       "additionalCerts",
+      "reportDefaults",
     ];
 
     const updateData: Record<string, string | boolean | null> = {};

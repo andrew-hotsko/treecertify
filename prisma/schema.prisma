@@ -26,8 +26,10 @@ model Arborist {
   companyWebsite   String?
   licenseNumbers   String?
   signatureName    String?
+  profilePhotoUrl  String?
   traqCertified    Boolean  @default(false)
   additionalCerts  String   @default("[]") // JSON array: ["BCMA", "Utility Specialist", etc.]
+  reportDefaults   String?  // JSON string for report template defaults
 
   createdAt DateTime @default(now())
 
@@ -65,6 +67,8 @@ model Property {
   siteObservations    String?
   scopeOfAssignment   String?
   neededByDate        DateTime?
+
+  shareToken String?  @unique
 
   status    String   @default("active") // active, archived
   createdAt DateTime @default(now())
