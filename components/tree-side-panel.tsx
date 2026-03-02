@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TreePhotos } from "@/components/tree-photos";
 import { TreeAudioNotes } from "@/components/tree-audio-notes";
 import { VoiceInput } from "@/components/voice-input";
+import { SmartDictation } from "@/components/smart-dictation";
 import { HealthAssessmentFields } from "@/components/type-fields/health-assessment-fields";
 import { RemovalPermitFields } from "@/components/type-fields/removal-permit-fields";
 import { TreeValuationFields } from "@/components/type-fields/tree-valuation-fields";
@@ -476,6 +477,30 @@ export function TreeSidePanel({
             </label>
           </div>
         )}
+
+        {/* Smart Dictation — fill multiple fields from voice */}
+        <SmartDictation
+          onApply={(fields) => {
+            if (fields.speciesCommon !== undefined) setSpeciesCommon(fields.speciesCommon);
+            if (fields.speciesScientific !== undefined) setSpeciesScientific(fields.speciesScientific);
+            if (fields.dbhInches !== undefined) setDbhInches(String(fields.dbhInches));
+            if (fields.heightFt !== undefined) setHeightFt(String(fields.heightFt));
+            if (fields.canopySpreadFt !== undefined) setCanopySpreadFt(String(fields.canopySpreadFt));
+            if (fields.conditionRating !== undefined) setConditionRating(fields.conditionRating);
+            if (fields.healthNotes !== undefined) {
+              const existing = healthNotes || "";
+              const separator = existing.trim() ? " " : "";
+              setHealthNotes(existing + separator + fields.healthNotes);
+            }
+            if (fields.structuralNotes !== undefined) {
+              const existing = structuralNotes || "";
+              const separator = existing.trim() ? " " : "";
+              setStructuralNotes(existing + separator + fields.structuralNotes);
+            }
+            if (fields.recommendedAction !== undefined) setRecommendedAction(fields.recommendedAction);
+            if (fields.tagNumber !== undefined) setTagNumber(fields.tagNumber);
+          }}
+        />
 
         {/* Species */}
         <div className="space-y-2">
