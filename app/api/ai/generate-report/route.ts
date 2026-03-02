@@ -557,7 +557,8 @@ CRITICAL WRITING GUIDELINES:
 - Use measurements provided (DBH, height, canopy spread) in the narrative. Don't just list them — incorporate them naturally: "The 20-inch DBH Valley Oak..." not "DBH: 20 inches."
 - End each individual tree assessment with a clear, one-sentence bottom line: what should be done with this tree and why.`;
 
-      const message = await anthropic.messages.create({
+      // Stream the response for real-time progress
+      const stream = anthropic.messages.stream({
         model: "claude-sonnet-4-20250514",
         max_tokens: 8192,
         messages: [
@@ -569,12 +570,67 @@ CRITICAL WRITING GUIDELINES:
         system: systemPrompt,
       });
 
-      const textBlock = message.content.find((block) => block.type === "text");
-      aiDraftContent = textBlock?.text || "Error: No text content generated.";
+      const encoder = new TextEncoder();
+
+      const readableStream = new ReadableStream({
+        async start(controller) {
+          let fullText = "";
+
+          try {
+            for await (const event of stream) {
+              if (
+                event.type === "content_block_delta" &&
+                event.delta.type === "text_delta"
+              ) {
+                const text = event.delta.text;
+                fullText += text;
+                controller.enqueue(
+                  encoder.encode(
+                    `data: ${JSON.stringify({ type: "text", text })}\n\n`
+                  )
+                );
+              }
+            }
+
+            // Save to database after streaming completes
+            const report = await prisma.report.create({
+              data: {
+                propertyId: body.propertyId,
+                arboristId,
+                reportType: body.reportType,
+                aiDraftContent: fullText,
+              },
+            });
+
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ type: "done", reportId: report.id })}\n\n`
+              )
+            );
+          } catch (err) {
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ type: "error", error: String(err) })}\n\n`
+              )
+            );
+          }
+
+          controller.close();
+        },
+      });
+
+      return new Response(readableStream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+      });
     } else {
       aiDraftContent = generateMockReport(property, property.trees, body.reportType);
     }
 
+    // Mock path: non-streaming fallback
     const report = await prisma.report.create({
       data: {
         propertyId: body.propertyId,

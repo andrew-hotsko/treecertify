@@ -13,6 +13,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ReportPreview } from "@/components/report-preview";
 import { renderMarkdownToHtml } from "@/lib/markdown";
 import { getReportTypeConfig } from "@/lib/report-types";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   ArrowLeft,
   Sparkles,
@@ -31,6 +33,8 @@ import {
   AlertTriangle,
   ShieldCheck,
   Share2,
+  Send,
+  X,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -61,6 +65,8 @@ interface Property {
   zip?: string;
   parcelNumber: string | null;
   reportType?: string;
+  homeownerName?: string | null;
+  homeownerEmail?: string | null;
   trees: TreeRecord[];
   reports: Report[];
 }
@@ -166,6 +172,13 @@ export default function PropertyReportPage() {
   const [viewMode, setViewMode] = useState<"editor" | "preview">("editor");
   const [showQualityDialog, setShowQualityDialog] = useState(false);
   const [qualityWarnings, setQualityWarnings] = useState<string[]>([]);
+  const [streamingText, setStreamingText] = useState("");
+
+  // Report delivery state
+  const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
 
   // Refs
   const previewRef = useRef<HTMLDivElement>(null);
@@ -374,6 +387,7 @@ export default function PropertyReportPage() {
 
   const generateReport = async () => {
     setGenerating(true);
+    setStreamingText("");
     setError(null);
     try {
       const res = await fetch("/api/ai/generate-report", {
@@ -382,20 +396,77 @@ export default function PropertyReportPage() {
         body: JSON.stringify({ propertyId, reportType }),
       });
       if (!res.ok) {
-        const data = await res.json();
+        // Non-streaming error — try to parse JSON
+        const data = await res.json().catch(() => ({ error: "Failed to generate report" }));
         throw new Error(data.error || "Failed to generate report");
       }
-      const newReport = await res.json();
-      setReport(newReport);
-      const c = newReport.aiDraftContent || "";
-      setContent(c);
-      savedContentRef.current = c;
-      setPreviewHtml(renderMarkdownToHtml(c));
-      setViewMode("editor");
+
+      const contentType = res.headers.get("Content-Type") || "";
+
+      if (contentType.includes("text/event-stream") && res.body) {
+        // Streaming SSE path
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let accumulated = "";
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          // Keep the last potentially incomplete line in buffer
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            try {
+              const payload = JSON.parse(line.slice(6));
+              if (payload.type === "text") {
+                accumulated += payload.text;
+                setStreamingText(accumulated);
+              } else if (payload.type === "done") {
+                // Report saved on server — set it locally
+                setReport({
+                  id: payload.reportId,
+                  propertyId,
+                  reportType,
+                  aiDraftContent: accumulated,
+                  finalContent: null,
+                  eSignatureText: null,
+                  certifiedAt: null,
+                  status: "draft",
+                });
+                setContent(accumulated);
+                savedContentRef.current = accumulated;
+                setPreviewHtml(renderMarkdownToHtml(accumulated));
+                setViewMode("editor");
+              } else if (payload.type === "error") {
+                throw new Error(payload.error || "Streaming error");
+              }
+            } catch (parseErr) {
+              // Skip malformed SSE lines
+              if (parseErr instanceof Error && parseErr.message !== "Streaming error") continue;
+              throw parseErr;
+            }
+          }
+        }
+      } else {
+        // Non-streaming JSON path (mock fallback)
+        const newReport = await res.json();
+        setReport(newReport);
+        const c = newReport.aiDraftContent || "";
+        setContent(c);
+        savedContentRef.current = c;
+        setPreviewHtml(renderMarkdownToHtml(c));
+        setViewMode("editor");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
     } finally {
       setGenerating(false);
+      setStreamingText("");
     }
   };
 
@@ -473,6 +544,28 @@ export default function PropertyReportPage() {
       setUnlocking(false);
     }
   };
+
+  // -------------------------------------------------------------------------
+  // Open delivery dialog (pre-fill from property data)
+  // -------------------------------------------------------------------------
+
+  const openDeliveryDialog = useCallback(() => {
+    if (!property || !report) return;
+    const reportLabel =
+      getReportTypeConfig(report.reportType)?.label ||
+      report.reportType
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+
+    setRecipientEmail(property.homeownerEmail || "");
+    setEmailSubject(
+      `${reportLabel} — ${property.address}, ${property.city}`
+    );
+    setEmailBody(
+      `Dear ${property.homeownerName || "Client"},\n\nPlease find attached the ${reportLabel} for the property at ${property.address}, ${property.city}.\n\nIf you have any questions regarding this report, please don't hesitate to contact me.\n\nBest regards`
+    );
+    setShowDeliveryDialog(true);
+  }, [property, report]);
 
   // -------------------------------------------------------------------------
   // Section nav click — scroll preview to heading
@@ -634,6 +727,50 @@ export default function PropertyReportPage() {
                   </Card>
                 </div>
               )}
+
+              {/* Streaming Progress Modal */}
+              {generating && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                  <Card className="w-full max-w-3xl mx-4 max-h-[80vh] flex flex-col">
+                    <CardContent className="p-6 flex flex-col flex-1 overflow-hidden gap-4">
+                      <div className="flex items-center gap-3">
+                        <Loader2 className="h-5 w-5 animate-spin text-blue-600 shrink-0" />
+                        <div>
+                          <h3 className="text-lg font-semibold">Generating Report</h3>
+                          <p className="text-sm text-muted-foreground">
+                            AI is writing your {getReportTypeConfig(reportType)?.label || "report"}...
+                          </p>
+                        </div>
+                      </div>
+                      {streamingText ? (
+                        <ScrollArea className="flex-1 min-h-0 rounded-lg border bg-muted/30">
+                          <div
+                            className="p-4 prose prose-sm max-w-none dark:prose-invert text-sm"
+                            dangerouslySetInnerHTML={{
+                              __html: renderMarkdownToHtml(streamingText),
+                            }}
+                          />
+                        </ScrollArea>
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center rounded-lg border bg-muted/30 min-h-[200px]">
+                          <div className="text-center text-muted-foreground">
+                            <Sparkles className="h-8 w-8 mx-auto mb-2 text-blue-400 animate-pulse" />
+                            <p className="text-sm">Preparing report structure...</p>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>
+                          {streamingText
+                            ? `${streamingText.split(/\s+/).length} words generated`
+                            : "Connecting to AI..."}
+                        </span>
+                        <span>This may take 30–60 seconds</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -765,6 +902,15 @@ export default function PropertyReportPage() {
             {/* Certified actions */}
             {isCertified && (
               <>
+                <Button
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={openDeliveryDialog}
+                >
+                  <Send className="h-3.5 w-3.5 mr-1.5" />
+                  Send Report
+                </Button>
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -1167,6 +1313,136 @@ export default function PropertyReportPage() {
               </span>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ---- Streaming Progress Modal (regeneration) ---- */}
+      {generating && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-full max-w-3xl mx-4 max-h-[80vh] flex flex-col">
+            <CardContent className="p-6 flex flex-col flex-1 overflow-hidden gap-4">
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-blue-600 shrink-0" />
+                <div>
+                  <h3 className="text-lg font-semibold">Regenerating Report</h3>
+                  <p className="text-sm text-muted-foreground">
+                    AI is rewriting your {getReportTypeConfig(reportType)?.label || "report"}...
+                  </p>
+                </div>
+              </div>
+              {streamingText ? (
+                <ScrollArea className="flex-1 min-h-0 rounded-lg border bg-muted/30">
+                  <div
+                    className="p-4 prose prose-sm max-w-none dark:prose-invert text-sm"
+                    dangerouslySetInnerHTML={{
+                      __html: renderMarkdownToHtml(streamingText),
+                    }}
+                  />
+                </ScrollArea>
+              ) : (
+                <div className="flex-1 flex items-center justify-center rounded-lg border bg-muted/30 min-h-[200px]">
+                  <div className="text-center text-muted-foreground">
+                    <Sparkles className="h-8 w-8 mx-auto mb-2 text-blue-400 animate-pulse" />
+                    <p className="text-sm">Preparing report structure...</p>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>
+                  {streamingText
+                    ? `${streamingText.split(/\s+/).length} words generated`
+                    : "Connecting to AI..."}
+                </span>
+                <span>This may take 30–60 seconds</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ---- Delivery Dialog ---- */}
+      {showDeliveryDialog && report && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-full max-w-lg mx-4">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Send className="h-5 w-5 text-blue-600" />
+                  Send Report
+                </h3>
+                <Button variant="ghost" size="icon" onClick={() => setShowDeliveryDialog(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="delivery-email" className="text-sm">Recipient Email</Label>
+                  <Input
+                    id="delivery-email"
+                    type="email"
+                    placeholder="client@example.com"
+                    value={recipientEmail}
+                    onChange={(e) => setRecipientEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="delivery-subject" className="text-sm">Subject</Label>
+                  <Input
+                    id="delivery-subject"
+                    value={emailSubject}
+                    onChange={(e) => setEmailSubject(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="delivery-body" className="text-sm">Message</Label>
+                  <Textarea
+                    id="delivery-body"
+                    value={emailBody}
+                    onChange={(e) => setEmailBody(e.target.value)}
+                    rows={5}
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                This will open your email client with the message pre-filled. Download the PDF first, then attach it to the email.
+              </p>
+
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    // Download PDF
+                    const a = document.createElement("a");
+                    a.href = `/api/reports/${report.id}/pdf`;
+                    a.download = "";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download PDF
+                </Button>
+                <Button
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={() => {
+                    const subject = encodeURIComponent(emailSubject);
+                    const body = encodeURIComponent(emailBody);
+                    const mailto = `mailto:${encodeURIComponent(recipientEmail)}?subject=${subject}&body=${body}`;
+                    window.open(mailto, "_blank");
+                    setShowDeliveryDialog(false);
+                  }}
+                  disabled={!recipientEmail.trim()}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Open Email Client
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

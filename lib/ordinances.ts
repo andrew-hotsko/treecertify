@@ -50,6 +50,17 @@ export async function getOrdinanceByCity(
   };
 }
 
+export interface OrdinanceContext {
+  nativeThreshold: number | null;
+  nonnativeThreshold: number | null;
+  heritageThreshold: number | null;
+  permitProcessNotes: string | null;
+  ordinanceUrl: string | null;
+  replantingRatio: string | null;
+  inLieuFee: string | null;
+  certifierRequirement: string | null;
+}
+
 export interface ProtectionCheckResult {
   isProtected: boolean;
   reason: string;
@@ -57,6 +68,7 @@ export interface ProtectionCheckResult {
   heritageReason: string | null;
   mitigationRequired: string | null;
   codeReference: string | null;
+  ordinanceContext: OrdinanceContext | null;
 }
 
 export async function checkTreeProtection(
@@ -74,8 +86,20 @@ export async function checkTreeProtection(
       heritageReason: null,
       mitigationRequired: null,
       codeReference: null,
+      ordinanceContext: null,
     };
   }
+
+  const ordinanceContext: OrdinanceContext = {
+    nativeThreshold: ordinance.defaultDbhThresholdNative,
+    nonnativeThreshold: ordinance.defaultDbhThresholdNonnative,
+    heritageThreshold: ordinance.heritageTreeRules.dbhThreshold || null,
+    permitProcessNotes: ordinance.permitProcessNotes,
+    ordinanceUrl: ordinance.ordinanceUrl,
+    replantingRatio: ordinance.mitigationRules.replantingRatio || null,
+    inLieuFee: ordinance.mitigationRules.inLieuFee || null,
+    certifierRequirement: ordinance.certifierRequirement,
+  };
 
   const species = getSpeciesByName(speciesCommon);
   const isNative = species?.category === "native";
@@ -134,5 +158,6 @@ export async function checkTreeProtection(
     heritageReason,
     mitigationRequired,
     codeReference: ordinance.codeReference,
+    ordinanceContext,
   };
 }

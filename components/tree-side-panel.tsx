@@ -24,6 +24,11 @@ import {
   type ConstructionEncroachmentData,
 } from "@/lib/report-types";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   X,
   Save,
   Trash2,
@@ -34,6 +39,8 @@ import {
   Camera,
   Mic,
   PenLine,
+  ExternalLink,
+  Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +65,17 @@ export interface TreeFormData {
   typeSpecificData?: string; // JSON string
 }
 
+interface OrdinanceContext {
+  nativeThreshold: number | null;
+  nonnativeThreshold: number | null;
+  heritageThreshold: number | null;
+  permitProcessNotes: string | null;
+  ordinanceUrl: string | null;
+  replantingRatio: string | null;
+  inLieuFee: string | null;
+  certifierRequirement: string | null;
+}
+
 interface ProtectionResult {
   isProtected: boolean;
   reason: string;
@@ -65,6 +83,7 @@ interface ProtectionResult {
   heritageReason: string | null;
   mitigationRequired: string | null;
   codeReference: string | null;
+  ordinanceContext?: OrdinanceContext | null;
 }
 
 interface TreeRecord {
@@ -507,6 +526,102 @@ export function TreeSidePanel({
                   <p className="mt-0.5 text-xs">
                     {protectionResult.mitigationRequired}
                   </p>
+                </div>
+              )}
+
+              {/* Ordinance details popover */}
+              {protectionResult.ordinanceContext && (
+                <div className="mt-2 flex items-center gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 transition-colors"
+                      >
+                        <Info className="h-3 w-3" />
+                        View ordinance details
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      side="bottom"
+                      align="start"
+                      className="w-72 p-3 space-y-2 text-xs"
+                    >
+                      <p className="font-semibold text-sm">
+                        {propertyCity} Tree Ordinance
+                      </p>
+                      {protectionResult.codeReference && (
+                        <p className="text-muted-foreground">
+                          {protectionResult.codeReference}
+                        </p>
+                      )}
+                      <div className="space-y-1.5 pt-1">
+                        {protectionResult.ordinanceContext.nativeThreshold != null && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Native threshold</span>
+                            <span className="font-mono font-medium">
+                              {protectionResult.ordinanceContext.nativeThreshold}&quot; DBH
+                            </span>
+                          </div>
+                        )}
+                        {protectionResult.ordinanceContext.nonnativeThreshold != null && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Non-native threshold</span>
+                            <span className="font-mono font-medium">
+                              {protectionResult.ordinanceContext.nonnativeThreshold}&quot; DBH
+                            </span>
+                          </div>
+                        )}
+                        {protectionResult.ordinanceContext.heritageThreshold != null && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Heritage threshold</span>
+                            <span className="font-mono font-medium">
+                              {protectionResult.ordinanceContext.heritageThreshold}&quot; DBH
+                            </span>
+                          </div>
+                        )}
+                        {protectionResult.ordinanceContext.replantingRatio && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Replanting ratio</span>
+                            <span className="font-medium">
+                              {protectionResult.ordinanceContext.replantingRatio}
+                            </span>
+                          </div>
+                        )}
+                        {protectionResult.ordinanceContext.inLieuFee && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">In-lieu fee</span>
+                            <span className="font-medium">
+                              {protectionResult.ordinanceContext.inLieuFee}
+                            </span>
+                          </div>
+                        )}
+                        {protectionResult.ordinanceContext.certifierRequirement && (
+                          <div className="pt-1 border-t">
+                            <span className="text-muted-foreground">Certifier: </span>
+                            <span>{protectionResult.ordinanceContext.certifierRequirement}</span>
+                          </div>
+                        )}
+                        {protectionResult.ordinanceContext.permitProcessNotes && (
+                          <div className="pt-1 border-t">
+                            <span className="text-muted-foreground">Permit process: </span>
+                            <span>{protectionResult.ordinanceContext.permitProcessNotes}</span>
+                          </div>
+                        )}
+                      </div>
+                      {protectionResult.ordinanceContext.ordinanceUrl && (
+                        <a
+                          href={protectionResult.ordinanceContext.ordinanceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-blue-600 hover:text-blue-800 pt-1 border-t"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          View full ordinance
+                        </a>
+                      )}
+                    </PopoverContent>
+                  </Popover>
                 </div>
               )}
             </div>
