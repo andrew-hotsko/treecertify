@@ -573,6 +573,77 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               <span className="hidden sm:inline">Export CSV</span>
             </Button>
           )}
+          <div className="relative">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleShare}
+              disabled={sharingLoading}
+              title="Share property map"
+            >
+              {sharingLoading ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <Share2 className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              <span className="hidden sm:inline">Share</span>
+            </Button>
+            {showSharePopover && shareToken && (
+              <div className="absolute right-0 top-full mt-2 z-50 w-80 bg-white rounded-lg border shadow-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold">Share Link</h3>
+                  <button
+                    onClick={() => {
+                      setShowSharePopover(false);
+                      setShareCopied(false);
+                    }}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    readOnly
+                    value={`${typeof window !== "undefined" ? window.location.origin : ""}/share/${shareToken}`}
+                    className="flex-1 text-xs bg-gray-50 border rounded px-2 py-1.5 text-gray-700 select-all"
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyShareLink}
+                    className="shrink-0"
+                  >
+                    {shareCopied ? (
+                      <span className="text-emerald-600 text-xs">Copied!</span>
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5 mr-1" />
+                        <span className="text-xs">Copy</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Anyone with this link can view the property map and tree inventory.
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRevokeShare}
+                  disabled={sharingLoading}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 w-full"
+                >
+                  {sharingLoading ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    "Revoke Link"
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
           {property.reports && property.reports.length > 0 ? (
             <div className="flex items-center gap-2">
               <StatusBadge status={property.reports[0].status} />
