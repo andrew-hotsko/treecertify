@@ -17,6 +17,8 @@ export interface TreePin {
   speciesCommon?: string;
   dbhInches?: number;
   conditionRating?: number;
+  healthNotes?: string;
+  structuralNotes?: string;
   recommendedAction?: string;
   isProtected?: boolean;
   isHeritage?: boolean;
@@ -47,106 +49,83 @@ interface PropertyMapProps {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** Color by completion status: gray → yellow → green */
 function pinColor(pin: TreePin): string {
-  if (pin.recommendedAction === "remove") return "#ef4444"; // red
-  if (pin.conditionRating != null) {
-    if (pin.conditionRating <= 1) return "#ef4444"; // red (Dead/Critical)
-    if (pin.conditionRating === 2) return "#f97316"; // orange (Poor)
-    if (pin.conditionRating === 3) return "#eab308"; // yellow (Fair)
-    if (pin.conditionRating === 4) return "#84cc16"; // lime (Good)
-    if (pin.conditionRating >= 5) return "#22c55e"; // green (Excellent)
+  const hasSpecies = pin.speciesCommon && pin.speciesCommon.trim() !== "";
+  const hasDBH = pin.dbhInches && pin.dbhInches > 0;
+  const hasCondition = pin.conditionRating && pin.conditionRating > 0;
+  const hasNotes =
+    (pin.healthNotes && pin.healthNotes.trim() !== "") ||
+    (pin.structuralNotes && pin.structuralNotes.trim() !== "");
+
+  if (hasSpecies && hasDBH && hasCondition && hasNotes) {
+    return "#16a34a"; // green-600 — fully assessed
   }
-  return "#9ca3af"; // gray (unassessed)
+  if (hasSpecies || hasDBH) {
+    return "#eab308"; // yellow-500 — partial data
+  }
+  return "#9ca3af"; // gray-400 — just placed, no data
 }
 
 function createMarkerElement(
   pin: TreePin,
   isSelected: boolean
 ): HTMLDivElement {
-  // Use larger pins on touch devices for better tap targets
-  const isTouch = window.matchMedia("(pointer: coarse)").matches;
-  const size = isTouch ? 36 : 30;
-  const fontSize = isTouch ? "14px" : "12px";
+  const pinSize = isSelected ? 26 : 22;
 
+  // Wrapper provides a 36px tap target while keeping visible pin small
   const wrapper = document.createElement("div");
-  wrapper.style.position = "relative";
-  wrapper.style.width = `${size}px`;
-  wrapper.style.height = `${size}px`;
+  wrapper.style.width = "36px";
+  wrapper.style.height = "36px";
+  wrapper.style.display = "flex";
+  wrapper.style.alignItems = "center";
+  wrapper.style.justifyContent = "center";
+  wrapper.style.cursor = "pointer";
 
   const el = document.createElement("div");
-  el.style.width = `${size}px`;
-  el.style.height = `${size}px`;
-  el.style.lineHeight = `${size}px`;
+  el.style.width = `${pinSize}px`;
+  el.style.height = `${pinSize}px`;
+  el.style.lineHeight = `${pinSize}px`;
   el.style.textAlign = "center";
   el.style.borderRadius = "50%";
   el.style.color = "white";
-  el.style.fontWeight = "700";
-  el.style.fontSize = fontSize;
+  el.style.fontWeight = "600";
+  el.style.fontSize = "10px";
   el.style.cursor = "pointer";
   el.style.userSelect = "none";
   el.style.backgroundColor = pinColor(pin);
   el.style.border = "2px solid white";
-  el.style.transition = "transform 0.15s, box-shadow 0.15s";
+  el.style.transition = "box-shadow 0.15s";
+
+  // Protection / heritage ring via outline
+  if (pin.isHeritage) {
+    el.style.outline = "2px solid #eab308";
+    el.style.outlineOffset = "1px";
+  } else if (pin.isProtected) {
+    el.style.outline = "2px solid #22c55e";
+    el.style.outlineOffset = "1px";
+  }
 
   if (isSelected) {
-    el.style.transform = "scale(1.2)";
-    el.style.boxShadow = "0 0 0 3px white, 0 0 8px rgba(0,0,0,0.4)";
+    el.style.boxShadow =
+      "0 0 0 3px rgba(22, 163, 74, 0.4), 0 2px 4px rgba(0,0,0,0.3)";
   } else {
-    el.style.boxShadow = "0 2px 6px rgba(0,0,0,0.35)";
+    el.style.boxShadow = "0 1px 3px rgba(0,0,0,0.3)";
   }
 
   el.textContent = String(pin.treeNumber);
   wrapper.appendChild(el);
 
-  // Protection badge (green shield)
-  if (pin.isProtected && !pin.isHeritage) {
-    const badge = document.createElement("div");
-    badge.style.position = "absolute";
-    badge.style.top = "-4px";
-    badge.style.right = "-4px";
-    badge.style.width = "14px";
-    badge.style.height = "14px";
-    badge.style.borderRadius = "50%";
-    badge.style.backgroundColor = "#22c55e";
-    badge.style.border = "1.5px solid white";
-    badge.style.display = "flex";
-    badge.style.alignItems = "center";
-    badge.style.justifyContent = "center";
-    badge.style.fontSize = "8px";
-    badge.style.color = "white";
-    badge.textContent = "🛡";
-    wrapper.appendChild(badge);
-  }
-
-  // Heritage badge (gold star)
-  if (pin.isHeritage) {
-    const badge = document.createElement("div");
-    badge.style.position = "absolute";
-    badge.style.top = "-4px";
-    badge.style.right = "-4px";
-    badge.style.width = "14px";
-    badge.style.height = "14px";
-    badge.style.borderRadius = "50%";
-    badge.style.backgroundColor = "#eab308";
-    badge.style.border = "1.5px solid white";
-    badge.style.display = "flex";
-    badge.style.alignItems = "center";
-    badge.style.justifyContent = "center";
-    badge.style.fontSize = "8px";
-    badge.style.color = "white";
-    badge.textContent = "★";
-    wrapper.appendChild(badge);
-  }
-
-  // Hover effect
+  // Hover effect — shadow only, no scale
   wrapper.addEventListener("mouseenter", () => {
     if (!isSelected) {
-      el.style.transform = "scale(1.15)";
+      el.style.boxShadow =
+        "0 0 0 2px rgba(22, 163, 74, 0.3), 0 2px 4px rgba(0,0,0,0.3)";
     }
   });
   wrapper.addEventListener("mouseleave", () => {
     if (!isSelected) {
-      el.style.transform = "scale(1)";
+      el.style.boxShadow = "0 1px 3px rgba(0,0,0,0.3)";
     }
   });
 
@@ -214,9 +193,25 @@ export function PropertyMap({
       style: "mapbox://styles/mapbox/satellite-streets-v12",
       center: [center.lng, center.lat],
       zoom: 19,
+      maxZoom: 22,
     });
 
     map.addControl(new mapboxgl.NavigationControl(), "top-right");
+
+    // Hide cluttering map labels for cleaner satellite view
+    map.on("load", () => {
+      const layersToHide = [
+        "poi-label",
+        "transit-label",
+        "natural-point-label",
+        "waterway-label",
+      ];
+      layersToHide.forEach((layerId) => {
+        if (map.getLayer(layerId)) {
+          map.setLayoutProperty(layerId, "visibility", "none");
+        }
+      });
+    });
 
     mapRef.current = map;
 

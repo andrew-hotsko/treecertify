@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,8 @@ import {
   Download,
   FileDown,
   Share2,
+  Copy,
+  X,
 } from "lucide-react";
 
 // Dynamically import PropertyMap with SSR disabled (Mapbox GL needs window/DOM)
@@ -88,6 +91,7 @@ interface PropertyMapViewProps {
 // ---------------------------------------------------------------------------
 
 export function PropertyMapView({ property }: PropertyMapViewProps) {
+  const router = useRouter();
   const [trees, setTrees] = useState<TreeData[]>(property.trees ?? []);
   const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
   const [pendingPin, setPendingPin] = useState<{
@@ -98,6 +102,10 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   const [saving, setSaving] = useState(false);
   const [flyToId, setFlyToId] = useState<string | null>(null);
   const [audioOpen, setAudioOpen] = useState(false);
+
+  // Quick-entry mode: auto-advance after save
+  const [showPlacementPrompt, setShowPlacementPrompt] = useState(false);
+  const [lastSavedNumber, setLastSavedNumber] = useState(0);
 
   // Construction encroachment project fields
   const [projectOpen, setProjectOpen] = useState(false);
@@ -149,6 +157,8 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     speciesCommon: t.speciesCommon,
     dbhInches: t.dbhInches,
     conditionRating: t.conditionRating,
+    healthNotes: t.healthNotes,
+    structuralNotes: t.structuralNotes,
     recommendedAction: t.recommendedAction,
     isProtected: t.isProtected,
   }));
@@ -170,6 +180,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
       setPendingPin({ lat, lng });
       setSelectedTreeId(null);
       setShowSidePanel(true);
+      setShowPlacementPrompt(false);
     },
     []
   );
@@ -231,7 +242,12 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
 
           setTrees((prev) => [...prev, newTree]);
           setPendingPin(null);
-          setSelectedTreeId(newTree.id);
+
+          // Quick-entry: auto-close panel and show placement prompt
+          setSelectedTreeId(null);
+          setShowSidePanel(false);
+          setLastSavedNumber(newTree.treeNumber);
+          setShowPlacementPrompt(true);
         } else if (selectedTreeId) {
           // Update existing tree
           const res = await fetch(`/api/trees/${selectedTreeId}`, {
@@ -328,6 +344,28 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     }
   }, [property.id, scopeOfAssignment, siteObservations, neededByDate]);
 
+  const handleDuplicate = useCallback(async () => {
+    try {
+      const res = await fetch("/api/properties", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          address: "(New Property)",
+          city: property.city,
+          county: "",
+          reportType,
+          scopeOfAssignment: property.scopeOfAssignment || undefined,
+        }),
+      });
+      if (res.ok) {
+        const newProperty = await res.json();
+        router.push(`/properties/${newProperty.id}`);
+      }
+    } catch (err) {
+      console.error("Failed to duplicate:", err);
+    }
+  }, [property.city, property.scopeOfAssignment, reportType, router]);
+
   // ---- Current side panel data ----
   const sidePanelTree = pendingPin
     ? { pinLat: pendingPin.lat, pinLng: pendingPin.lng }
@@ -366,6 +404,15 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             <TreePine className="h-3 w-3" />
             {trees.length} tree{trees.length !== 1 ? "s" : ""}
           </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDuplicate}
+            title="Duplicate property setup"
+          >
+            <Copy className="h-3.5 w-3.5 mr-1.5" />
+            <span className="hidden sm:inline">Duplicate</span>
+          </Button>
           {property.reports && property.reports.length > 0 ? (
             <div className="flex items-center gap-2">
               <StatusBadge status={property.reports[0].status} />
@@ -656,6 +703,21 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
 
       {/* Main Area: Map + Side Panel */}
       <div className="flex gap-0 rounded-xl border overflow-hidden relative">
+        {/* Quick-entry placement prompt */}
+        {showPlacementPrompt && !selectedTreeId && !pendingPin && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-emerald-600 text-white px-4 py-2 rounded-full shadow-lg text-sm font-medium flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+            <span>&#10003; Tree #{lastSavedNumber} saved</span>
+            <span className="text-emerald-200">&middot;</span>
+            <span>Tap map to place Tree #{lastSavedNumber + 1}</span>
+            <button
+              onClick={() => setShowPlacementPrompt(false)}
+              className="ml-1 text-emerald-200 hover:text-white"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* Map — full width on mobile, flex-1 on desktop */}
         <div className="w-full md:flex-1" style={{ minHeight: 400 }}>
           <PropertyMap

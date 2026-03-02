@@ -21,6 +21,28 @@ import {
 import { PENINSULA_SPECIES, type TreeSpecies } from "@/lib/species";
 
 // ---------------------------------------------------------------------------
+// Common species shortcuts — one-tap selection for the 15 most frequent species
+// ---------------------------------------------------------------------------
+
+const COMMON_SPECIES = [
+  { common: "Coast Live Oak", scientific: "Quercus agrifolia" },
+  { common: "Valley Oak", scientific: "Quercus lobata" },
+  { common: "Blue Oak", scientific: "Quercus douglasii" },
+  { common: "California Black Oak", scientific: "Quercus kelloggii" },
+  { common: "Coast Redwood", scientific: "Sequoia sempervirens" },
+  { common: "Monterey Pine", scientific: "Pinus radiata" },
+  { common: "Blue Gum Eucalyptus", scientific: "Eucalyptus globulus" },
+  { common: "Red Ironbark", scientific: "Eucalyptus sideroxylon" },
+  { common: "Japanese Maple", scientific: "Acer palmatum" },
+  { common: "London Plane", scientific: "Platanus × acerifolia" },
+  { common: "Western Sycamore", scientific: "Platanus racemosa" },
+  { common: "Deodar Cedar", scientific: "Cedrus deodara" },
+  { common: "Italian Stone Pine", scientific: "Pinus pinea" },
+  { common: "Southern Magnolia", scientific: "Magnolia grandiflora" },
+  { common: "Chinese Elm", scientific: "Ulmus parvifolia" },
+];
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -49,6 +71,11 @@ export function SpeciesSearch({ value, onChange, className }: SpeciesSearchProps
 
   function handleSelect(species: TreeSpecies) {
     onChange(species.common, species.scientific);
+    setOpen(false);
+  }
+
+  function handleCommonSelect(sp: { common: string; scientific: string }) {
+    onChange(sp.common, sp.scientific);
     setOpen(false);
   }
 
@@ -116,6 +143,31 @@ export function SpeciesSearch({ value, onChange, className }: SpeciesSearchProps
                 )}
               </div>
             </CommandEmpty>
+
+            {/* Common species shortcuts — shown when search is empty */}
+            {!search && (
+              <div className="p-2 border-b">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                  Common Species
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {COMMON_SPECIES.map((sp) => (
+                    <button
+                      key={sp.scientific}
+                      onClick={() => handleCommonSelect(sp)}
+                      className={cn(
+                        "text-xs px-2.5 py-1.5 rounded-full transition-colors border",
+                        value === sp.common
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200"
+                      )}
+                    >
+                      {sp.common}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <CommandGroup heading="Native Species">
               {natives.map((species) => (

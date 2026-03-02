@@ -45,6 +45,8 @@ interface TreeRecord {
   dbhInches: number;
   heightFt: number | null;
   conditionRating: number;
+  healthNotes: string;
+  structuralNotes: string;
   isProtected: boolean;
   recommendedAction: string;
   status: string;
@@ -162,6 +164,8 @@ export default function PropertyReportPage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showSectionNav, setShowSectionNav] = useState(true);
   const [viewMode, setViewMode] = useState<"editor" | "preview">("editor");
+  const [showQualityDialog, setShowQualityDialog] = useState(false);
+  const [qualityWarnings, setQualityWarnings] = useState<string[]>([]);
 
   // Refs
   const previewRef = useRef<HTMLDivElement>(null);
@@ -311,6 +315,58 @@ export default function PropertyReportPage() {
     const t = setInterval(() => setTick((n) => n + 1), 15000);
     return () => clearInterval(t);
   }, []);
+
+  // -------------------------------------------------------------------------
+  // Data quality check
+  // -------------------------------------------------------------------------
+
+  function assessDataQuality(trees: TreeRecord[]) {
+    const warnings: string[] = [];
+    const treesWithoutNotes: number[] = [];
+    const treesWithoutCondition: number[] = [];
+    const treesWithoutDBH: number[] = [];
+
+    trees.forEach((tree) => {
+      if (!tree.healthNotes && !tree.structuralNotes) {
+        treesWithoutNotes.push(tree.treeNumber);
+      }
+      if (!tree.conditionRating || tree.conditionRating === 0) {
+        treesWithoutCondition.push(tree.treeNumber);
+      }
+      if (!tree.dbhInches || tree.dbhInches === 0) {
+        treesWithoutDBH.push(tree.treeNumber);
+      }
+    });
+
+    if (treesWithoutDBH.length > 0) {
+      warnings.push(
+        `Tree${treesWithoutDBH.length > 1 ? "s" : ""} #${treesWithoutDBH.join(", #")} missing DBH measurement`
+      );
+    }
+    if (treesWithoutCondition.length > 0) {
+      warnings.push(
+        `Tree${treesWithoutCondition.length > 1 ? "s" : ""} #${treesWithoutCondition.join(", #")} missing condition rating`
+      );
+    }
+    if (treesWithoutNotes.length > 0) {
+      warnings.push(
+        `Tree${treesWithoutNotes.length > 1 ? "s" : ""} #${treesWithoutNotes.join(", #")} have no health or structural notes \u2014 the AI will generate generic observations`
+      );
+    }
+
+    return warnings;
+  }
+
+  const handleGenerateClick = () => {
+    if (!property) return;
+    const warnings = assessDataQuality(property.trees);
+    if (warnings.length > 0) {
+      setQualityWarnings(warnings);
+      setShowQualityDialog(true);
+    } else {
+      generateReport();
+    }
+  };
 
   // -------------------------------------------------------------------------
   // Generate report
@@ -505,7 +561,7 @@ export default function PropertyReportPage() {
               </div>
 
               <Button
-                onClick={generateReport}
+                onClick={handleGenerateClick}
                 disabled={generating || property.trees.length === 0}
                 className="w-full bg-blue-600 hover:bg-blue-700"
               >
@@ -526,6 +582,57 @@ export default function PropertyReportPage() {
                 <p className="text-sm text-amber-600 text-center">
                   Add at least one tree before generating a report.
                 </p>
+              )}
+
+              {/* Data Quality Check Dialog */}
+              {showQualityDialog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                  <Card className="w-full max-w-lg mx-4">
+                    <CardContent className="p-6 space-y-4">
+                      <h3 className="text-lg font-semibold">Ready to Generate Report</h3>
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <p><span className="font-medium text-foreground">Property:</span> {property.address}, {property.city}</p>
+                        <p><span className="font-medium text-foreground">Report Type:</span> {getReportTypeConfig(reportType)?.label || reportType}</p>
+                        <p><span className="font-medium text-foreground">Trees:</span> {property.trees.length} assessed</p>
+                      </div>
+
+                      <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-medium text-amber-800">
+                          <AlertTriangle className="h-4 w-4" />
+                          Data Quality Notes
+                        </div>
+                        <ul className="text-sm text-amber-700 space-y-1 list-disc list-inside">
+                          {qualityWarnings.map((w, i) => (
+                            <li key={i}>{w}</li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground">
+                        The AI will fill in missing details with professional language, but the report will be stronger with complete field data.
+                      </p>
+
+                      <div className="flex gap-3 justify-end">
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowQualityDialog(false)}
+                        >
+                          Go Back and Complete
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setShowQualityDialog(false);
+                            generateReport();
+                          }}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Generate Anyway
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               )}
             </CardContent>
           </Card>
