@@ -36,6 +36,7 @@ interface PropertyMapProps {
   center: { lat: number; lng: number };
   pins: TreePin[];
   circles?: CircleOverlay[];
+  dimmedPinIds?: string[];
   onPinAdd?: (lat: number, lng: number) => void;
   onPinMove?: (id: string, lat: number, lng: number) => void;
   onPinClick?: (id: string) => void;
@@ -48,6 +49,15 @@ interface PropertyMapProps {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+const CONDITION_LABELS: Record<number, string> = {
+  0: "Dead",
+  1: "Critical",
+  2: "Poor",
+  3: "Fair",
+  4: "Good",
+  5: "Excellent",
+};
 
 /** Color by completion status: gray → yellow → green */
 function pinColor(pin: TreePin): string {
@@ -69,7 +79,8 @@ function pinColor(pin: TreePin): string {
 
 function createMarkerElement(
   pin: TreePin,
-  isSelected: boolean
+  isSelected: boolean,
+  isDimmed: boolean
 ): HTMLDivElement {
   const pinSize = isSelected ? 26 : 22;
 
@@ -81,6 +92,7 @@ function createMarkerElement(
   wrapper.style.alignItems = "center";
   wrapper.style.justifyContent = "center";
   wrapper.style.cursor = "pointer";
+  wrapper.style.position = "relative";
 
   const el = document.createElement("div");
   el.style.width = `${pinSize}px`;
@@ -95,7 +107,12 @@ function createMarkerElement(
   el.style.userSelect = "none";
   el.style.backgroundColor = pinColor(pin);
   el.style.border = "2px solid white";
-  el.style.transition = "box-shadow 0.15s";
+  el.style.transition = "box-shadow 0.15s, opacity 0.2s";
+
+  // Dimming for filtered pins
+  if (isDimmed) {
+    el.style.opacity = "0.3";
+  }
 
   // Protection / heritage ring via outline
   if (pin.isHeritage) {
@@ -116,17 +133,50 @@ function createMarkerElement(
   el.textContent = String(pin.treeNumber);
   wrapper.appendChild(el);
 
-  // Hover effect — shadow only, no scale
+  // ---- Tooltip ----
+  const tooltip = document.createElement("div");
+  tooltip.style.position = "absolute";
+  tooltip.style.bottom = "100%";
+  tooltip.style.left = "50%";
+  tooltip.style.transform = "translateX(-50%) translateY(-6px)";
+  tooltip.style.whiteSpace = "nowrap";
+  tooltip.style.padding = "4px 8px";
+  tooltip.style.borderRadius = "6px";
+  tooltip.style.backgroundColor = "rgba(0,0,0,0.85)";
+  tooltip.style.color = "white";
+  tooltip.style.fontSize = "11px";
+  tooltip.style.fontWeight = "500";
+  tooltip.style.pointerEvents = "none";
+  tooltip.style.opacity = "0";
+  tooltip.style.transition = "opacity 0.15s";
+  tooltip.style.zIndex = "10";
+  tooltip.style.lineHeight = "1.3";
+
+  // Build tooltip content
+  const species = pin.speciesCommon || "Unidentified";
+  const dbh = pin.dbhInches ? `${pin.dbhInches}"` : "";
+  const condition =
+    pin.conditionRating != null && pin.conditionRating >= 0
+      ? CONDITION_LABELS[pin.conditionRating] ?? ""
+      : "";
+  const parts = [species, dbh, condition].filter(Boolean);
+  tooltip.textContent = `#${pin.treeNumber} — ${parts.join(" \u00b7 ")}`;
+
+  wrapper.appendChild(tooltip);
+
+  // Hover effect — shadow + tooltip
   wrapper.addEventListener("mouseenter", () => {
     if (!isSelected) {
       el.style.boxShadow =
         "0 0 0 2px rgba(22, 163, 74, 0.3), 0 2px 4px rgba(0,0,0,0.3)";
+      tooltip.style.opacity = "1";
     }
   });
   wrapper.addEventListener("mouseleave", () => {
     if (!isSelected) {
       el.style.boxShadow = "0 1px 3px rgba(0,0,0,0.3)";
     }
+    tooltip.style.opacity = "0";
   });
 
   return wrapper;
@@ -160,6 +210,7 @@ export function PropertyMap({
   center,
   pins,
   circles,
+  dimmedPinIds,
   onPinAdd,
   onPinMove,
   onPinClick,
@@ -253,7 +304,8 @@ export function PropertyMap({
 
     pins.forEach((pin) => {
       const isSelected = pin.id === selectedPinId;
-      const el = createMarkerElement(pin, isSelected);
+      const isDimmed = dimmedPinIds?.includes(pin.id) ?? false;
+      const el = createMarkerElement(pin, isSelected, isDimmed);
 
       // Prevent map click when clicking marker
       el.addEventListener("mousedown", (e) => {
@@ -283,7 +335,7 @@ export function PropertyMap({
 
       markersRef.current.push(marker);
     });
-  }, [pins, selectedPinId, interactive, onPinClick, onPinMove, clearMarkers]);
+  }, [pins, selectedPinId, dimmedPinIds, interactive, onPinClick, onPinMove, clearMarkers]);
 
   // ---- flyTo support ----
   useEffect(() => {

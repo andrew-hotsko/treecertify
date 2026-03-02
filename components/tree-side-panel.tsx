@@ -12,6 +12,7 @@ import { ConditionRating } from "@/components/condition-rating";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TreePhotos } from "@/components/tree-photos";
 import { TreeAudioNotes } from "@/components/tree-audio-notes";
+import { VoiceInput } from "@/components/voice-input";
 import { HealthAssessmentFields } from "@/components/type-fields/health-assessment-fields";
 import { RemovalPermitFields } from "@/components/type-fields/removal-permit-fields";
 import { TreeValuationFields } from "@/components/type-fields/tree-valuation-fields";
@@ -41,6 +42,7 @@ import {
   PenLine,
   ExternalLink,
   Info,
+  Copy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -88,6 +90,7 @@ interface ProtectionResult {
 
 interface TreeRecord {
   id?: string;
+  treeNumber?: number;
   pinLat?: number;
   pinLng?: number;
   tagNumber?: string | null;
@@ -119,6 +122,7 @@ interface TreeSidePanelProps {
   onDelete?: () => void;
   onClose: () => void;
   saving?: boolean;
+  lastSavedTree?: TreeRecord | null;
 }
 
 const ACTION_OPTIONS = [
@@ -127,6 +131,15 @@ const ACTION_OPTIONS = [
   { value: "prune", label: "Prune", color: "amber" },
   { value: "monitor", label: "Monitor", color: "blue" },
 ];
+
+// ---------------------------------------------------------------------------
+// Quick Photo types
+// ---------------------------------------------------------------------------
+
+interface QuickPhoto {
+  id: string;
+  url: string;
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -142,6 +155,7 @@ export function TreeSidePanel({
   onDelete,
   onClose,
   saving = false,
+  lastSavedTree,
 }: TreeSidePanelProps) {
   // ---- Form state ----
   const [tagNumber, setTagNumber] = useState(tree?.tagNumber ?? "");
@@ -181,6 +195,21 @@ export function TreeSidePanel({
     }
     return {};
   });
+
+  // ---- Quick photos state ----
+  const [photos, setPhotos] = useState<QuickPhoto[]>([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  // Load photos when tree exists
+  const isExisting = tree != null && tree.id != null;
+  useEffect(() => {
+    if (isExisting && tree?.id) {
+      fetch(`/api/properties/${propertyId}/trees/${tree.id}/photos`)
+        .then((res) => (res.ok ? res.json() : []))
+        .then((data) => setPhotos(data.map((p: { id: string; url: string }) => ({ id: p.id, url: p.url }))))
+        .catch(() => setPhotos([]));
+    }
+  }, [isExisting, tree?.id, propertyId]);
 
   // ---- Protection check state ----
   const [protectionResult, setProtectionResult] =
@@ -243,7 +272,6 @@ export function TreeSidePanel({
   }, [speciesCommon, dbhInches, checkProtection]);
 
   // ---- Derived ----
-  const isExisting = tree != null && tree.id != null;
   const statusDot =
     tree?.status === "certified"
       ? "bg-emerald-500"
@@ -255,11 +283,26 @@ export function TreeSidePanel({
     ? getReportTypeConfig(reportType)
     : undefined;
 
+  // Is this a new tree (no id)?
+  const isNewTree = !tree?.id;
+
   // ---- Handlers ----
   function handleSpeciesChange(common: string, scientific: string) {
     setSpeciesCommon(common);
     setSpeciesScientific(scientific);
     setProtectionResult(null);
+  }
+
+  function handleCopyFromLast() {
+    if (!lastSavedTree) return;
+    setSpeciesCommon(lastSavedTree.speciesCommon ?? "");
+    setSpeciesScientific(lastSavedTree.speciesScientific ?? "");
+    setDbhInches(lastSavedTree.dbhInches != null ? String(lastSavedTree.dbhInches) : "");
+    setHeightFt(lastSavedTree.heightFt != null ? String(lastSavedTree.heightFt) : "");
+    setCanopySpreadFt(lastSavedTree.canopySpreadFt != null ? String(lastSavedTree.canopySpreadFt) : "");
+    setConditionRating(lastSavedTree.conditionRating ?? 0);
+    setRecommendedAction(lastSavedTree.recommendedAction ?? "");
+    // Don't copy: healthNotes, structuralNotes, photos, pin location
   }
 
   function handleSave() {
@@ -290,6 +333,37 @@ export function TreeSidePanel({
           : undefined,
     });
   }
+
+  const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !tree?.id) return;
+
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(
+        `/api/properties/${propertyId}/trees/${tree.id}/photos`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (res.ok) {
+        const photo = await res.json();
+        setPhotos((prev) => [...prev, { id: photo.id, url: photo.url }]);
+      }
+    } catch (err) {
+      console.error("Photo upload failed:", err);
+    } finally {
+      setUploadingPhoto(false);
+    }
+
+    // Reset input so same file can be re-selected
+    e.target.value = "";
+  };
 
   // ---- Render ----
   return (
@@ -346,6 +420,62 @@ export function TreeSidePanel({
 
         {/* Details Tab */}
         <TabsContent value="details" className="flex-1 overflow-y-auto px-4 py-4 space-y-5 mt-0">
+
+        {/* Copy from last tree button */}
+        {isNewTree && lastSavedTree && (
+          <button
+            onClick={handleCopyFromLast}
+            className="w-full text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 py-1.5 px-3 rounded border border-emerald-200 border-dashed transition-colors flex items-center justify-center gap-1.5"
+          >
+            <Copy className="h-3 w-3" />
+            Copy species &amp; size from Tree #{lastSavedTree.treeNumber}
+          </button>
+        )}
+
+        {/* Quick Photos Section */}
+        {isExisting && tree?.id && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">Photos</Label>
+              <span className="text-[10px] text-muted-foreground">
+                {photos.length} photo{photos.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+
+            {/* Photo thumbnails row */}
+            {photos.length > 0 && (
+              <div className="flex gap-1.5 overflow-x-auto pb-1">
+                {photos.map((photo) => (
+                  <img
+                    key={photo.id}
+                    src={photo.url}
+                    className="w-12 h-12 rounded object-cover border flex-shrink-0"
+                    alt=""
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Camera capture button */}
+            <label className="flex items-center justify-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 py-2 px-3 rounded border border-emerald-200 border-dashed cursor-pointer transition-colors">
+              {uploadingPhoto ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Camera className="h-3.5 w-3.5" />
+              )}
+              <span>{uploadingPhoto ? "Uploading..." : "Take Photo"}</span>
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handlePhotoCapture}
+                disabled={uploadingPhoto}
+              />
+            </label>
+          </div>
+        )}
+
         {/* Species */}
         <div className="space-y-2">
           <Label>Species</Label>
@@ -420,12 +550,21 @@ export function TreeSidePanel({
           />
         </div>
 
-        {/* Notes */}
+        {/* Notes with Voice Input */}
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="sp-health" className="text-xs">
-              Health Notes
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="sp-health" className="text-xs">
+                Health Notes
+              </Label>
+              <VoiceInput
+                onTranscript={(text) => {
+                  const existing = healthNotes || "";
+                  const separator = existing.trim() ? " " : "";
+                  setHealthNotes(existing + separator + text);
+                }}
+              />
+            </div>
             <Textarea
               id="sp-health"
               placeholder="Describe observed health conditions..."
@@ -435,9 +574,18 @@ export function TreeSidePanel({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="sp-structural" className="text-xs">
-              Structural Notes
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="sp-structural" className="text-xs">
+                Structural Notes
+              </Label>
+              <VoiceInput
+                onTranscript={(text) => {
+                  const existing = structuralNotes || "";
+                  const separator = existing.trim() ? " " : "";
+                  setStructuralNotes(existing + separator + text);
+                }}
+              />
+            </div>
             <Textarea
               id="sp-structural"
               placeholder="Describe structural defects or concerns..."

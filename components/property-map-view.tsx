@@ -30,6 +30,9 @@ import {
   Share2,
   Copy,
   X,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ShieldCheck,
 } from "lucide-react";
 
 // Dynamically import PropertyMap with SSR disabled (Mapbox GL needs window/DOM)
@@ -87,6 +90,39 @@ interface PropertyMapViewProps {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function isTreeComplete(tree: TreeData): boolean {
+  return !!(
+    tree.speciesCommon?.trim() &&
+    tree.dbhInches && tree.dbhInches > 0 &&
+    tree.conditionRating && tree.conditionRating > 0 &&
+    (tree.healthNotes?.trim() || tree.structuralNotes?.trim())
+  );
+}
+
+const CONDITION_LABELS: Record<number, string> = {
+  0: "Dead",
+  1: "Critical",
+  2: "Poor",
+  3: "Fair",
+  4: "Good",
+  5: "Excellent",
+};
+
+const CONDITION_DOT_COLOR: Record<number, string> = {
+  0: "bg-gray-700",
+  1: "bg-red-500",
+  2: "bg-orange-500",
+  3: "bg-amber-500",
+  4: "bg-emerald-500",
+  5: "bg-green-500",
+};
+
+type FilterKey = "all" | "incomplete" | "protected" | "remove" | "retain";
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -106,6 +142,18 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   // Quick-entry mode: auto-advance after save
   const [showPlacementPrompt, setShowPlacementPrompt] = useState(false);
   const [lastSavedNumber, setLastSavedNumber] = useState(0);
+
+  // Copy from last tree
+  const [lastSavedTree, setLastSavedTree] = useState<TreeData | null>(null);
+
+  // Tree list panel (desktop only)
+  const [showTreeList, setShowTreeList] = useState(true);
+
+  // Filter chips
+  const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
+
+  // Map legend
+  const [showLegend, setShowLegend] = useState(false);
 
   // Construction encroachment project fields
   const [projectOpen, setProjectOpen] = useState(false);
@@ -147,6 +195,31 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     lng: property.lng ?? -122.143,
   };
 
+  // Progress counts
+  const assessedCount = trees.filter((t) => isTreeComplete(t)).length;
+  const protectedCount = trees.filter((t) => t.isProtected).length;
+
+  // Filter logic: compute dimmed pin IDs
+  const dimmedPinIds =
+    activeFilter === "all"
+      ? []
+      : trees
+          .filter((t) => {
+            switch (activeFilter) {
+              case "incomplete":
+                return isTreeComplete(t);
+              case "protected":
+                return !t.isProtected;
+              case "remove":
+                return t.recommendedAction !== "remove";
+              case "retain":
+                return t.recommendedAction !== "retain";
+              default:
+                return false;
+            }
+          })
+          .map((t) => t.id);
+
   // Convert trees to pins
   const pins: TreePin[] = trees.map((t) => ({
     id: t.id,
@@ -173,6 +246,15 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
       status: "draft",
     });
   }
+
+  // Filter chip definitions
+  const filterChips: { key: FilterKey; label: string; count: number }[] = [
+    { key: "all", label: "All", count: trees.length },
+    { key: "incomplete", label: "Needs Data", count: trees.filter((t) => !isTreeComplete(t)).length },
+    { key: "protected", label: "Protected", count: trees.filter((t) => t.isProtected).length },
+    { key: "remove", label: "Remove", count: trees.filter((t) => t.recommendedAction === "remove").length },
+    { key: "retain", label: "Retain", count: trees.filter((t) => t.recommendedAction === "retain").length },
+  ];
 
   // ---- Handlers ----
   const handlePinAdd = useCallback(
@@ -242,6 +324,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
 
           setTrees((prev) => [...prev, newTree]);
           setPendingPin(null);
+          setLastSavedTree(newTree);
 
           // Quick-entry: auto-close panel and show placement prompt
           setSelectedTreeId(null);
@@ -262,6 +345,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           setTrees((prev) =>
             prev.map((t) => (t.id === selectedTreeId ? updatedTree : t))
           );
+          setLastSavedTree(updatedTree);
         }
       } catch (err) {
         console.error("Save failed:", err);
@@ -299,6 +383,13 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   }, []);
 
   const handleSelectTreeFromSummary = useCallback((id: string) => {
+    setPendingPin(null);
+    setSelectedTreeId(id);
+    setShowSidePanel(true);
+    setFlyToId(id);
+  }, []);
+
+  const handleSelectTreeFromList = useCallback((id: string) => {
     setPendingPin(null);
     setSelectedTreeId(id);
     setShowSidePanel(true);
@@ -701,7 +792,28 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         )}
       </Card>
 
-      {/* Main Area: Map + Side Panel */}
+      {/* Filter Chips */}
+      {trees.length > 0 && (
+        <div className="flex items-center gap-1.5 px-1 overflow-x-auto">
+          {filterChips
+            .filter((f) => f.key === "all" || f.count > 0)
+            .map((filter) => (
+              <button
+                key={filter.key}
+                onClick={() => setActiveFilter(filter.key)}
+                className={`text-xs px-2.5 py-1 rounded-full whitespace-nowrap transition-colors ${
+                  activeFilter === filter.key
+                    ? "bg-emerald-600 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {filter.label} ({filter.count})
+              </button>
+            ))}
+        </div>
+      )}
+
+      {/* Main Area: Tree List + Map + Side Panel */}
       <div className="flex gap-0 rounded-xl border overflow-hidden relative">
         {/* Quick-entry placement prompt */}
         {showPlacementPrompt && !selectedTreeId && !pendingPin && (
@@ -718,11 +830,162 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           </div>
         )}
 
-        {/* Map — full width on mobile, flex-1 on desktop */}
-        <div className="w-full md:flex-1" style={{ minHeight: 400 }}>
+        {/* Tree List Panel — desktop only */}
+        {showTreeList && trees.length > 0 && (
+          <div className="hidden md:flex flex-col w-60 border-r bg-white overflow-hidden flex-shrink-0">
+            <div className="p-3 border-b flex items-center justify-between">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Trees ({trees.length})
+              </h3>
+              <button
+                onClick={() => setShowTreeList(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="divide-y overflow-y-auto flex-1">
+              {[...trees]
+                .sort((a, b) => a.treeNumber - b.treeNumber)
+                .map((tree) => {
+                  const isDimmed = dimmedPinIds.includes(tree.id);
+                  return (
+                    <button
+                      key={tree.id}
+                      onClick={() => handleSelectTreeFromList(tree.id)}
+                      className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 transition-colors flex items-center gap-2 ${
+                        selectedTreeId === tree.id
+                          ? "bg-emerald-50 border-l-2 border-emerald-600"
+                          : ""
+                      } ${isDimmed ? "opacity-40" : ""}`}
+                    >
+                      <span className="font-mono font-semibold text-muted-foreground w-6">
+                        #{tree.treeNumber}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate font-medium">
+                          {tree.speciesCommon || "Unidentified"}
+                        </p>
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          {tree.dbhInches ? (
+                            <span>{tree.dbhInches}&quot;</span>
+                          ) : null}
+                          {tree.conditionRating != null && tree.conditionRating > 0 ? (
+                            <span className="flex items-center gap-0.5">
+                              <span
+                                className={`inline-block w-1.5 h-1.5 rounded-full ${
+                                  CONDITION_DOT_COLOR[tree.conditionRating] ?? "bg-gray-400"
+                                }`}
+                              />
+                              {CONDITION_LABELS[tree.conditionRating]}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                      {tree.isProtected && (
+                        <ShieldCheck className="h-3 w-3 text-emerald-600 flex-shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+        )}
+
+        {/* Map area — with relative positioning for overlays */}
+        <div className="w-full md:flex-1 relative" style={{ minHeight: 400 }}>
+          {/* Tree list toggle button (when list is hidden) */}
+          {!showTreeList && trees.length > 0 && (
+            <button
+              onClick={() => setShowTreeList(true)}
+              className="hidden md:flex absolute top-4 left-4 z-10 bg-white/95 backdrop-blur-sm rounded-lg shadow-md border px-2 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground items-center gap-1"
+            >
+              <PanelLeftOpen className="h-3.5 w-3.5" />
+              Trees
+            </button>
+          )}
+
+          {/* Tree count progress badge */}
+          {trees.length > 0 && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm rounded-full shadow-md border px-3 py-1.5 text-xs font-medium flex items-center gap-2">
+              <TreePine className="h-3.5 w-3.5 text-emerald-600" />
+              <span>
+                {trees.length} tree{trees.length !== 1 ? "s" : ""}
+              </span>
+              <span className="text-muted-foreground">&middot;</span>
+              <span className="text-emerald-600">{assessedCount} assessed</span>
+              {protectedCount > 0 && (
+                <>
+                  <span className="text-muted-foreground">&middot;</span>
+                  <span className="text-emerald-600">
+                    {protectedCount} protected
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Map Legend */}
+          <div className="absolute bottom-4 left-4 z-10">
+            {showLegend ? (
+              <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-md border p-2.5 text-[10px]">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-semibold text-muted-foreground uppercase tracking-wider">
+                    Legend
+                  </span>
+                  <button
+                    onClick={() => setShowLegend(false)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#16a34a] border-2 border-white shadow-sm" />
+                    <span>Fully assessed</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#eab308] border-2 border-white shadow-sm" />
+                    <span>Partial data</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#9ca3af] border-2 border-white shadow-sm" />
+                    <span>Needs assessment</span>
+                  </div>
+                  <div className="border-t pt-1 mt-1">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-3 h-3 rounded-full bg-gray-400 border-2 border-white outline outline-2 outline-[#22c55e]"
+                        style={{ outlineOffset: "1px" }}
+                      />
+                      <span>Protected</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span
+                        className="w-3 h-3 rounded-full bg-gray-400 border-2 border-white outline outline-2 outline-[#eab308]"
+                        style={{ outlineOffset: "1px" }}
+                      />
+                      <span>Heritage</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowLegend(true)}
+                className="bg-white/95 backdrop-blur-sm rounded-lg shadow-md border px-2.5 py-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground"
+              >
+                Legend
+              </button>
+            )}
+          </div>
+
           <PropertyMap
             center={center}
             pins={pins}
+            dimmedPinIds={dimmedPinIds}
             circles={
               reportType === "construction_encroachment"
                 ? trees
@@ -762,6 +1025,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             }
             onClose={handleClosePanel}
             saving={saving}
+            lastSavedTree={lastSavedTree}
           />
         )}
       </div>
