@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { renderMarkdownToHtml } from "@/lib/markdown";
 import puppeteer from "puppeteer";
@@ -21,6 +22,27 @@ export async function GET(
 ) {
   let browser;
   try {
+    // --- Auth: share token or Clerk session ---
+    const url = new URL(request.url);
+    const shareToken = url.searchParams.get("token");
+
+    if (shareToken) {
+      // Public access via share token — validate token and require certified
+      const check = await prisma.report.findUnique({
+        where: { id: params.id },
+        select: { status: true, property: { select: { shareToken: true } } },
+      });
+      if (!check || check.property.shareToken !== shareToken || check.status !== "certified") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      }
+    } else {
+      // Authenticated access via Clerk
+      const { userId } = await auth();
+      if (!userId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    }
+
     const report = await prisma.report.findUnique({
       where: { id: params.id },
       include: {

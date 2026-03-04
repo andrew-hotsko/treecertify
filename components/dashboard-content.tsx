@@ -13,6 +13,8 @@ import {
   ShieldCheck,
   ArrowRight,
   Plus,
+  Send,
+  AlertTriangle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -29,6 +31,7 @@ interface DashboardTree {
 interface DashboardReport {
   id: string;
   status: string;
+  permitStatus: string | null;
 }
 
 interface DashboardProperty {
@@ -53,10 +56,18 @@ interface ActivityItem {
   certifiedAt: string | null;
 }
 
+interface PermitStats {
+  pendingSubmission: number;
+  submittedOrReview: number;
+  approved: number;
+  needingRevision: number;
+}
+
 interface DashboardContentProps {
   properties: DashboardProperty[];
   totalTrees: number;
   activityFeed?: ActivityItem[];
+  permitStats?: PermitStats;
 }
 
 // ---------------------------------------------------------------------------
@@ -132,6 +143,7 @@ export function DashboardContent({
   properties,
   totalTrees,
   activityFeed,
+  permitStats,
 }: DashboardContentProps) {
   const [filter, setFilter] = useState<FilterStatus>("all");
 
@@ -231,6 +243,49 @@ export function DashboardContent({
           );
         })}
       </div>
+
+      {/* Permit Pipeline Card */}
+      {permitStats && (permitStats.pendingSubmission + permitStats.submittedOrReview + permitStats.approved + permitStats.needingRevision > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-900">
+              Permit Pipeline
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                <Send className="h-4 w-4 text-gray-500" />
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{permitStats.pendingSubmission}</p>
+                  <p className="text-xs text-gray-500">Pending Submission</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50">
+                <Clock className="h-4 w-4 text-amber-600" />
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{permitStats.submittedOrReview}</p>
+                  <p className="text-xs text-gray-500">Submitted / Under Review</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50">
+                <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{permitStats.approved}</p>
+                  <p className="text-xs text-gray-500">Approved</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-red-50">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{permitStats.needingRevision}</p>
+                  <p className="text-xs text-gray-500">Needing Revision</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Properties Card */}
       <Card>

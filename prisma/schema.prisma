@@ -204,6 +204,17 @@ model Report {
   pdfUrl         String?
   reportOptions  String  @default("{}") // JSON — toggleable options like includeTraq, includeCoverLetter
 
+  // Permit lifecycle tracking
+  permitStatus         String?    // submitted, under_review, approved, denied, revision_requested
+  submittedAt          DateTime?
+  submittedTo          String?    // e.g. "City of Palo Alto Planning Dept"
+  reviewerName         String?
+  reviewerNotes        String?
+  conditionsOfApproval String?
+  denialReason         String?
+  approvedAt           DateTime?
+  permitExpiresAt      DateTime?
+
   status String @default("draft") // draft, review, certified, filed
 
   property Property @relation(fields: [propertyId], references: [id])

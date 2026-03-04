@@ -33,7 +33,7 @@ export default async function DashboardPage() {
           orderBy: { treeNumber: "asc" },
         },
         reports: {
-          select: { id: true, status: true },
+          select: { id: true, status: true, permitStatus: true },
           orderBy: { updatedAt: "desc" },
           take: 1,
         },
@@ -71,6 +71,21 @@ export default async function DashboardPage() {
     const due = p.neededByDate;
     return due && new Date(due) < now && (!p.reports[0] || p.reports[0].status !== "certified");
   }).length;
+
+  // Permit pipeline stats
+  const certifiedReports = allProperties
+    .filter((p) => p.reports[0]?.status === "certified")
+    .map((p) => p.reports[0]);
+  const permitStats = {
+    pendingSubmission: certifiedReports.filter((r) => !r.permitStatus).length,
+    submittedOrReview: certifiedReports.filter(
+      (r) => r.permitStatus === "submitted" || r.permitStatus === "under_review"
+    ).length,
+    approved: certifiedReports.filter((r) => r.permitStatus === "approved").length,
+    needingRevision: certifiedReports.filter(
+      (r) => r.permitStatus === "denied" || r.permitStatus === "revision_requested"
+    ).length,
+  };
 
   const greeting = getGreeting();
   const contextMessage = getContextMessage({ draftCount, overdueCount, totalTrees });
@@ -118,6 +133,7 @@ export default async function DashboardPage() {
         properties={JSON.parse(JSON.stringify(allProperties))}
         totalTrees={totalTrees}
         activityFeed={activityFeed}
+        permitStats={permitStats}
       />
     </div>
   );

@@ -61,6 +61,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { PermitStatusPipeline } from "@/components/permit-status-pipeline";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -106,6 +107,16 @@ interface Report {
   certifiedAt: string | null;
   status: string;
   reportOptions?: string;
+  // Permit lifecycle
+  permitStatus: string | null;
+  submittedAt: string | null;
+  submittedTo: string | null;
+  reviewerName: string | null;
+  reviewerNotes: string | null;
+  conditionsOfApproval: string | null;
+  denialReason: string | null;
+  approvedAt: string | null;
+  permitExpiresAt: string | null;
 }
 
 interface ReportOptions {
@@ -396,6 +407,29 @@ export default function PropertyReportPage() {
   );
 
   // -------------------------------------------------------------------------
+  // Update permit status
+  // -------------------------------------------------------------------------
+
+  const updatePermitStatus = useCallback(
+    async (data: Record<string, unknown>) => {
+      if (!report) return;
+      try {
+        const res = await fetch(`/api/reports/${report.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error("Failed to update permit status");
+        const updated = await res.json();
+        setReport(updated);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to update permit status");
+      }
+    },
+    [report]
+  );
+
+  // -------------------------------------------------------------------------
   // Auto-save every 30s
   // -------------------------------------------------------------------------
 
@@ -540,6 +574,15 @@ export default function PropertyReportPage() {
                   eSignatureText: null,
                   certifiedAt: null,
                   status: "draft",
+                  permitStatus: null,
+                  submittedAt: null,
+                  submittedTo: null,
+                  reviewerName: null,
+                  reviewerNotes: null,
+                  conditionsOfApproval: null,
+                  denialReason: null,
+                  approvedAt: null,
+                  permitExpiresAt: null,
                 });
                 setContent(accumulated);
                 savedContentRef.current = accumulated;
@@ -1457,6 +1500,22 @@ export default function PropertyReportPage() {
                     This report has been certified and is locked. Use
                     &ldquo;Unlock &amp; Revise&rdquo; to make changes.
                   </div>
+                )}
+                {isCertified && report && (
+                  <PermitStatusPipeline
+                    permitStatus={report.permitStatus}
+                    submittedAt={report.submittedAt}
+                    submittedTo={report.submittedTo}
+                    reviewerName={report.reviewerName}
+                    reviewerNotes={report.reviewerNotes}
+                    conditionsOfApproval={report.conditionsOfApproval}
+                    denialReason={report.denialReason}
+                    approvedAt={report.approvedAt}
+                    permitExpiresAt={report.permitExpiresAt}
+                    certifiedAt={report.certifiedAt}
+                    mode="interactive"
+                    onUpdatePermitStatus={updatePermitStatus}
+                  />
                 )}
                 <ReportPreview
                   content={content}

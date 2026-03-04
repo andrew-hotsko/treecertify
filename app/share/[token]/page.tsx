@@ -1,8 +1,14 @@
 import { prisma } from "@/lib/db";
+import { Clock, Download, TreePine, Mail, Phone, Globe } from "lucide-react";
+import { PermitStatusPipeline } from "@/components/permit-status-pipeline";
 
 export const metadata = {
-  title: "Shared Property Map | TreeCertify",
+  title: "Tree Assessment Report | TreeCertify",
 };
+
+// ---------------------------------------------------------------------------
+// Condition labels & colors (duplicated from condition-rating.tsx for RSC use)
+// ---------------------------------------------------------------------------
 
 const CONDITION_LABELS: Record<number, string> = {
   0: "Dead",
@@ -22,6 +28,21 @@ const CONDITION_COLORS: Record<number, string> = {
   5: "text-green-600",
 };
 
+// ---------------------------------------------------------------------------
+// Homeowner-friendly action translations
+// ---------------------------------------------------------------------------
+
+const ACTION_FRIENDLY: Record<string, string> = {
+  retain: "This tree is healthy and will be preserved",
+  remove: "Removal is recommended — see report for details",
+  prune: "Maintenance pruning is recommended",
+  monitor: "This tree will be monitored over time",
+};
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
 export default async function SharedPropertyPage({
   params,
 }: {
@@ -34,6 +55,13 @@ export default async function SharedPropertyPage({
     include: {
       trees: {
         orderBy: { treeNumber: "asc" },
+      },
+      reports: {
+        orderBy: { updatedAt: "desc" },
+        take: 1,
+        include: {
+          arborist: true,
+        },
       },
     },
   });
@@ -55,6 +83,10 @@ export default async function SharedPropertyPage({
     );
   }
 
+  const report = property.reports[0] ?? null;
+  const arborist = report?.arborist ?? null;
+  const isCertified = report?.status === "certified";
+
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   const hasCoords = property.lat != null && property.lng != null;
 
@@ -64,10 +96,9 @@ export default async function SharedPropertyPage({
     const lng = property.lng!;
     const lat = property.lat!;
 
-    // Build pin markers for trees
     const treePins = property.trees
       .filter((t) => t.pinLat != null && t.pinLng != null)
-      .slice(0, 50) // Mapbox static API has URL length limits
+      .slice(0, 50)
       .map((t) => `pin-s-${t.treeNumber}+16a34a(${t.pinLng},${t.pinLat})`)
       .join(",");
 
@@ -77,23 +108,93 @@ export default async function SharedPropertyPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* ---- Header ---- */}
       <header className="bg-white border-b">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900">
-              {property.address}
-            </h1>
-            <p className="text-sm text-gray-500">{property.city}</p>
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {arborist?.companyLogoUrl && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={arborist.companyLogoUrl}
+                  alt={arborist.companyName ?? "Company logo"}
+                  className="h-10 w-10 rounded-lg object-contain border"
+                />
+              )}
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900">
+                  {property.address}
+                </h1>
+                <p className="text-sm text-gray-500">
+                  {arborist?.companyName ?? "Tree Assessment Report"} &middot; {property.city}
+                </p>
+              </div>
+            </div>
+            <span className="text-xs text-gray-400 font-medium tracking-wider uppercase hidden sm:inline">
+              TreeCertify
+            </span>
           </div>
-          <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">
-            TreeCertify
-          </span>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* Map Section */}
+        {/* ---- In Progress Banner (not certified) ---- */}
+        {!isCertified && (
+          <section>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center">
+              <Clock className="h-8 w-8 text-amber-500 mx-auto mb-2" />
+              <h2 className="text-lg font-semibold text-amber-800">
+                Assessment In Progress
+              </h2>
+              <p className="text-sm text-amber-700 mt-1 max-w-md mx-auto">
+                Your arborist is still working on this tree assessment report.
+                Check back soon.
+              </p>
+              {arborist && (
+                <p className="text-xs text-amber-600 mt-3">
+                  Arborist: {arborist.name}
+                  {arborist.companyName ? ` — ${arborist.companyName}` : ""}
+                </p>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* ---- Permit Status Pipeline (certified only) ---- */}
+        {isCertified && report && (
+          <section>
+            <PermitStatusPipeline
+              permitStatus={report.permitStatus}
+              submittedAt={report.submittedAt?.toISOString() ?? null}
+              submittedTo={report.submittedTo}
+              reviewerName={report.reviewerName}
+              reviewerNotes={report.reviewerNotes}
+              conditionsOfApproval={report.conditionsOfApproval}
+              denialReason={report.denialReason}
+              approvedAt={report.approvedAt?.toISOString() ?? null}
+              permitExpiresAt={report.permitExpiresAt?.toISOString() ?? null}
+              certifiedAt={report.certifiedAt?.toISOString() ?? null}
+              mode="readonly"
+              friendlyLabels
+            />
+          </section>
+        )}
+
+        {/* ---- Download Report (certified only) ---- */}
+        {isCertified && report && (
+          <section className="flex justify-center">
+            <a
+              href={`/api/reports/${report.id}/pdf?token=${token}`}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium text-sm transition-colors shadow-sm"
+              download
+            >
+              <Download className="h-4 w-4" />
+              Download Report (PDF)
+            </a>
+          </section>
+        )}
+
+        {/* ---- Map Section ---- */}
         <section>
           {mapImageUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */
@@ -110,83 +211,136 @@ export default async function SharedPropertyPage({
           )}
         </section>
 
-        {/* Tree Inventory Table */}
-        {property.trees.length > 0 ? (
+        {/* ---- Tree Summary (certified: full details; otherwise: basic count) ---- */}
+        {isCertified && property.trees.length > 0 && (
           <section>
-            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
-              Tree Inventory ({property.trees.length} tree
-              {property.trees.length !== 1 ? "s" : ""})
+            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <TreePine className="h-4 w-4" />
+              Trees on This Property ({property.trees.length})
             </h2>
-            <div className="bg-white rounded-lg border shadow-sm overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-gray-50">
-                    <th className="text-left px-4 py-2.5 font-medium text-gray-600">
-                      Tree #
-                    </th>
-                    <th className="text-left px-4 py-2.5 font-medium text-gray-600">
-                      Species
-                    </th>
-                    <th className="text-left px-4 py-2.5 font-medium text-gray-600">
-                      DBH
-                    </th>
-                    <th className="text-left px-4 py-2.5 font-medium text-gray-600">
-                      Condition
-                    </th>
-                    <th className="text-left px-4 py-2.5 font-medium text-gray-600">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {property.trees.map((tree) => (
-                    <tr key={tree.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-2.5 font-mono text-gray-700">
-                        #{tree.treeNumber}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <div className="font-medium text-gray-900">
-                          {tree.speciesCommon || "Unidentified"}
-                        </div>
-                        {tree.speciesScientific && (
-                          <div className="text-xs text-gray-400 italic">
-                            {tree.speciesScientific}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-2.5 text-gray-700">
-                        {tree.dbhInches > 0 ? `${tree.dbhInches}"` : "—"}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <span
-                          className={`font-medium ${
-                            CONDITION_COLORS[tree.conditionRating] ??
-                            "text-gray-400"
-                          }`}
-                        >
-                          {CONDITION_LABELS[tree.conditionRating] ?? "—"}
+            <div className="space-y-3">
+              {property.trees.map((tree) => (
+                <div
+                  key={tree.id}
+                  className="bg-white rounded-lg border p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-mono text-gray-500">
+                          #{tree.treeNumber}
                         </span>
-                      </td>
-                      <td className="px-4 py-2.5 capitalize text-gray-700">
-                        {tree.recommendedAction || "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        <h3 className="font-medium text-gray-900">
+                          {tree.speciesCommon || "Unidentified Species"}
+                        </h3>
+                      </div>
+                      {tree.speciesScientific && (
+                        <p className="text-xs text-gray-400 italic mb-2">
+                          {tree.speciesScientific}
+                        </p>
+                      )}
+                      <p className="text-sm text-gray-600">
+                        {ACTION_FRIENDLY[tree.recommendedAction] ??
+                          tree.recommendedAction ??
+                          "No recommendation yet"}
+                      </p>
+                    </div>
+                    <span
+                      className={`text-sm font-medium whitespace-nowrap ${
+                        CONDITION_COLORS[tree.conditionRating] ?? "text-gray-400"
+                      }`}
+                    >
+                      {CONDITION_LABELS[tree.conditionRating] ?? "—"}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
-        ) : (
-          <div className="bg-white rounded-lg border p-8 text-center text-gray-400 text-sm">
-            No trees have been inventoried yet.
-          </div>
+        )}
+
+        {/* Not certified — just show tree count */}
+        {!isCertified && property.trees.length > 0 && (
+          <section>
+            <div className="bg-white rounded-lg border p-6 text-center text-gray-500 text-sm">
+              <TreePine className="h-6 w-6 mx-auto mb-2 text-gray-400" />
+              {property.trees.length} tree{property.trees.length !== 1 ? "s" : ""} assessed on this property.
+              Full details will be available once the report is complete.
+            </div>
+          </section>
+        )}
+
+        {/* ---- Arborist Contact Card ---- */}
+        {arborist && (
+          <section>
+            <div className="bg-white rounded-lg border p-6 shadow-sm">
+              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
+                Your Arborist
+              </h2>
+              <div className="flex items-start gap-4">
+                {arborist.companyLogoUrl && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={arborist.companyLogoUrl}
+                    alt=""
+                    className="h-12 w-12 rounded-lg object-contain border shrink-0"
+                  />
+                )}
+                <div className="space-y-1 text-sm min-w-0">
+                  <p className="font-medium text-gray-900">{arborist.name}</p>
+                  {arborist.companyName && (
+                    <p className="text-gray-600">{arborist.companyName}</p>
+                  )}
+                  <p className="text-gray-500">
+                    ISA Certified Arborist #{arborist.isaCertificationNum}
+                  </p>
+                  {arborist.companyPhone && (
+                    <p className="flex items-center gap-1.5 text-gray-600">
+                      <Phone className="h-3.5 w-3.5 shrink-0" />
+                      <a
+                        href={`tel:${arborist.companyPhone}`}
+                        className="hover:text-emerald-600 transition-colors"
+                      >
+                        {arborist.companyPhone}
+                      </a>
+                    </p>
+                  )}
+                  {arborist.companyEmail && (
+                    <p className="flex items-center gap-1.5 text-gray-600">
+                      <Mail className="h-3.5 w-3.5 shrink-0" />
+                      <a
+                        href={`mailto:${arborist.companyEmail}`}
+                        className="hover:text-emerald-600 transition-colors truncate"
+                      >
+                        {arborist.companyEmail}
+                      </a>
+                    </p>
+                  )}
+                  {arborist.companyWebsite && (
+                    <p className="flex items-center gap-1.5">
+                      <Globe className="h-3.5 w-3.5 text-gray-600 shrink-0" />
+                      <a
+                        href={arborist.companyWebsite}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-600 hover:underline truncate"
+                      >
+                        {arborist.companyWebsite.replace(/^https?:\/\//, "")}
+                      </a>
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
         )}
       </main>
 
-      {/* Footer */}
+      {/* ---- Footer ---- */}
       <footer className="border-t mt-12">
         <div className="max-w-4xl mx-auto px-4 py-4 text-center text-xs text-gray-400">
           Shared via TreeCertify
+          {arborist?.companyName ? ` · ${arborist.companyName}` : ""}
         </div>
       </footer>
     </div>

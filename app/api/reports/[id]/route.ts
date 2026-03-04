@@ -71,6 +71,12 @@ export async function PUT(
       }
     }
 
+    // Validate permitStatus if provided
+    const VALID_PERMIT_STATUSES = [null, "submitted", "under_review", "approved", "denied", "revision_requested"];
+    if (body.permitStatus !== undefined && !VALID_PERMIT_STATUSES.includes(body.permitStatus)) {
+      return NextResponse.json({ error: "Invalid permit status" }, { status: 400 });
+    }
+
     const report = await prisma.report.update({
       where: { id },
       data: {
@@ -78,6 +84,16 @@ export async function PUT(
         ...(body.status !== undefined && { status: body.status }),
         ...(body.eSignatureText !== undefined && { eSignatureText: body.eSignatureText }),
         ...(body.reportOptions !== undefined && { reportOptions: body.reportOptions }),
+        // Permit lifecycle fields
+        ...(body.permitStatus !== undefined && { permitStatus: body.permitStatus }),
+        ...(body.submittedAt !== undefined && { submittedAt: body.submittedAt }),
+        ...(body.submittedTo !== undefined && { submittedTo: body.submittedTo }),
+        ...(body.reviewerName !== undefined && { reviewerName: body.reviewerName }),
+        ...(body.reviewerNotes !== undefined && { reviewerNotes: body.reviewerNotes }),
+        ...(body.conditionsOfApproval !== undefined && { conditionsOfApproval: body.conditionsOfApproval }),
+        ...(body.denialReason !== undefined && { denialReason: body.denialReason }),
+        ...(body.approvedAt !== undefined && { approvedAt: body.approvedAt }),
+        ...(body.permitExpiresAt !== undefined && { permitExpiresAt: body.permitExpiresAt }),
       },
     });
 
