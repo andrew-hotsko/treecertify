@@ -239,7 +239,6 @@ export async function GET(
                     ? photo.url
                     : photo.url;
                 const base64 = photoToBase64(srcUrl);
-                const imgSrc = base64 || srcUrl;
                 // Prefer EXIF date, fall back to upload date
                 const dateSource = photo.exifTakenAt || photo.createdAt;
                 const photoDate = dateSource
@@ -252,9 +251,22 @@ export async function GET(
                 const catLabel = photo.category
                   ? photo.category.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())
                   : "";
+
+                // If base64 conversion failed (file missing/deleted), show placeholder
+                if (!base64) {
+                  return `
+            <div class="photo-cell">
+              <div style="width:100%;height:200px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;border-radius:6px;color:#9ca3af;font-size:12px;border:1px solid #e5e7eb;">Photo unavailable</div>
+              <div class="photo-meta">
+                <span class="photo-ref">Tree #${tree.treeNumber}${catLabel ? ` &mdash; ${catLabel}` : ""}${photo.isAnnotated ? " (annotated)" : ""}</span>
+                ${photoDate ? `<span class="photo-date">${photoDate}</span>` : ""}
+              </div>
+            </div>`;
+                }
+
                 return `
             <div class="photo-cell">
-              <img src="${imgSrc}" alt="Tree #${tree.treeNumber} photo ${chunkIdx * 4 + i + 1}" />
+              <img src="${base64}" alt="Tree #${tree.treeNumber} photo ${chunkIdx * 4 + i + 1}" />
               <div class="photo-meta">
                 <span class="photo-ref">Tree #${tree.treeNumber}${catLabel ? ` &mdash; ${catLabel}` : ""}${photo.isAnnotated ? " (annotated)" : ""}</span>
                 ${photo.caption ? `<span class="photo-caption-text">${esc(photo.caption)}</span>` : ""}

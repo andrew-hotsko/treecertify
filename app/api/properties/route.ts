@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       data: {
         arboristId: arborist.id,
         address: body.address,
-        city: body.city,
+        city: (body.city || "").trim().replace(/\b\w/g, (c: string) => c.toUpperCase()),
         county: body.county ?? "San Mateo",
         state: body.state ?? "CA",
         zip: body.zip ?? null,

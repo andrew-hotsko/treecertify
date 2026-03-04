@@ -113,7 +113,8 @@ export default function NewPropertyPage() {
 
   const handleCityChange = (value: string) => {
     setCity(value);
-    const matchedCounty = COUNTY_MAP[value.trim()];
+    const normalized = value.trim().replace(/\b\w/g, (c) => c.toUpperCase());
+    const matchedCounty = COUNTY_MAP[normalized];
     if (matchedCounty) {
       setCounty(matchedCounty);
     }

@@ -41,8 +41,18 @@ export interface OrdinanceData {
 export async function getOrdinanceByCity(
   cityName: string
 ): Promise<OrdinanceData | null> {
-  const ord = await prisma.municipalOrdinance.findUnique({
-    where: { cityName },
+  // Normalize input: trim + title case, and use case-insensitive match
+  const normalized = cityName
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+
+  const ord = await prisma.municipalOrdinance.findFirst({
+    where: {
+      cityName: {
+        equals: normalized,
+        mode: "insensitive",
+      },
+    },
   });
   if (!ord) return null;
 

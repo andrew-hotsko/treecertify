@@ -58,7 +58,9 @@ export async function PUT(
       where: { id },
       data: {
         ...(body.address !== undefined && { address: body.address }),
-        ...(body.city !== undefined && { city: body.city }),
+        ...(body.city !== undefined && {
+          city: (body.city || "").trim().replace(/\b\w/g, (c: string) => c.toUpperCase()),
+        }),
         ...(body.state !== undefined && { state: body.state }),
         ...(body.zip !== undefined && { zip: body.zip }),
         ...(body.county !== undefined && { county: body.county }),

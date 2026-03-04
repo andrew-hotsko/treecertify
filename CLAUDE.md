@@ -22,6 +22,7 @@
 - **Verified against municipal code text (March 2026):** Palo Alto (PAMC §8.10.020), Menlo Park (MPMC §13.24.020), Atherton (AMC §8.10.020), Portola Valley (PVMC §15.12.060).
 - **NEEDS_VERIFICATION:** Woodside species-specific DBH thresholds (WMC §153.005 table is in a PDF that couldn't be fully extracted — native threshold ~9.5" DBH confirmed by Almanac reporting but per-species breakdown unverified). Woodside replanting ratios not found in code text. Portola Valley replanting ratios not found in code text. Menlo Park in-lieu fee schedule amounts may be outdated.
 - The check logic is in `lib/ordinances.ts` — `checkTreeProtection()` evaluates species-specific thresholds first, then falls back to default native/non-native thresholds. Heritage status is checked separately.
+- City name matching is case-insensitive: `getOrdinanceByCity()` normalizes input to title case and uses Prisma `mode: "insensitive"`. Property creation/update API routes also normalize city to title case on storage.
 - Test script at `scripts/test-ordinances.ts` validates 5 representative scenarios.
 
 ## AI Report Generation
@@ -41,7 +42,7 @@
 - Photo documentation: 2-column grid grouped by tree, max 4 per page, captions + dates.
 - Limitations section: wrapped in gray background box for visual distinction from findings.
 - Signature block: formal certification statement, Dancing Script e-signature when certified, credential details table.
-- `photoToBase64()` converts `/api/uploads/` paths to base64 data URIs for Puppeteer rendering.
+- `photoToBase64()` converts `/api/uploads/` paths to base64 data URIs for Puppeteer rendering. If conversion fails (file missing/deleted), a "Photo unavailable" placeholder is shown instead of a broken image.
 
 ## Photo Documentation Workflow
 - Photo categories defined in `lib/photo-categories.ts` — per-report-type checklists (removal_permit, health_assessment, construction_encroachment, tree_valuation).
