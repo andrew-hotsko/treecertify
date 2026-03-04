@@ -92,7 +92,7 @@ export function ReportPreview({
           color: #1a1a1a;
           font-size: 11pt;
           line-height: 1.6;
-          padding: 48px 56px;
+          padding: 24px 16px;
           max-width: 8.5in;
           margin: 0 auto;
         }
@@ -124,11 +124,18 @@ export function ReportPreview({
         .report-preview li {
           margin: 4px 0;
         }
+        @media (min-width: 640px) {
+          .report-preview {
+            padding: 48px 56px;
+          }
+        }
         .report-preview table {
           width: 100%;
           border-collapse: collapse;
           margin: 16px 0;
           font-size: 9pt;
+          display: block;
+          overflow-x: auto;
         }
         .report-preview table th {
           background: #2d5016;

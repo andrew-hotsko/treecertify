@@ -472,7 +472,7 @@ export default function SettingsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Full Name</Label>
               <Input
@@ -491,7 +491,7 @@ export default function SettingsPage() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>ISA Certification #</Label>
               <Input
@@ -559,7 +559,7 @@ export default function SettingsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Company Name</Label>
               <Input
@@ -586,7 +586,7 @@ export default function SettingsPage() {
               className="mt-1"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Email</Label>
               <Input
@@ -731,7 +731,7 @@ export default function SettingsPage() {
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
                   This Month
                 </p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="bg-gray-50 rounded-lg p-3 text-center">
                     <p className="text-lg font-semibold text-gray-900">
                       ${usageData.monthly.cost.toFixed(2)}

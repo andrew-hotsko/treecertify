@@ -62,6 +62,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { PermitStatusPipeline } from "@/components/permit-status-pipeline";
+import { useToast } from "@/hooks/use-toast";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -211,6 +212,7 @@ function timeAgo(date: Date): string {
 export default function PropertyReportPage() {
   const params = useParams();
   const propertyId = params.id as string;
+  const { toast } = useToast();
 
   // Data state
   const [property, setProperty] = useState<Property | null>(null);
@@ -1300,13 +1302,27 @@ export default function PropertyReportPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                const a = document.createElement("a");
-                a.href = `/api/reports/${report.id}/pdf`;
-                a.download = "";
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+              onClick={async () => {
+                try {
+                  const res = await fetch(`/api/reports/${report.id}/pdf`);
+                  if (!res.ok) throw new Error(`PDF generation failed (${res.status})`);
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `report-${report.id}.pdf`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                } catch (err) {
+                  console.error("PDF download failed:", err);
+                  toast({
+                    title: "PDF download failed",
+                    description: "Could not generate PDF. Please try again.",
+                    variant: "destructive",
+                  });
+                }
               }}
             >
               <Download className="h-3.5 w-3.5 mr-1.5" />
@@ -1315,13 +1331,27 @@ export default function PropertyReportPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                const a = document.createElement("a");
-                a.href = `/api/reports/${report.id}/word`;
-                a.download = "";
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+              onClick={async () => {
+                try {
+                  const res = await fetch(`/api/reports/${report.id}/word`);
+                  if (!res.ok) throw new Error(`Word export failed (${res.status})`);
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `report-${report.id}.docx`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                } catch (err) {
+                  console.error("Word download failed:", err);
+                  toast({
+                    title: "Word download failed",
+                    description: "Could not generate Word document. Please try again.",
+                    variant: "destructive",
+                  });
+                }
               }}
             >
               <FileDown className="h-3.5 w-3.5 mr-1.5" />
@@ -1346,15 +1376,29 @@ export default function PropertyReportPage() {
                       files: [file],
                     });
                   } catch {
-                    // User cancelled or share failed — silent
+                    // User cancelled share — silent
                   }
                 } else {
-                  const a = document.createElement("a");
-                  a.href = pdfUrl;
-                  a.download = "";
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
+                  try {
+                    const res = await fetch(pdfUrl);
+                    if (!res.ok) throw new Error("PDF generation failed");
+                    const blob = await res.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = blobUrl;
+                    a.download = `report-${report.id}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(blobUrl);
+                  } catch (err) {
+                    console.error("PDF download failed:", err);
+                    toast({
+                      title: "PDF download failed",
+                      description: "Could not generate PDF. Please try again.",
+                      variant: "destructive",
+                    });
+                  }
                 }
               }}
             >
@@ -2002,14 +2046,27 @@ export default function PropertyReportPage() {
               <div className="flex gap-3 justify-end">
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    // Download PDF
-                    const a = document.createElement("a");
-                    a.href = `/api/reports/${report.id}/pdf`;
-                    a.download = "";
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`/api/reports/${report.id}/pdf`);
+                      if (!res.ok) throw new Error("PDF generation failed");
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `report-${report.id}.pdf`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                    } catch (err) {
+                      console.error("PDF download failed:", err);
+                      toast({
+                        title: "PDF download failed",
+                        description: "Could not generate PDF. Please try again.",
+                        variant: "destructive",
+                      });
+                    }
                   }}
                 >
                   <Download className="h-4 w-4 mr-2" />

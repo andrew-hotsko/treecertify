@@ -205,7 +205,7 @@ export function TreeSummaryPanel({
             <p>Click the map to add your first tree.</p>
           </div>
         ) : (
-          <div className="max-h-72 overflow-y-auto rounded-lg border">
+          <div className="max-h-72 overflow-auto rounded-lg border">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 sticky top-0">
                 <tr>

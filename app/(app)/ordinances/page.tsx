@@ -60,10 +60,10 @@ export default async function OrdinancesPage() {
           return (
             <Card key={ord.id}>
               <CardHeader>
-                <div className="flex items-start justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                   <div>
                     <CardTitle className="text-xl flex items-center gap-2">
-                      <BookOpen className="h-5 w-5 text-emerald-600" />
+                      <BookOpen className="h-5 w-5 text-emerald-600 shrink-0" />
                       {ord.cityName}
                     </CardTitle>
                     {ord.codeReference && (
@@ -72,7 +72,7 @@ export default async function OrdinancesPage() {
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     {ord.certifierRequirement && (
                       <Badge
                         variant="outline"
@@ -128,6 +128,7 @@ export default async function OrdinancesPage() {
                     <Shield className="h-4 w-4 text-emerald-600" />
                     Protected Species
                   </h4>
+                  <div className="overflow-x-auto -mx-1">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -160,12 +161,13 @@ export default async function OrdinancesPage() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 </div>
 
                 <Separator />
 
                 {/* Mitigation & Heritage */}
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
                     <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
                       <Scale className="h-4 w-4 text-emerald-600" />

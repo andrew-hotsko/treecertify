@@ -594,10 +594,15 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
       setShowSidePanel(false);
     } catch (err) {
       console.error("Delete failed:", err);
+      toast({
+        title: "Delete failed",
+        description: "Could not delete tree. Check your connection and try again.",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
-  }, [selectedTreeId]);
+  }, [selectedTreeId, toast]);
 
   const handleClosePanel = useCallback(() => {
     setShowSidePanel(false);
@@ -629,7 +634,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   const handleSaveProject = useCallback(async () => {
     setSavingProject(true);
     try {
-      await fetch(`/api/properties/${property.id}`, {
+      const res = await fetch(`/api/properties/${property.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -639,17 +644,23 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           architectName: architectName.trim() || null,
         }),
       });
+      if (!res.ok) throw new Error("Save failed");
     } catch (err) {
       console.error("Failed to save project info:", err);
+      toast({
+        title: "Save failed",
+        description: "Could not save project info. Try again.",
+        variant: "destructive",
+      });
     } finally {
       setSavingProject(false);
     }
-  }, [property.id, projectDescription, permitNumber, developerName, architectName]);
+  }, [property.id, projectDescription, permitNumber, developerName, architectName, toast]);
 
   const handleSaveSiteInfo = useCallback(async () => {
     setSavingSiteInfo(true);
     try {
-      await fetch(`/api/properties/${property.id}`, {
+      const res = await fetch(`/api/properties/${property.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -658,12 +669,18 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           neededByDate: neededByDate || null,
         }),
       });
+      if (!res.ok) throw new Error("Save failed");
     } catch (err) {
       console.error("Failed to save site info:", err);
+      toast({
+        title: "Save failed",
+        description: "Could not save site info. Try again.",
+        variant: "destructive",
+      });
     } finally {
       setSavingSiteInfo(false);
     }
-  }, [property.id, scopeOfAssignment, siteObservations, neededByDate]);
+  }, [property.id, scopeOfAssignment, siteObservations, neededByDate, toast]);
 
   const handleDuplicate = useCallback(async () => {
     try {

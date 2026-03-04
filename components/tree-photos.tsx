@@ -239,7 +239,11 @@ export function TreePhotos({
           description: "Photos will upload when you're back online.",
         });
       } catch {
-        // IndexedDB unavailable — fall back to silent failure
+        toast({
+          title: "Upload failed",
+          description: "Could not upload photos. Check your connection and try again.",
+          variant: "destructive",
+        });
       }
     } finally {
       setUploading(false);
@@ -268,18 +272,22 @@ export function TreePhotos({
   async function handleDelete(photoId: string) {
     try {
       const res = await fetch(`${basePath}/${photoId}`, { method: "DELETE" });
-      if (res.ok) {
-        setPhotos((prev) => prev.filter((p) => p.id !== photoId));
-        setDeleteConfirmId(null);
-        if (lightboxIndex !== null) {
-          const deletedIdx = photos.findIndex((p) => p.id === photoId);
-          if (deletedIdx === lightboxIndex) setLightboxIndex(null);
-          else if (deletedIdx < lightboxIndex)
-            setLightboxIndex(lightboxIndex - 1);
-        }
+      if (!res.ok) throw new Error("Delete failed");
+      setPhotos((prev) => prev.filter((p) => p.id !== photoId));
+      setDeleteConfirmId(null);
+      if (lightboxIndex !== null) {
+        const deletedIdx = photos.findIndex((p) => p.id === photoId);
+        if (deletedIdx === lightboxIndex) setLightboxIndex(null);
+        else if (deletedIdx < lightboxIndex)
+          setLightboxIndex(lightboxIndex - 1);
       }
     } catch (err) {
       console.error("Delete failed:", err);
+      toast({
+        title: "Delete failed",
+        description: "Could not delete photo. Try again.",
+        variant: "destructive",
+      });
     }
   }
 

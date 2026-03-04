@@ -13,6 +13,7 @@ import { ConditionRating } from "@/components/condition-rating";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TreePhotos } from "@/components/tree-photos";
 import { TreeAudioNotes } from "@/components/tree-audio-notes";
+import { useToast } from "@/hooks/use-toast";
 import { VoiceInput } from "@/components/voice-input";
 import { SmartDictation } from "@/components/smart-dictation";
 import { HealthAssessmentFields } from "@/components/type-fields/health-assessment-fields";
@@ -223,6 +224,7 @@ export function TreeSidePanel({
   recentSpecies = [],
   quickAddMode = false,
 }: TreeSidePanelProps) {
+  const { toast } = useToast();
   // ---- Form state ----
   const [tagNumber, setTagNumber] = useState(tree?.tagNumber ?? "");
   const [speciesCommon, setSpeciesCommon] = useState(tree?.speciesCommon ?? "");
@@ -324,10 +326,15 @@ export function TreeSidePanel({
       setProtectionResult(data);
     } catch {
       setProtectionResult(null);
+      toast({
+        title: "Ordinance check failed",
+        description: "Could not check tree protection status. You can still save the tree.",
+        variant: "destructive",
+      });
     } finally {
       setCheckingProtection(false);
     }
-  }, [speciesCommon, dbhInches, propertyCity]);
+  }, [speciesCommon, dbhInches, propertyCity, toast]);
 
   // Auto-trigger ordinance check when species + DBH both have values
   useEffect(() => {
@@ -542,9 +549,16 @@ export function TreeSidePanel({
       if (res.ok) {
         const photo = await res.json();
         setPhotos((prev) => [...prev, { id: photo.id, url: photo.url }]);
+      } else {
+        throw new Error("Upload failed");
       }
     } catch (err) {
       console.error("Photo upload failed:", err);
+      toast({
+        title: "Photo upload failed",
+        description: "Could not upload photo. Check your connection and try again.",
+        variant: "destructive",
+      });
     } finally {
       setUploadingPhoto(false);
     }
