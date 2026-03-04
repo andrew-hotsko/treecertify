@@ -15,9 +15,13 @@ export interface MitigationRules {
 }
 
 export interface HeritageTreeRules {
-  dbhThreshold: number;
+  dbhThreshold: number | null;
   reviewProcess: string;
   notes: string;
+  designatedByCouncil?: boolean;
+  designatedByCommittee?: boolean;
+  speciesRestricted?: boolean;
+  protectedSpecies?: string[];
 }
 
 export interface OrdinanceData {
@@ -93,7 +97,7 @@ export async function checkTreeProtection(
   const ordinanceContext: OrdinanceContext = {
     nativeThreshold: ordinance.defaultDbhThresholdNative,
     nonnativeThreshold: ordinance.defaultDbhThresholdNonnative,
-    heritageThreshold: ordinance.heritageTreeRules.dbhThreshold || null,
+    heritageThreshold: ordinance.heritageTreeRules.dbhThreshold ?? null,
     permitProcessNotes: ordinance.permitProcessNotes,
     ordinanceUrl: ordinance.ordinanceUrl,
     replantingRatio: ordinance.mitigationRules.replantingRatio || null,
@@ -103,11 +107,13 @@ export async function checkTreeProtection(
 
   const species = getSpeciesByName(speciesCommon);
   const isNative = species?.category === "native";
+  const scientificName = species?.scientific?.toLowerCase();
 
-  // Check species-specific rules first
+  // Check species-specific rules first — match by common name OR scientific name
   const speciesRule = ordinance.protectedSpecies.find(
     (s) =>
       s.species.toLowerCase() === speciesCommon.toLowerCase() ||
+      (scientificName && s.scientific.toLowerCase() === scientificName) ||
       s.species.toLowerCase() === "any tree"
   );
 
@@ -117,38 +123,57 @@ export async function checkTreeProtection(
   if (speciesRule) {
     if (dbhInches >= speciesRule.dbhThreshold) {
       isProtected = true;
-      reason = `${speciesCommon} with ${dbhInches}" DBH exceeds ${speciesRule.dbhThreshold}" threshold per ${ordinance.codeReference}`;
+      reason = `${speciesCommon} with ${dbhInches}" DBH meets or exceeds ${speciesRule.dbhThreshold}" threshold per ${ordinance.codeReference}`;
     } else {
       reason = `${speciesCommon} with ${dbhInches}" DBH does not meet ${speciesRule.dbhThreshold}" threshold per ${ordinance.codeReference}`;
     }
   } else {
-    // Fall back to default thresholds
+    // Fall back to default thresholds based on native/non-native status
     const threshold = isNative
       ? ordinance.defaultDbhThresholdNative
       : ordinance.defaultDbhThresholdNonnative;
 
-    if (threshold && dbhInches >= threshold) {
+    if (threshold != null && dbhInches >= threshold) {
       isProtected = true;
-      reason = `${isNative ? "Native" : "Non-native"} tree with ${dbhInches}" DBH exceeds ${threshold}" ${isNative ? "native" : "non-native"} threshold per ${ordinance.codeReference}`;
-    } else if (threshold) {
+      reason = `${isNative ? "Native" : "Non-native"} tree with ${dbhInches}" DBH meets or exceeds ${threshold}" ${isNative ? "native" : "non-native"} threshold per ${ordinance.codeReference}`;
+    } else if (threshold != null) {
       reason = `${isNative ? "Native" : "Non-native"} tree with ${dbhInches}" DBH does not meet ${threshold}" threshold per ${ordinance.codeReference}`;
     } else {
-      reason = `No applicable DBH threshold found for this species in ${cityName}`;
+      reason = `${speciesCommon} is not a regulated species under ${cityName}'s tree ordinance (${ordinance.codeReference})`;
     }
   }
 
-  // Check heritage status
+  // Check heritage status — only if the ordinance uses a DBH-based heritage threshold
   let isHeritage = false;
   let heritageReason: string | null = null;
-  if (ordinance.heritageTreeRules.dbhThreshold && dbhInches >= ordinance.heritageTreeRules.dbhThreshold) {
-    isHeritage = true;
-    heritageReason = `Tree qualifies as heritage (${dbhInches}" DBH >= ${ordinance.heritageTreeRules.dbhThreshold}" threshold). ${ordinance.heritageTreeRules.reviewProcess}. ${ordinance.heritageTreeRules.notes}`;
+  const heritageRules = ordinance.heritageTreeRules;
+
+  if (heritageRules.dbhThreshold != null && dbhInches >= heritageRules.dbhThreshold) {
+    // Some cities restrict heritage status to certain species (e.g., Atherton: oaks + redwoods only)
+    const speciesQualifies = !heritageRules.speciesRestricted ||
+      (heritageRules.protectedSpecies && scientificName &&
+        heritageRules.protectedSpecies.some(
+          (s) => s.toLowerCase() === scientificName
+        ));
+
+    if (speciesQualifies) {
+      isHeritage = true;
+      isProtected = true; // Heritage always implies protected
+      heritageReason = `Tree qualifies as heritage (${dbhInches}" DBH >= ${heritageRules.dbhThreshold}" threshold). ${heritageRules.reviewProcess}. ${heritageRules.notes}`;
+      // Update reason to reflect heritage status if it wasn't already protected
+      if (!reason.includes("meets or exceeds")) {
+        reason = `${speciesCommon} with ${dbhInches}" DBH qualifies as heritage tree per ${ordinance.codeReference}`;
+      }
+    }
+  } else if (heritageRules.designatedByCouncil || heritageRules.designatedByCommittee) {
+    // Heritage is by designation only — we can't auto-determine, just note it
+    heritageReason = `Heritage status in ${cityName} is by ${heritageRules.designatedByCouncil ? "City Council" : "committee"} designation only. ${heritageRules.notes}`;
   }
 
-  // Mitigation info
+  // Mitigation info — only if protected
   let mitigationRequired: string | null = null;
   if (isProtected) {
-    mitigationRequired = `Replanting ratio: ${ordinance.mitigationRules.replantingRatio}. ${ordinance.mitigationRules.notes}`;
+    mitigationRequired = `${ordinance.mitigationRules.replantingRatio}. ${ordinance.mitigationRules.notes}`;
   }
 
   return {
