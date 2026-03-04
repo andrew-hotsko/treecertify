@@ -5,6 +5,16 @@ import puppeteer from "puppeteer";
 import fs from "fs";
 import path from "path";
 
+// ---------------------------------------------------------------------------
+// Professional report-type titles (formal, uppercase style)
+// ---------------------------------------------------------------------------
+const REPORT_TYPE_TITLES: Record<string, string> = {
+  removal_permit: "Tree Removal Permit Assessment",
+  health_assessment: "Tree Health Assessment Report",
+  tree_valuation: "Tree Appraisal & Valuation Report",
+  construction_encroachment: "Tree Protection & Construction Impact Assessment",
+};
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -38,9 +48,11 @@ export async function GET(
     const arborist = report.arborist;
     const isCertified = report.status === "certified";
 
-    const reportTypeLabel = report.reportType
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (c: string) => c.toUpperCase());
+    const reportTitle =
+      REPORT_TYPE_TITLES[report.reportType] ||
+      report.reportType
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (c: string) => c.toUpperCase());
     const dateStr = new Date().toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -52,10 +64,16 @@ export async function GET(
     let reportOpts: Record<string, boolean> = {};
     try {
       reportOpts = JSON.parse(report.reportOptions || "{}");
-    } catch { /* default empty */ }
+    } catch {
+      /* default empty */
+    }
 
-    const includeTraq = reportOpts.includeTraq ?? (report.reportType === "health_assessment");
-    const includeCoverLetter = reportOpts.includeCoverLetter ?? (report.reportType === "removal_permit");
+    const includeTraq =
+      reportOpts.includeTraq ??
+      report.reportType === "health_assessment";
+    const includeCoverLetter =
+      reportOpts.includeCoverLetter ??
+      report.reportType === "removal_permit";
     const includeMitigation = reportOpts.includeMitigation ?? true;
 
     // Render markdown to HTML
@@ -89,61 +107,138 @@ export async function GET(
       monitor: "#2563eb",
     };
 
-    // Tree inventory rows
-    const treeRows = trees
-      .map(
-        (tree, idx) => {
-          const condLabel = conditionLabels[tree.conditionRating] ?? `${tree.conditionRating}`;
-          const condColor = conditionColors[tree.conditionRating] ?? "#6b7280";
-          const actionRaw = tree.recommendedAction || "";
-          const actionLabel = actionRaw.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) || "N/A";
-          const actionColor = actionColors[actionRaw] || "#374151";
+    // =========================================================================
+    // COMPANY LOGO (base64)
+    // =========================================================================
+    let logoBase64 = "";
+    if (arborist.companyLogoUrl) {
+      const b64 = photoToBase64(arborist.companyLogoUrl);
+      if (b64) logoBase64 = b64;
+    }
 
-          return `
+    // =========================================================================
+    // TREE INVENTORY TABLE (with protection status & summary row)
+    // =========================================================================
+    const actionCounts: Record<string, number> = {};
+    trees.forEach((t) => {
+      const a = t.recommendedAction || "retain";
+      actionCounts[a] = (actionCounts[a] || 0) + 1;
+    });
+    const summaryParts = Object.entries(actionCounts)
+      .map(
+        ([action, count]) =>
+          `${count} ${action.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}`
+      )
+      .join(", ");
+
+    const treeRows = trees
+      .map((tree, idx) => {
+        const condLabel =
+          conditionLabels[tree.conditionRating] ??
+          `${tree.conditionRating}`;
+        const condColor =
+          conditionColors[tree.conditionRating] ?? "#6b7280";
+        const actionRaw = tree.recommendedAction || "";
+        const actionLabel =
+          actionRaw
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (c: string) => c.toUpperCase()) || "N/A";
+        const actionColor = actionColors[actionRaw] || "#374151";
+
+        // Protection status with shield + code reference
+        let protCell = '<span style="color:#ccc;">\u2014</span>';
+        if (tree.isProtected) {
+          const reason = tree.protectionReason
+            ? `<br/><span style="font-size:6.5pt;color:#666;">${esc(tree.protectionReason)}</span>`
+            : "";
+          protCell = `<span style="color:#2d5016;font-size:10pt;">\u{1F6E1}</span>${reason}`;
+        }
+
+        return `
       <tr${idx % 2 === 1 ? ' class="alt"' : ""}>
-        <td class="center">${tree.treeNumber}</td>
+        <td class="num-cell">${tree.treeNumber}</td>
         <td class="center">${esc(tree.tagNumber || "\u2014")}</td>
         <td>${esc(tree.speciesCommon)}${tree.speciesScientific ? ` <em>(${esc(tree.speciesScientific)})</em>` : ""}</td>
-        <td class="center">${tree.dbhInches}"</td>
-        <td class="center">${tree.heightFt ? `${tree.heightFt}'` : "\u2014"}</td>
-        <td class="center">${tree.canopySpreadFt ? `${tree.canopySpreadFt}'` : "\u2014"}</td>
-        <td class="center"><span style="color:${condColor}; font-weight:600;">${condLabel}</span> <span style="color:#999; font-size:7.5pt;">(${tree.conditionRating}/5)</span></td>
-        <td class="center">${tree.isProtected ? '<span style="color:#16a34a;">&#10003;</span>' : '<span style="color:#ccc;">\u2014</span>'}</td>
+        <td class="num-cell">${tree.dbhInches}"</td>
+        <td class="num-cell">${tree.heightFt ? `${tree.heightFt}'` : "\u2014"}</td>
+        <td class="num-cell">${tree.canopySpreadFt ? `${tree.canopySpreadFt}'` : "\u2014"}</td>
+        <td class="center"><span style="color:${condColor}; font-weight:600;">${condLabel}</span> <span style="color:#999; font-size:7pt;">(${tree.conditionRating}/5)</span></td>
+        <td class="center">${protCell}</td>
         <td><span style="color:${actionColor}; font-weight:600;">${actionLabel}</span></td>
       </tr>`;
-        }
-      )
+      })
       .join("\n");
 
-    // Photo documentation
+    // Summary row
+    const summaryRow = `
+    <tr class="summary-row">
+      <td colspan="3"><strong>TOTAL: ${trees.length} Trees</strong></td>
+      <td colspan="6"><strong>Actions:</strong> ${summaryParts}${protectedCount > 0 ? ` &nbsp;|&nbsp; <strong>${protectedCount} Protected</strong>` : ""}</td>
+    </tr>`;
+
+    // =========================================================================
+    // PHOTO DOCUMENTATION (2-column grid grouped by tree)
+    // =========================================================================
     const treesWithPhotos = trees.filter(
       (t) => t.treePhotos && t.treePhotos.length > 0
     );
     const photoPages = treesWithPhotos
-      .map(
-        (tree) => `
-      <div class="photo-group">
-        <h3>Tree #${tree.treeNumber} \u2014 ${esc(tree.speciesCommon)}${tree.speciesScientific ? ` <em>(${esc(tree.speciesScientific)})</em>` : ""}</h3>
-        <div class="photo-grid">
-          ${(tree.treePhotos || [])
+      .map((tree) => {
+        const photos = tree.treePhotos || [];
+        // Split into chunks of 4 photos per page
+        const chunks: typeof photos[] = [];
+        for (let i = 0; i < photos.length; i += 4) {
+          chunks.push(photos.slice(i, i + 4));
+        }
+
+        return chunks
+          .map(
+            (chunk, chunkIdx) => `
+      <div class="photo-group${chunkIdx > 0 ? " page-break" : ""}">
+        ${chunkIdx === 0 ? `<h3 class="photo-tree-header">Tree #${tree.treeNumber} \u2014 ${esc(tree.speciesCommon)}${tree.speciesScientific ? ` <em>(${esc(tree.speciesScientific)})</em>` : ""}</h3>` : `<h3 class="photo-tree-header">Tree #${tree.treeNumber} (continued)</h3>`}
+        <div class="photo-grid-2col">
+          ${chunk
             .map(
-              (photo: { url: string; caption?: string | null; isAnnotated?: boolean; annotatedUrl?: string | null }, i: number) => {
-                // Use annotated version if available
-                const srcUrl = photo.isAnnotated && photo.annotatedUrl ? photo.annotatedUrl : photo.url;
-                // Convert to base64 data URI so Puppeteer can render it
+              (
+                photo: {
+                  url: string;
+                  caption?: string | null;
+                  isAnnotated?: boolean;
+                  originalUrl?: string | null;
+                  createdAt?: Date | string;
+                },
+                i: number
+              ) => {
+                const srcUrl =
+                  photo.isAnnotated && photo.originalUrl
+                    ? photo.url
+                    : photo.url;
                 const base64 = photoToBase64(srcUrl);
                 const imgSrc = base64 || srcUrl;
+                const photoDate = photo.createdAt
+                  ? new Date(photo.createdAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })
+                  : "";
                 return `
-            <div class="photo-item">
-              <img src="${imgSrc}" alt="Tree #${tree.treeNumber} photo ${i + 1}" />
-              <p class="photo-caption">Photo ${i + 1}${photo.caption ? ` \u2014 ${esc(photo.caption)}` : ""}${photo.isAnnotated ? " (annotated)" : ""}</p>
+            <div class="photo-cell">
+              <img src="${imgSrc}" alt="Tree #${tree.treeNumber} photo ${chunkIdx * 4 + i + 1}" />
+              <div class="photo-meta">
+                <span class="photo-ref">Tree #${tree.treeNumber}${photo.isAnnotated ? " (annotated)" : ""}</span>
+                ${photo.caption ? `<span class="photo-caption-text">${esc(photo.caption)}</span>` : ""}
+                ${photoDate ? `<span class="photo-date">${photoDate}</span>` : ""}
+              </div>
             </div>`;
               }
             )
             .join("")}
         </div>
       </div>`
-      )
+          )
+          .join("\n");
+      })
       .join("\n");
 
     // =========================================================================
@@ -151,7 +246,9 @@ export async function GET(
     // =========================================================================
     let coverLetterHtml = "";
     if (includeCoverLetter && report.reportType === "removal_permit") {
-      const removalCount = trees.filter((t) => t.recommendedAction === "remove").length;
+      const removalCount = trees.filter(
+        (t) => t.recommendedAction === "remove"
+      ).length;
       const ordinance = await prisma.municipalOrdinance.findUnique({
         where: { cityName: property.city },
       });
@@ -190,11 +287,15 @@ export async function GET(
     Qualification (TRAQ) methodology and ANSI A300 standards. The attached report provides detailed findings including
     individual tree assessments, risk analysis, and recommendations.</p>
 
-    ${protectedCount > 0 ? `
+    ${
+      protectedCount > 0
+        ? `
     <p><strong>Protected Trees:</strong> ${protectedCount} of ${trees.length} trees assessed meet the criteria for
     protected status under the applicable municipal tree ordinance. The report includes detailed justification for
     the requested removal${protectedCount > 1 ? "s" : ""}, including risk assessment findings, retention feasibility
-    analysis, and proposed mitigation measures as required.</p>` : ""}
+    analysis, and proposed mitigation measures as required.</p>`
+        : ""
+    }
 
     <p>The enclosed report includes:</p>
     <ul>
@@ -222,10 +323,14 @@ export async function GET(
     }
 
     // =========================================================================
-    // TRAQ APPENDIX — Formal ISA TRAQ Level 2 Basic Assessment forms
+    // TRAQ APPENDIX
     // =========================================================================
     let traqAppendix = "";
-    if (includeTraq && (report.reportType === "health_assessment" || report.reportType === "removal_permit")) {
+    if (
+      includeTraq &&
+      (report.reportType === "health_assessment" ||
+        report.reportType === "removal_permit")
+    ) {
       const traqForms = trees
         .map((tree) => {
           let data: Record<string, unknown> = {};
@@ -237,11 +342,17 @@ export async function GET(
             }
           }
 
-          const lof = ((data.likelihoodOfFailure as string) || "").toLowerCase();
-          const loi = ((data.likelihoodOfImpact as string) || "").toLowerCase();
+          const lof = (
+            (data.likelihoodOfFailure as string) || ""
+          ).toLowerCase();
+          const loi = (
+            (data.likelihoodOfImpact as string) || ""
+          ).toLowerCase();
           const con = ((data.consequences as string) || "").toLowerCase();
           const overallRisk = fmtEnum(data.overallRiskRating as string);
-          const overallRiskRaw = ((data.overallRiskRating as string) || "").toLowerCase();
+          const overallRiskRaw = (
+            (data.overallRiskRating as string) || ""
+          ).toLowerCase();
           const target = (data.targetDescription as string) || "";
           const targetZone = (data.targetZone as string) || "";
           const occupancy = (data.occupancyRate as string) || "Frequent";
@@ -249,47 +360,86 @@ export async function GET(
             ? (data.maintenanceItems as string[]).join(", ")
             : "None specified";
 
-          // Checkbox helper
-          const chk = (val: string, match: string) => val === match ? "\u2611" : "\u2610";
+          const chk = (val: string, match: string) =>
+            val === match ? "\u2611" : "\u2610";
 
-          // Compute Matrix 1 result: Likelihood of Failure & Impact
           const m1Lookup: Record<string, Record<string, string>> = {
-            imminent:   { very_low: "Unlikely",  low: "Somewhat likely", medium: "Likely",          high: "Very likely" },
-            probable:   { very_low: "Unlikely",  low: "Unlikely",        medium: "Somewhat likely",  high: "Likely" },
-            possible:   { very_low: "Unlikely",  low: "Unlikely",        medium: "Unlikely",         high: "Somewhat likely" },
-            improbable: { very_low: "Unlikely",  low: "Unlikely",        medium: "Unlikely",         high: "Unlikely" },
+            imminent: {
+              very_low: "Unlikely",
+              low: "Somewhat likely",
+              medium: "Likely",
+              high: "Very likely",
+            },
+            probable: {
+              very_low: "Unlikely",
+              low: "Unlikely",
+              medium: "Somewhat likely",
+              high: "Likely",
+            },
+            possible: {
+              very_low: "Unlikely",
+              low: "Unlikely",
+              medium: "Unlikely",
+              high: "Somewhat likely",
+            },
+            improbable: {
+              very_low: "Unlikely",
+              low: "Unlikely",
+              medium: "Unlikely",
+              high: "Unlikely",
+            },
           };
-          const failureAndImpact = (lof && loi) ? (m1Lookup[lof]?.[loi] || "N/A") : "N/A";
+          const failureAndImpact =
+            lof && loi ? m1Lookup[lof]?.[loi] || "N/A" : "N/A";
           const faiKey = failureAndImpact.toLowerCase().replace(/ /g, "_");
 
-          // Compute Matrix 2 result: Risk Rating
           const m2Lookup: Record<string, Record<string, string>> = {
-            very_likely:     { negligible: "Low", minor: "Moderate", significant: "High",     severe: "Extreme" },
-            likely:          { negligible: "Low", minor: "Moderate", significant: "High",     severe: "High" },
-            somewhat_likely: { negligible: "Low", minor: "Low",      significant: "Moderate", severe: "Moderate" },
-            unlikely:        { negligible: "Low", minor: "Low",      significant: "Low",      severe: "Low" },
+            very_likely: {
+              negligible: "Low",
+              minor: "Moderate",
+              significant: "High",
+              severe: "Extreme",
+            },
+            likely: {
+              negligible: "Low",
+              minor: "Moderate",
+              significant: "High",
+              severe: "High",
+            },
+            somewhat_likely: {
+              negligible: "Low",
+              minor: "Low",
+              significant: "Moderate",
+              severe: "Moderate",
+            },
+            unlikely: {
+              negligible: "Low",
+              minor: "Low",
+              significant: "Low",
+              severe: "Low",
+            },
           };
-          const computedRisk = (faiKey && con) ? (m2Lookup[faiKey]?.[con] || overallRisk) : overallRisk;
+          const computedRisk =
+            faiKey && con
+              ? m2Lookup[faiKey]?.[con] || overallRisk
+              : overallRisk;
 
-          // Matrix cell highlight helper
           const m1Cell = (rowKey: string, colKey: string) => {
             const isActive = lof === rowKey && loi === colKey;
-            return isActive ? 'class="matrix-active"' : '';
+            return isActive ? 'class="matrix-active"' : "";
           };
           const m2Cell = (rowKey: string, colKey: string) => {
             const isActive = faiKey === rowKey && con === colKey;
-            return isActive ? 'class="matrix-active"' : '';
+            return isActive ? 'class="matrix-active"' : "";
           };
 
           return `
     <div class="traq-form">
-      <!-- Header -->
       <div class="traq-header">
         <h3>ISA TRAQ Level 2 \u2014 Basic Assessment</h3>
         <p class="traq-subtitle">Tree Risk Assessment Qualification</p>
       </div>
 
-      <!-- Assessor/Tree Info -->
       <table class="traq-info-table">
         <tr>
           <td class="traq-label">Assessor</td>
@@ -321,7 +471,6 @@ export async function GET(
         </tr>
       </table>
 
-      <!-- Targets -->
       <div class="traq-section-header">Targets</div>
       <table class="traq-target-table">
         <thead>
@@ -337,7 +486,6 @@ export async function GET(
         </tbody>
       </table>
 
-      <!-- Tree Health & Structural Assessment -->
       <div class="traq-section-header">Tree Health &amp; Structural Assessment</div>
       <table class="traq-data-table">
         <tr>
@@ -359,7 +507,6 @@ export async function GET(
         </tr>
       </table>
 
-      <!-- Risk Rating -->
       <div class="traq-section-header">Risk Rating</div>
       <table class="traq-risk-table">
         <tr>
@@ -391,13 +538,11 @@ export async function GET(
         </tr>
       </table>
 
-      <!-- Overall Risk -->
       <div class="traq-overall-risk traq-risk-${overallRiskRaw || "none"}">
         <strong>OVERALL RISK RATING:</strong>
         <span class="traq-risk-value">${(computedRisk || overallRisk || "N/A").toUpperCase()}</span>
       </div>
 
-      <!-- ISA Matrices (reference) -->
       <div class="traq-matrices">
         <div class="matrix-pair">
           <div class="matrix">
@@ -407,10 +552,10 @@ export async function GET(
                 <tr><th>Failure \u2193 / Impact \u2192</th><th>Very Low</th><th>Low</th><th>Medium</th><th>High</th></tr>
               </thead>
               <tbody>
-                <tr><td>Imminent</td><td ${m1Cell("imminent","very_low")}>Unlikely</td><td ${m1Cell("imminent","low")}>Somewhat</td><td ${m1Cell("imminent","medium")}>Likely</td><td ${m1Cell("imminent","high")}>Very likely</td></tr>
-                <tr><td>Probable</td><td ${m1Cell("probable","very_low")}>Unlikely</td><td ${m1Cell("probable","low")}>Unlikely</td><td ${m1Cell("probable","medium")}>Somewhat</td><td ${m1Cell("probable","high")}>Likely</td></tr>
-                <tr><td>Possible</td><td ${m1Cell("possible","very_low")}>Unlikely</td><td ${m1Cell("possible","low")}>Unlikely</td><td ${m1Cell("possible","medium")}>Unlikely</td><td ${m1Cell("possible","high")}>Somewhat</td></tr>
-                <tr><td>Improbable</td><td ${m1Cell("improbable","very_low")}>Unlikely</td><td ${m1Cell("improbable","low")}>Unlikely</td><td ${m1Cell("improbable","medium")}>Unlikely</td><td ${m1Cell("improbable","high")}>Unlikely</td></tr>
+                <tr><td>Imminent</td><td ${m1Cell("imminent", "very_low")}>Unlikely</td><td ${m1Cell("imminent", "low")}>Somewhat</td><td ${m1Cell("imminent", "medium")}>Likely</td><td ${m1Cell("imminent", "high")}>Very likely</td></tr>
+                <tr><td>Probable</td><td ${m1Cell("probable", "very_low")}>Unlikely</td><td ${m1Cell("probable", "low")}>Unlikely</td><td ${m1Cell("probable", "medium")}>Somewhat</td><td ${m1Cell("probable", "high")}>Likely</td></tr>
+                <tr><td>Possible</td><td ${m1Cell("possible", "very_low")}>Unlikely</td><td ${m1Cell("possible", "low")}>Unlikely</td><td ${m1Cell("possible", "medium")}>Unlikely</td><td ${m1Cell("possible", "high")}>Somewhat</td></tr>
+                <tr><td>Improbable</td><td ${m1Cell("improbable", "very_low")}>Unlikely</td><td ${m1Cell("improbable", "low")}>Unlikely</td><td ${m1Cell("improbable", "medium")}>Unlikely</td><td ${m1Cell("improbable", "high")}>Unlikely</td></tr>
               </tbody>
             </table>
           </div>
@@ -421,17 +566,16 @@ export async function GET(
                 <tr><th>F&amp;I \u2193 / Conseq. \u2192</th><th>Negligible</th><th>Minor</th><th>Significant</th><th>Severe</th></tr>
               </thead>
               <tbody>
-                <tr><td>Very likely</td><td ${m2Cell("very_likely","negligible")}>Low</td><td ${m2Cell("very_likely","minor")}>Moderate</td><td ${m2Cell("very_likely","significant")}>High</td><td ${m2Cell("very_likely","severe")}>Extreme</td></tr>
-                <tr><td>Likely</td><td ${m2Cell("likely","negligible")}>Low</td><td ${m2Cell("likely","minor")}>Moderate</td><td ${m2Cell("likely","significant")}>High</td><td ${m2Cell("likely","severe")}>High</td></tr>
-                <tr><td>Somewhat likely</td><td ${m2Cell("somewhat_likely","negligible")}>Low</td><td ${m2Cell("somewhat_likely","minor")}>Low</td><td ${m2Cell("somewhat_likely","significant")}>Moderate</td><td ${m2Cell("somewhat_likely","severe")}>Moderate</td></tr>
-                <tr><td>Unlikely</td><td ${m2Cell("unlikely","negligible")}>Low</td><td ${m2Cell("unlikely","minor")}>Low</td><td ${m2Cell("unlikely","significant")}>Low</td><td ${m2Cell("unlikely","severe")}>Low</td></tr>
+                <tr><td>Very likely</td><td ${m2Cell("very_likely", "negligible")}>Low</td><td ${m2Cell("very_likely", "minor")}>Moderate</td><td ${m2Cell("very_likely", "significant")}>High</td><td ${m2Cell("very_likely", "severe")}>Extreme</td></tr>
+                <tr><td>Likely</td><td ${m2Cell("likely", "negligible")}>Low</td><td ${m2Cell("likely", "minor")}>Moderate</td><td ${m2Cell("likely", "significant")}>High</td><td ${m2Cell("likely", "severe")}>High</td></tr>
+                <tr><td>Somewhat likely</td><td ${m2Cell("somewhat_likely", "negligible")}>Low</td><td ${m2Cell("somewhat_likely", "minor")}>Low</td><td ${m2Cell("somewhat_likely", "significant")}>Moderate</td><td ${m2Cell("somewhat_likely", "severe")}>Moderate</td></tr>
+                <tr><td>Unlikely</td><td ${m2Cell("unlikely", "negligible")}>Low</td><td ${m2Cell("unlikely", "minor")}>Low</td><td ${m2Cell("unlikely", "significant")}>Low</td><td ${m2Cell("unlikely", "severe")}>Low</td></tr>
               </tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <!-- Recommended Action & Mitigation -->
       <div class="traq-section-header">Recommended Action &amp; Mitigation</div>
       <table class="traq-data-table">
         <tr>
@@ -452,7 +596,6 @@ export async function GET(
         </tr>
       </table>
 
-      <!-- Inspection limitations & Signature -->
       <div class="traq-footer-note">
         <p>Inspection limitations: Visual assessment from ground level. Tools: N/A</p>
         <p>Data: \u2611 Final &nbsp; \u2610 Preliminary</p>
@@ -501,19 +644,26 @@ export async function GET(
         if (ordinance?.mitigationRules) {
           try {
             mitigationRules = JSON.parse(ordinance.mitigationRules);
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
         }
 
-        const replacementRatio = (mitigationRules.replantingRatio as string) || "3:1";
-        const minBoxSize = (mitigationRules.minBoxSize as string) || "24-inch box";
-        const inLieuFeePerTree = (mitigationRules.inLieuFeePerTree as number) || null;
+        const replacementRatio =
+          (mitigationRules.replantingRatio as string) || "3:1";
+        const minBoxSize =
+          (mitigationRules.minBoxSize as string) || "24-inch box";
+        const inLieuFeePerTree =
+          (mitigationRules.inLieuFeePerTree as number) || null;
 
         const ratioNum = parseInt(replacementRatio.split(":")[0]) || 3;
 
         const rows = protectedRemovalTrees
           .map((tree) => {
             const replacementsRequired = ratioNum;
-            const feeTotal = inLieuFeePerTree ? inLieuFeePerTree * replacementsRequired : null;
+            const feeTotal = inLieuFeePerTree
+              ? inLieuFeePerTree * replacementsRequired
+              : null;
 
             return `
           <tr>
@@ -524,13 +674,15 @@ export async function GET(
             <td class="center">${replacementRatio}</td>
             <td class="center">${replacementsRequired} tree${replacementsRequired !== 1 ? "s" : ""}</td>
             <td class="center">${minBoxSize} min.</td>
-            ${inLieuFeePerTree ? `<td class="center">$${(feeTotal!).toLocaleString()}</td>` : ""}
+            ${inLieuFeePerTree ? `<td class="center">$${feeTotal!.toLocaleString()}</td>` : ""}
           </tr>`;
           })
           .join("\n");
 
         const totalReplacements = protectedRemovalTrees.length * ratioNum;
-        const totalFee = inLieuFeePerTree ? totalReplacements * inLieuFeePerTree : null;
+        const totalFee = inLieuFeePerTree
+          ? totalReplacements * inLieuFeePerTree
+          : null;
 
         mitigationHtml = `
     <div class="page-break"></div>
@@ -564,31 +716,37 @@ export async function GET(
       </tfoot>
     </table>
 
-    ${inLieuFeePerTree ? `
+    ${
+      inLieuFeePerTree
+        ? `
     <p class="mitigation-note">
       <strong>Note:</strong> The property owner may elect to plant replacement trees on-site at the required ratio
       and size, or pay the in-lieu fee of $${inLieuFeePerTree.toLocaleString()} per required replacement tree to
       the city's tree replacement fund. Contact the city Urban Forestry division for current fee schedules and
       approved replacement species lists.
-    </p>` : `
+    </p>`
+        : `
     <p class="mitigation-note">
       <strong>Note:</strong> Contact the ${esc(property.city)} Urban Forestry division for current mitigation
       requirements, approved replacement species lists, and any applicable in-lieu fee options.
-    </p>`}
+    </p>`
+    }
     `;
       }
     }
 
     // =========================================================================
-    // ENHANCED CREDENTIALS BLOCK
+    // ADDITIONAL CERTS
     // =========================================================================
     let additionalCertsArr: string[] = [];
     try {
       const parsed = JSON.parse(arborist.additionalCerts || "[]");
       if (Array.isArray(parsed)) additionalCertsArr = parsed;
     } catch {
-      // If it's a comma-separated string, split it
-      if (arborist.additionalCerts && arborist.additionalCerts !== "[]") {
+      if (
+        arborist.additionalCerts &&
+        arborist.additionalCerts !== "[]"
+      ) {
         additionalCertsArr = arborist.additionalCerts
           .split(",")
           .map((s: string) => s.trim())
@@ -596,49 +754,122 @@ export async function GET(
       }
     }
 
-    const credentialsBlock = `
-    <div class="cert-credentials">
-      <div class="cert-credentials-header">CERTIFYING ARBORIST</div>
-      <table class="cert-credentials-table">
-        <tr>
-          <td class="cert-cred-label">Name</td>
-          <td class="cert-cred-value">${esc(arborist.name)}</td>
-        </tr>
-        <tr>
-          <td class="cert-cred-label">ISA Certification</td>
-          <td class="cert-cred-value">#${esc(arborist.isaCertificationNum)}</td>
-        </tr>
-        ${arborist.traqCertified ? `
-        <tr>
-          <td class="cert-cred-label">TRAQ Qualified</td>
-          <td class="cert-cred-value">ISA Tree Risk Assessment Qualified</td>
-        </tr>` : ""}
-        ${additionalCertsArr.length > 0 ? `
-        <tr>
-          <td class="cert-cred-label">Additional Certs</td>
-          <td class="cert-cred-value">${esc(additionalCertsArr.join(", "))}</td>
-        </tr>` : ""}
-        ${arborist.licenseNumbers ? `
-        <tr>
-          <td class="cert-cred-label">License Numbers</td>
-          <td class="cert-cred-value">${esc(arborist.licenseNumbers)}</td>
-        </tr>` : ""}
-        ${arborist.companyName ? `
-        <tr>
-          <td class="cert-cred-label">Company</td>
-          <td class="cert-cred-value">${esc(arborist.companyName)}</td>
-        </tr>` : ""}
-        ${arborist.companyPhone ? `
-        <tr>
-          <td class="cert-cred-label">Phone</td>
-          <td class="cert-cred-value">${esc(arborist.companyPhone)}</td>
-        </tr>` : ""}
-        ${arborist.companyEmail ? `
-        <tr>
-          <td class="cert-cred-label">Email</td>
-          <td class="cert-cred-value">${esc(arborist.companyEmail)}</td>
-        </tr>` : ""}
-      </table>
+    // =========================================================================
+    // TABLE OF CONTENTS — section list
+    // =========================================================================
+    const tocSections: { title: string; desc: string }[] = [];
+    tocSections.push({
+      title: "Tree Inventory",
+      desc: `${trees.length} trees assessed`,
+    });
+
+    // Parse H1 sections from the report body
+    const h1Regex = /^#\s+(.+)$/gm;
+    let h1Match;
+    while ((h1Match = h1Regex.exec(content)) !== null) {
+      tocSections.push({ title: h1Match[1], desc: "" });
+    }
+
+    if (treesWithPhotos.length > 0) {
+      tocSections.push({
+        title: "Photo Documentation",
+        desc: `${treesWithPhotos.reduce((sum, t) => sum + (t.treePhotos?.length || 0), 0)} photos`,
+      });
+    }
+    if (traqAppendix) {
+      tocSections.push({
+        title: "Appendix: TRAQ Risk Assessment Forms",
+        desc: `${trees.length} forms`,
+      });
+    }
+    if (mitigationHtml) {
+      tocSections.push({
+        title: "Appendix: Mitigation Requirements Summary",
+        desc: "",
+      });
+    }
+    tocSections.push({
+      title: "Arborist Certification & Signature",
+      desc: "",
+    });
+
+    const tocRows = tocSections
+      .map(
+        (s, i) => `
+      <tr>
+        <td class="toc-num">${i + 1}.</td>
+        <td class="toc-title">${esc(s.title)}<span class="toc-dots"></span></td>
+        <td class="toc-desc">${esc(s.desc)}</td>
+      </tr>`
+      )
+      .join("\n");
+
+    // =========================================================================
+    // COVER PAGE — "Prepared For" block
+    // =========================================================================
+    const preparedForLines: string[] = [];
+    if (property.homeownerName) {
+      preparedForLines.push(esc(property.homeownerName));
+    }
+    preparedForLines.push(esc(property.address));
+    preparedForLines.push(
+      `${esc(property.city)}, ${esc(property.state || "CA")}${property.zip ? ` ${esc(property.zip)}` : ""}`
+    );
+    preparedForLines.push(""); // spacer
+    preparedForLines.push(`City of ${esc(property.city)}`);
+    preparedForLines.push("Planning & Development Services");
+
+    // =========================================================================
+    // SIGNATURE BLOCK
+    // =========================================================================
+    const certDateStr = report.certifiedAt
+      ? new Date(report.certifiedAt).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : dateStr;
+
+    const signatureBlock = `
+    <div class="signature-block">
+      <h2 class="section-title">Arborist Certification & Signature</h2>
+      <div class="cert-statement">
+        <p>I, the undersigned, certify that I have personally inspected the tree(s) described in this
+        report and that the information contained herein is accurate to the best of my professional
+        knowledge and belief. I am an ISA Certified Arborist and the opinions expressed are based
+        on my professional training, experience, and education.</p>
+        <p>I have no personal interest or bias with respect to the parties involved. The analysis,
+        opinions, and conclusions stated herein are my own, and are based on current scientific
+        procedures and facts.</p>
+      </div>
+
+      <div class="sig-area">
+        ${
+          isCertified
+            ? `
+        <div class="sig-line-group">
+          <div class="sig-esignature">${esc(report.eSignatureText || arborist.name)}</div>
+          <div class="sig-rule"></div>
+          <div class="sig-label">Signature</div>
+        </div>
+        `
+            : `
+        <div class="sig-line-group">
+          <div class="sig-rule" style="margin-top:40px;"></div>
+          <div class="sig-label">Signature</div>
+        </div>
+        `
+        }
+        <div class="sig-details">
+          <div class="sig-detail-row"><span class="sig-detail-label">Name:</span> ${esc(arborist.name)}</div>
+          <div class="sig-detail-row"><span class="sig-detail-label">ISA Certified Arborist:</span> #${esc(arborist.isaCertificationNum)}</div>
+          ${arborist.traqCertified ? `<div class="sig-detail-row"><span class="sig-detail-label">Qualification:</span> ISA Tree Risk Assessment Qualified</div>` : ""}
+          ${additionalCertsArr.length > 0 ? `<div class="sig-detail-row"><span class="sig-detail-label">Additional Certifications:</span> ${esc(additionalCertsArr.join(", "))}</div>` : ""}
+          ${arborist.licenseNumbers ? `<div class="sig-detail-row"><span class="sig-detail-label">License(s):</span> ${esc(arborist.licenseNumbers)}</div>` : ""}
+          ${arborist.companyName ? `<div class="sig-detail-row"><span class="sig-detail-label">Company:</span> ${esc(arborist.companyName)}</div>` : ""}
+          <div class="sig-detail-row"><span class="sig-detail-label">Date:</span> ${certDateStr}</div>
+        </div>
+      </div>
     </div>`;
 
     // Draft watermark
@@ -646,33 +877,50 @@ export async function GET(
       ? `<div style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-35deg); font-size:140pt; font-weight:bold; color:rgba(200,200,200,0.08); letter-spacing:24px; pointer-events:none; z-index:0; white-space:nowrap;">DRAFT</div>`
       : "";
 
-    // Footer text for displayHeaderFooter
-    const footerCompany = arborist.companyName || arborist.name;
-    const footerAddress = `${property.address}, ${property.city}`;
+    // Header/footer values for Puppeteer
+    const headerCompany = esc(
+      arborist.companyName || arborist.name
+    );
+    const headerTitle = esc(reportTitle);
 
-    // Build the full HTML document
+    // =========================================================================
+    // FULL HTML DOCUMENT
+    // =========================================================================
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Arborist Report \u2014 ${esc(property.address)}, ${esc(property.city)}</title>
+  <title>${esc(reportTitle)} \u2014 ${esc(property.address)}, ${esc(property.city)}</title>
   <style>
-    /* ---- Base ---- */
+    /* =========================================================================
+       BASE TYPOGRAPHY & LAYOUT
+       ========================================================================= */
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Source+Sans+3:wght@300;400;600;700&family=Dancing+Script:wght@400;700&display=swap');
+
     * { box-sizing: border-box; }
     body {
-      font-family: 'Georgia', 'Times New Roman', serif;
+      font-family: 'Source Sans 3', 'Helvetica Neue', Helvetica, Arial, sans-serif;
       color: #1a1a1a;
       font-size: 10.5pt;
-      line-height: 1.6;
+      line-height: 1.55;
       margin: 0;
       padding: 0;
       position: relative;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     .page-break { page-break-before: always; }
 
-    /* ==== COVER LETTER ==== */
+    /* Cover page: hide from running header/footer via @page :first */
+    @page :first {
+      margin-top: 0.5in;
+      margin-bottom: 0.5in;
+    }
+
+    /* =========================================================================
+       COVER LETTER
+       ========================================================================= */
     .cover-letter {
-      font-family: Georgia, serif;
       font-size: 10.5pt;
       line-height: 1.6;
       padding: 0.5in 0;
@@ -712,120 +960,142 @@ export async function GET(
     }
     .cl-signature p { margin: 2px 0; font-size: 9.5pt; }
 
-    /* ==== COVER PAGE ==== */
+    /* =========================================================================
+       COVER PAGE
+       ========================================================================= */
     .cover-page {
       display: flex;
       flex-direction: column;
-      min-height: 9in;
+      min-height: 9.5in;
       position: relative;
       padding: 0;
     }
-    .cover-branding {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #2d5016;
+
+    /* Company block */
+    .cover-company-block {
+      text-align: center;
+      padding: 40px 0 24px 0;
+      border-bottom: 2.5px solid #2d5016;
       margin-bottom: 0;
     }
-    .cover-brand-left {
-      display: flex;
-      align-items: center;
-      gap: 16px;
+    .cover-logo-img {
+      max-width: 180px;
+      max-height: 80px;
+      width: auto;
+      height: auto;
+      margin-bottom: 12px;
     }
-    .cover-logo { max-height: 64px; width: auto; }
     .cover-company-name {
-      font-size: 16pt;
-      font-weight: bold;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 18pt;
+      font-weight: 700;
       color: #2d5016;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
+      margin: 0;
     }
-    .cover-brand-right {
-      text-align: right;
-      font-size: 8.5pt;
+    .cover-company-detail {
+      font-size: 9.5pt;
       color: #666;
-      line-height: 1.5;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      margin: 2px 0;
+      line-height: 1.4;
     }
-    .cover-title-block {
+
+    /* Report title area */
+    .cover-title-area {
       flex: 1;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       text-align: center;
-      padding: 60px 0 40px 0;
+      padding: 36px 40px;
     }
-    .cover-rule-top {
-      width: 280px;
+    .cover-rule {
+      width: 240px;
       border: none;
       border-top: 3px double #2d5016;
-      margin: 0 auto 32px auto;
+      margin: 0 auto 28px auto;
     }
-    .cover-title {
-      font-size: 28pt;
-      font-weight: bold;
+    .cover-report-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 26pt;
+      font-weight: 700;
       color: #1a1a1a;
-      letter-spacing: 4px;
+      letter-spacing: 2px;
       text-transform: uppercase;
-      margin: 0 0 6px 0;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      margin: 0 0 12px 0;
+      line-height: 1.2;
     }
-    .cover-address {
-      font-size: 14pt;
+    .cover-property-address {
+      font-size: 15pt;
       color: #333;
-      font-weight: normal;
       margin: 0 0 4px 0;
+      font-weight: 400;
     }
-    .cover-city {
+    .cover-property-city {
       font-size: 11pt;
       color: #666;
       margin: 0 0 20px 0;
     }
-    .cover-type-badge {
-      font-size: 9pt;
+    .cover-status-badge {
+      font-size: 8.5pt;
       font-weight: 600;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
       display: inline-block;
-      padding: 5px 20px;
+      padding: 5px 24px;
       border-radius: 20px;
-      margin: 0 0 4px 0;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      margin-bottom: 4px;
     }
-    .cover-type-certified { background: #2d5016; color: #fff; }
-    .cover-type-draft { background: #e5e7eb; color: #6b7280; }
+    .badge-certified { background: #2d5016; color: #fff; }
+    .badge-draft { background: #e5e7eb; color: #6b7280; }
     .cover-rule-bottom {
-      width: 280px;
+      width: 240px;
       border: none;
       border-top: 3px double #2d5016;
-      margin: 28px auto 0 auto;
+      margin: 24px auto 0 auto;
     }
-    .cover-meta-table {
-      width: 80%;
-      max-width: 480px;
-      margin: 32px auto 0 auto;
-      border-collapse: collapse;
-      font-size: 10pt;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+    /* Prepared For block */
+    .cover-prepared-block {
+      display: flex;
+      justify-content: space-between;
+      padding: 24px 0;
+      gap: 40px;
     }
-    .cover-meta-table td {
-      padding: 6px 12px;
-      vertical-align: top;
+    .cover-prepared-col {
+      flex: 1;
     }
-    .cover-meta-label {
-      color: #888;
-      font-size: 8pt;
+    .cover-prepared-label {
+      font-size: 7.5pt;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      padding-bottom: 2px;
+      letter-spacing: 2px;
+      color: #999;
+      font-weight: 600;
+      margin-bottom: 6px;
     }
-    .cover-meta-value { color: #1a1a1a; font-weight: 500; }
+    .cover-prepared-value {
+      font-size: 10pt;
+      color: #333;
+      line-height: 1.5;
+    }
+    .cover-prepared-value .name {
+      font-weight: 600;
+      color: #1a1a1a;
+      font-size: 10.5pt;
+    }
+
+    /* Cover footer */
     .cover-footer {
       text-align: center;
-      padding-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid #ddd;
       margin-top: auto;
+    }
+    .cover-credentials-line {
+      font-size: 9pt;
+      color: #555;
+      margin: 2px 0;
     }
     .cover-draft-badge {
       font-size: 14pt;
@@ -835,48 +1105,104 @@ export async function GET(
       border: 2px solid #d0d0d0;
       padding: 6px 32px;
       display: inline-block;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
     .cover-confidential {
-      font-size: 7.5pt;
-      color: #999;
+      font-size: 7pt;
+      color: #aaa;
       text-transform: uppercase;
       letter-spacing: 2px;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      margin-top: 8px;
     }
 
-    /* ==== REPORT BODY ==== */
+    /* =========================================================================
+       TABLE OF CONTENTS
+       ========================================================================= */
+    .toc-page {
+      padding: 40px 0;
+    }
+    .toc-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 18pt;
+      color: #2d5016;
+      font-weight: 700;
+      margin: 0 0 6px 0;
+      border-bottom: 2.5px solid #2d5016;
+      padding-bottom: 8px;
+    }
+    .toc-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+    .toc-table tr {
+      border-bottom: 1px dotted #ccc;
+    }
+    .toc-table td {
+      padding: 8px 4px;
+      vertical-align: bottom;
+    }
+    .toc-num {
+      width: 30px;
+      color: #2d5016;
+      font-weight: 600;
+      font-size: 10pt;
+    }
+    .toc-table .toc-title-cell {
+      font-size: 10.5pt;
+      color: #1a1a1a;
+      font-weight: 500;
+    }
+    .toc-dots {
+      display: inline;
+    }
+    .toc-desc {
+      text-align: right;
+      font-size: 9pt;
+      color: #888;
+      white-space: nowrap;
+      width: 120px;
+    }
+    .toc-note {
+      margin-top: 20px;
+      font-size: 9pt;
+      color: #999;
+      font-style: italic;
+    }
+
+    /* =========================================================================
+       REPORT BODY
+       ========================================================================= */
     .section-title {
+      font-family: 'Playfair Display', Georgia, serif;
       font-size: 14pt;
       color: #2d5016;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      margin: 24px 0 8px 0;
-      border-bottom: 2px solid #2d5016;
-      padding-bottom: 4px;
+      margin: 28px 0 8px 0;
+      border-bottom: 2.5px solid #2d5016;
+      padding-bottom: 5px;
       font-weight: 700;
     }
     .report-body h1 {
+      font-family: 'Playfair Display', Georgia, serif;
       font-size: 14pt;
       color: #2d5016;
-      border-bottom: 2px solid #2d5016;
-      padding-bottom: 4px;
-      margin: 28px 0 10px 0;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      border-bottom: 2.5px solid #2d5016;
+      padding-bottom: 5px;
+      margin: 32px 0 10px 0;
       font-weight: 700;
     }
     .report-body h2 {
       font-size: 12pt;
       color: #1a1a1a;
-      margin: 20px 0 8px 0;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      margin: 22px 0 8px 0;
       font-weight: 600;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 3px;
     }
     .report-body h3 {
       font-size: 10.5pt;
       color: #333;
       margin: 16px 0 6px 0;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
       font-weight: 600;
     }
     .report-body p { margin: 6px 0; }
@@ -895,7 +1221,6 @@ export async function GET(
       padding: 5px 8px;
       text-align: left;
       font-weight: bold;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
       font-size: 8.5pt;
     }
     .report-body table td {
@@ -904,7 +1229,41 @@ export async function GET(
     }
     .report-body table tr:nth-child(even) { background: #f7f9f5; }
 
-    /* ---- Tree Inventory Table ---- */
+    /* Limitations section — distinct visual treatment */
+    .report-body h1:has(+ *),
+    .report-body h2:has(+ *) {
+      /* These are generic selectors; the limitations box is applied via JS post-processing */
+    }
+    .limitations-box {
+      background-color: #f5f5f2;
+      border: 1px solid #e0e0dd;
+      border-radius: 3px;
+      padding: 14px 18px;
+      margin: 12px 0 20px 0;
+      font-size: 9.5pt;
+      color: #555;
+      line-height: 1.5;
+    }
+    .limitations-box h1,
+    .limitations-box h2,
+    .limitations-box h3 {
+      font-size: 11pt;
+      color: #444;
+      border-bottom-color: #ddd;
+      margin-top: 0;
+    }
+    .limitations-box p {
+      font-size: 9.5pt;
+      color: #555;
+    }
+    .limitations-box ul, .limitations-box ol {
+      font-size: 9.5pt;
+      color: #555;
+    }
+
+    /* =========================================================================
+       TREE INVENTORY TABLE
+       ========================================================================= */
     .inventory-table {
       width: 100%;
       border-collapse: collapse;
@@ -914,20 +1273,29 @@ export async function GET(
     .inventory-table th {
       background: #2d5016;
       color: white;
-      padding: 6px 6px;
+      padding: 7px 6px;
       text-align: left;
       font-weight: 600;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
       font-size: 8pt;
       letter-spacing: 0.3px;
     }
     .inventory-table td {
-      padding: 4px 6px;
+      padding: 5px 6px;
       border-bottom: 1px solid #e5e7eb;
     }
     .inventory-table tr.alt { background: #f7f9f5; }
     .inventory-table td.center,
     .inventory-table th.center { text-align: center; }
+    .inventory-table td.num-cell { text-align: right; font-variant-numeric: tabular-nums; }
+    .inventory-table th.num-cell { text-align: right; }
+    .summary-row {
+      background-color: #f0f4ec !important;
+      border-top: 2px solid #2d5016;
+      font-size: 8.5pt;
+    }
+    .summary-row td {
+      padding: 7px 6px;
+    }
     .inventory-legend {
       font-size: 7.5pt;
       color: #999;
@@ -935,43 +1303,61 @@ export async function GET(
       font-style: italic;
     }
 
-    /* ---- Photo Documentation ---- */
+    /* =========================================================================
+       PHOTO DOCUMENTATION — 2-column grid
+       ========================================================================= */
     .photo-group {
-      margin-bottom: 24px;
-      page-break-inside: avoid;
+      margin-bottom: 20px;
     }
-    .photo-group h3 {
+    .photo-tree-header {
+      font-family: 'Source Sans 3', sans-serif;
       font-size: 11pt;
       color: #2d5016;
       margin: 0 0 10px 0;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
       font-weight: 600;
       border-bottom: 1px solid #e5e7eb;
       padding-bottom: 4px;
     }
-    .photo-grid {
-      display: flex;
-      flex-wrap: wrap;
+    .photo-grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 14px;
     }
-    .photo-item {
-      text-align: center;
-      max-width: 280px;
+    .photo-cell {
+      page-break-inside: avoid;
     }
-    .photo-item img {
-      max-width: 280px;
-      max-height: 220px;
+    .photo-cell img {
+      width: 100%;
+      max-height: 230px;
+      object-fit: contain;
       border: 1px solid #d0d0d0;
       border-radius: 3px;
+      background: #fafafa;
     }
-    .photo-caption {
-      font-size: 8pt;
-      color: #666;
+    .photo-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
       margin-top: 4px;
+    }
+    .photo-ref {
+      font-size: 7.5pt;
+      color: #2d5016;
+      font-weight: 600;
+    }
+    .photo-caption-text {
+      font-size: 8pt;
+      color: #555;
       font-style: italic;
     }
+    .photo-date {
+      font-size: 7pt;
+      color: #999;
+    }
 
-    /* ---- TRAQ Form Styles ---- */
+    /* =========================================================================
+       TRAQ FORM STYLES
+       ========================================================================= */
     .appendix-subtitle {
       font-size: 9pt;
       color: #666;
@@ -997,7 +1383,6 @@ export async function GET(
       font-size: 13px;
       margin: 0;
       color: #3d5c2e;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     }
     .traq-subtitle {
       font-size: 9px;
@@ -1012,7 +1397,6 @@ export async function GET(
       padding: 3px 8px;
       margin: 8px 0 4px 0;
       border-radius: 2px;
-      font-family: Helvetica, Arial, sans-serif;
     }
     .traq-info-table, .traq-data-table, .traq-target-table, .traq-risk-table {
       width: 100%;
@@ -1063,8 +1447,6 @@ export async function GET(
     .traq-risk-extreme .traq-risk-value { color: #c62828; }
     .traq-risk-none { background-color: #f0f0f0; }
     .traq-risk-none .traq-risk-value { color: #666; }
-
-    /* Matrices side by side */
     .traq-matrices { margin: 6px 0; }
     .matrix-pair { display: flex; gap: 8px; }
     .matrix { flex: 1; }
@@ -1093,13 +1475,11 @@ export async function GET(
       font-weight: 600;
       width: 70px;
     }
-    /* Highlight the active cell in the matrix */
     .matrix-active {
       background-color: #3d5c2e;
       color: white;
       font-weight: 700;
     }
-
     .traq-signature {
       display: flex;
       justify-content: space-between;
@@ -1130,9 +1510,10 @@ export async function GET(
       padding-top: 4px;
     }
     .traq-footer-note p { margin: 1px 0; }
-    .avoid-break { page-break-inside: avoid; }
 
-    /* ---- Mitigation Table ---- */
+    /* =========================================================================
+       MITIGATION TABLE
+       ========================================================================= */
     .mitigation-intro {
       font-size: 10pt;
       margin-bottom: 12px;
@@ -1168,76 +1549,84 @@ export async function GET(
     }
     .center { text-align: center; }
 
-    /* ---- Certification Page ---- */
-    .cert-page {
+    /* =========================================================================
+       SIGNATURE BLOCK
+       ========================================================================= */
+    .signature-block {
       page-break-before: always;
-      padding-top: 40px;
+      padding-top: 20px;
     }
-    .cert-box {
-      border: 3px double #2d5016;
-      padding: 32px;
-      margin: 20px 0;
+    .cert-statement {
+      border: 2px solid #2d5016;
       background: #f8faf5;
+      padding: 24px 28px;
+      margin: 16px 0 32px 0;
       border-radius: 2px;
     }
-    .cert-box h2 {
-      margin: 0 0 16px 0;
-      font-size: 14pt;
-      color: #2d5016;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      font-weight: 700;
+    .cert-statement p {
+      font-size: 10pt;
+      line-height: 1.6;
+      margin: 6px 0;
     }
-    .cert-icon {
-      display: inline-block;
-      margin-right: 8px;
-      font-size: 16pt;
-    }
-    .cert-box p { margin: 5px 0; font-size: 10pt; line-height: 1.6; }
-    .cert-signature {
-      margin-top: 40px;
-      padding-top: 16px;
-      border-top: 1px solid #ccc;
-    }
-    .cert-signature p { margin: 4px 0; font-size: 10pt; }
-    .signature-line {
-      border-bottom: 1px solid #333;
-      display: inline-block;
-      min-width: 300px;
-      padding-bottom: 3px;
-      font-style: italic;
-      margin-left: 4px;
-    }
-
-    /* ---- Enhanced Credentials Block ---- */
-    .cert-credentials {
-      border: 2px solid #2d5016;
+    .sig-area {
       margin-top: 24px;
-      overflow: hidden;
     }
-    .cert-credentials-header {
-      background-color: #2d5016;
-      color: white;
-      padding: 6px 12px;
-      font-size: 9pt;
-      font-weight: bold;
-      font-family: Helvetica, Arial, sans-serif;
+    .sig-line-group {
+      margin-bottom: 24px;
+    }
+    .sig-esignature {
+      font-family: 'Dancing Script', cursive;
+      font-size: 22pt;
+      color: #1a1a1a;
+      padding-bottom: 4px;
+    }
+    .sig-rule {
+      border-bottom: 1px solid #333;
+      width: 340px;
+      margin-bottom: 4px;
+    }
+    .sig-label {
+      font-size: 8pt;
+      color: #888;
+      text-transform: uppercase;
       letter-spacing: 1px;
     }
-    .cert-credentials-table {
-      width: 100%;
+    .sig-details {
+      margin-top: 16px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .sig-detail-row {
+      padding: 6px 14px;
       font-size: 9.5pt;
+      border-bottom: 1px solid #f0f0f0;
     }
-    .cert-credentials-table td {
-      padding: 5px 12px;
-      border-bottom: 1px solid #eee;
-    }
-    .cert-cred-label {
-      width: 30%;
+    .sig-detail-row:last-child { border-bottom: none; }
+    .sig-detail-row:nth-child(even) { background: #fafbf8; }
+    .sig-detail-label {
       font-weight: 600;
       color: #555;
-      background-color: #f8faf5;
+      display: inline-block;
+      min-width: 180px;
     }
-    .cert-cred-value { color: #222; }
+
+    /* Draft not-certified watermark in signature area */
+    .draft-not-certified {
+      text-align: center;
+      margin: 24px 0;
+      padding: 12px;
+      border: 2px dashed #ccc;
+      color: #999;
+      font-size: 14pt;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+
+    /* =========================================================================
+       UTILITY
+       ========================================================================= */
+    .avoid-break { page-break-inside: avoid; }
   </style>
 </head>
 <body>
@@ -1248,73 +1637,65 @@ export async function GET(
 
   <!-- ========== COVER PAGE ========== -->
   <div class="cover-page">
-    <!-- Top branding bar -->
-    <div class="cover-branding">
-      <div class="cover-brand-left">
-        ${arborist.companyLogoUrl ? `<img src="${photoToBase64(arborist.companyLogoUrl) || arborist.companyLogoUrl}" alt="Logo" class="cover-logo" />` : ""}
-        ${arborist.companyName ? `<div class="cover-company-name">${esc(arborist.companyName)}</div>` : `<div class="cover-company-name">${esc(arborist.name)}</div>`}
-      </div>
-      <div class="cover-brand-right">
-        ${arborist.companyAddress ? `${esc(arborist.companyAddress)}<br/>` : ""}
-        ${arborist.companyPhone ? `${esc(arborist.companyPhone)}<br/>` : ""}
-        ${arborist.companyEmail ? `${esc(arborist.companyEmail)}<br/>` : ""}
-        ${arborist.companyWebsite ? `${esc(arborist.companyWebsite)}` : ""}
+    <!-- Company block — centered logo + info -->
+    <div class="cover-company-block">
+      ${logoBase64 ? `<img src="${logoBase64}" alt="Company Logo" class="cover-logo-img" /><br/>` : ""}
+      <div class="cover-company-name">${esc(arborist.companyName || arborist.name)}</div>
+      ${arborist.companyAddress ? `<div class="cover-company-detail">${esc(arborist.companyAddress)}</div>` : ""}
+      <div class="cover-company-detail">
+        ${[arborist.companyPhone, arborist.companyEmail, arborist.companyWebsite].filter(Boolean).map((v) => esc(v!)).join(" &nbsp;&bull;&nbsp; ")}
       </div>
     </div>
 
-    <!-- Centered title block -->
-    <div class="cover-title-block">
-      <hr class="cover-rule-top" />
-      <div class="cover-title">Arborist Report</div>
-      <div class="cover-address">${esc(property.address)}</div>
-      <div class="cover-city">
+    <!-- Report title -->
+    <div class="cover-title-area">
+      <hr class="cover-rule" />
+      <div class="cover-report-title">${esc(reportTitle)}</div>
+      <div class="cover-property-address">${esc(property.address)}</div>
+      <div class="cover-property-city">
         ${esc(property.city)}, ${esc(property.state || "CA")}${property.county ? ` \u2014 ${esc(property.county)} County` : ""}
       </div>
-      <div class="cover-type-badge ${isCertified ? "cover-type-certified" : "cover-type-draft"}">
-        ${isCertified ? "\u2713 Certified" : "Draft"} \u2014 ${esc(reportTypeLabel)}
+      <div class="cover-status-badge ${isCertified ? "badge-certified" : "badge-draft"}">
+        ${isCertified ? "\u2713 Certified" : "Draft"}
       </div>
       <hr class="cover-rule-bottom" />
+    </div>
 
-      <!-- 2-column meta table -->
-      <table class="cover-meta-table">
-        <tr>
-          <td>
-            <div class="cover-meta-label">Prepared By</div>
-            <div class="cover-meta-value">${esc(arborist.name)}</div>
-          </td>
-          <td>
-            <div class="cover-meta-label">ISA Certification</div>
-            <div class="cover-meta-value">#${esc(arborist.isaCertificationNum)}</div>
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <div class="cover-meta-label">Report Date</div>
-            <div class="cover-meta-value">${dateStr}</div>
-          </td>
-          <td>
-            <div class="cover-meta-label">Property APN</div>
-            <div class="cover-meta-value">${esc(property.parcelNumber || "N/A")}</div>
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <div class="cover-meta-label">Trees Assessed</div>
-            <div class="cover-meta-value">${trees.length}${protectedCount > 0 ? ` (${protectedCount} protected)` : ""}</div>
-          </td>
-          <td>
-            <div class="cover-meta-label">Report Type</div>
-            <div class="cover-meta-value">${esc(reportTypeLabel)}</div>
-          </td>
-        </tr>
-      </table>
+    <!-- Prepared For / Prepared By -->
+    <div class="cover-prepared-block">
+      <div class="cover-prepared-col">
+        <div class="cover-prepared-label">Prepared For</div>
+        <div class="cover-prepared-value">
+          ${preparedForLines.map((line) => (line === "" ? "<br/>" : `<div${line.startsWith(esc(property.homeownerName || "__NOMATCH__")) ? ' class="name"' : ""}>${line}</div>`)).join("\n")}
+        </div>
+      </div>
+      <div class="cover-prepared-col" style="text-align:right;">
+        <div class="cover-prepared-label">Report Date</div>
+        <div class="cover-prepared-value" style="font-weight:600;margin-bottom:12px;">${dateStr}</div>
+        ${property.parcelNumber ? `<div class="cover-prepared-label">APN</div><div class="cover-prepared-value">${esc(property.parcelNumber)}</div>` : ""}
+      </div>
     </div>
 
     <!-- Cover footer -->
     <div class="cover-footer">
       ${!isCertified ? '<div class="cover-draft-badge">DRAFT</div><br/>' : ""}
+      <div class="cover-credentials-line">${esc(arborist.name)} &nbsp;&bull;&nbsp; ISA Certified Arborist #${esc(arborist.isaCertificationNum)}</div>
+      ${arborist.traqCertified ? '<div class="cover-credentials-line">ISA Tree Risk Assessment Qualified</div>' : ""}
       <div class="cover-confidential">Confidential \u2014 Prepared for property owner and authorized parties only</div>
     </div>
+  </div>
+
+  <!-- ========== TABLE OF CONTENTS ========== -->
+  <div class="page-break"></div>
+  <div class="toc-page">
+    <div class="toc-title">Table of Contents</div>
+    <table class="toc-table">
+      ${tocRows}
+    </table>
+    <p class="toc-note">
+      <!-- TODO: Exact page numbers require a two-pass PDF render. Section titles are listed for reference. -->
+      This report contains ${trees.length} trees assessed across ${tocSections.length} sections.
+    </p>
   </div>
 
   <!-- ========== TREE INVENTORY TABLE ========== -->
@@ -1323,23 +1704,25 @@ export async function GET(
   <table class="inventory-table">
     <thead>
       <tr>
-        <th class="center" style="width:5%">#</th>
+        <th class="num-cell" style="width:5%">#</th>
         <th class="center" style="width:5%">Tag</th>
         <th>Species</th>
-        <th class="center" style="width:6%">DBH</th>
-        <th class="center" style="width:6%">Ht.</th>
-        <th class="center" style="width:7%">Canopy</th>
+        <th class="num-cell" style="width:6%">DBH</th>
+        <th class="num-cell" style="width:5%">Ht.</th>
+        <th class="num-cell" style="width:6%">Canopy</th>
         <th class="center" style="width:12%">Condition</th>
-        <th class="center" style="width:6%">Prot.</th>
+        <th class="center" style="width:8%">Protection</th>
         <th style="width:10%">Action</th>
       </tr>
     </thead>
     <tbody>
       ${treeRows}
+      ${summaryRow}
     </tbody>
   </table>
   <p class="inventory-legend">
-    Condition: 0 = Dead &bull; 1 = Critical &bull; 2 = Poor &bull; 3 = Fair &bull; 4 = Good &bull; 5 = Excellent &nbsp;|&nbsp; Prot. = Protected under local tree ordinance
+    Condition: 0 = Dead &bull; 1 = Critical &bull; 2 = Poor &bull; 3 = Fair &bull; 4 = Good &bull; 5 = Excellent &nbsp;|&nbsp;
+    \u{1F6E1} = Protected under local tree ordinance
   </p>
 
   <!-- ========== REPORT BODY ========== -->
@@ -1364,81 +1747,63 @@ export async function GET(
   <!-- ========== MITIGATION SUMMARY ========== -->
   ${mitigationHtml}
 
-  <!-- ========== CERTIFICATION PAGE ========== -->
-  <div class="cert-page">
-    <h2 class="section-title">Arborist Certification</h2>
-    <div class="cert-box">
-      <h2><span class="cert-icon">${isCertified ? "\u2713" : "\u2726"}</span>Certification Statement</h2>
-      <p>
-        I, the undersigned, certify that I have personally inspected the tree(s) described in this
-        report and that the information contained herein is accurate to the best of my professional
-        knowledge and belief. I am an ISA Certified Arborist and the opinions expressed are based
-        on my professional training, experience, and education.
-      </p>
-      <p>
-        I have no personal interest or bias with respect to the parties involved. The analysis,
-        opinions, and conclusions stated herein are my own, and are based on current scientific
-        procedures and facts.
-      </p>
+  <!-- ========== SIGNATURE BLOCK ========== -->
+  ${signatureBlock}
 
-      <div class="cert-signature">
-        ${
-          isCertified
-            ? `
-        <p><strong>Electronically Signed:</strong><span class="signature-line">${esc(report.eSignatureText || "")}</span></p>
-        <p style="margin-top:12px;"><strong>Name:</strong> ${esc(arborist.name)}</p>
-        <p><strong>ISA Certification #:</strong> ${esc(arborist.isaCertificationNum)}</p>
-        ${arborist.companyName ? `<p><strong>Company:</strong> ${esc(arborist.companyName)}</p>` : ""}
-        <p><strong>Date Certified:</strong> ${
-          report.certifiedAt
-            ? new Date(report.certifiedAt).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })
-            : dateStr
-        }</p>`
-            : `
-        <p style="color: #999; font-style: italic;">
-          This report has not yet been certified. The certification signature will appear here once the arborist certifies the report.
-        </p>
-        <p style="margin-top: 24px;"><strong>Arborist:</strong> ${esc(arborist.name)}</p>
-        <p><strong>ISA Certification #:</strong> ${esc(arborist.isaCertificationNum)}</p>
-        ${arborist.companyName ? `<p><strong>Company:</strong> ${esc(arborist.companyName)}</p>` : ""}`
-        }
-      </div>
-    </div>
-
-    <!-- Enhanced Credentials Block -->
-    ${credentialsBlock}
-  </div>
 </body>
 </html>`;
 
-    // Render HTML to PDF using Puppeteer
+    // =========================================================================
+    // POST-PROCESS: Wrap Limitations section in a gray box
+    // =========================================================================
+    // Find the "Limitations and Assumptions" section in the rendered HTML
+    // and wrap its content in a .limitations-box div
+    let processedHtml = html;
+    const limRegex =
+      /(<h[12][^>]*>(?:[^<]*Limitations?\s+and\s+Assumptions?[^<]*)<\/h[12]>)([\s\S]*?)(?=<h[12][ >]|<div class="page-break"|<div class="signature-block"|$)/i;
+    const limMatch = processedHtml.match(limRegex);
+    if (limMatch) {
+      const fullMatch = limMatch[0];
+      const heading = limMatch[1];
+      const sectionContent = limMatch[2];
+      const replacement = `${heading}<div class="limitations-box">${sectionContent}</div>`;
+      processedHtml = processedHtml.replace(fullMatch, replacement);
+    }
+
+    // =========================================================================
+    // RENDER PDF
+    // =========================================================================
     browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
+    await page.setContent(processedHtml, { waitUntil: "networkidle0" });
 
     const pdfBuffer = await page.pdf({
       format: "Letter",
       printBackground: true,
       margin: {
-        top: "0.75in",
-        right: "1in",
-        bottom: "1in",
-        left: "1in",
+        top: "1in",
+        right: "0.85in",
+        bottom: "0.85in",
+        left: "0.85in",
       },
       displayHeaderFooter: true,
-      headerTemplate: '<div></div>',
+      // Running header: company left, report title right, hairline rule
+      // Cover page (page 1) gets blank header via conditional display
+      headerTemplate: `
+        <div style="width:100%; font-size:9px; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; color:#666; padding:0 0.85in; margin:0;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:4px; border-bottom:0.5px solid #ccc;">
+            <span style="font-weight:600;">${headerCompany}</span>
+            <span style="font-style:italic;">${headerTitle}</span>
+          </div>
+        </div>
+      `,
+      // Page X of Y, centered, gray
       footerTemplate: `
-        <div style="width:100%; font-size:8px; font-family:Helvetica,Arial,sans-serif; color:#999; padding:0 0.6in; display:flex; justify-content:space-between; align-items:center;">
-          <span>${esc(footerCompany)}</span>
-          <span>${esc(footerAddress)}</span>
-          <span>Page <span class="pageNumber"></span></span>
+        <div style="width:100%; font-size:9px; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; color:#666; text-align:center; padding:0 0.85in;">
+          Page <span class="pageNumber"></span> of <span class="totalPages"></span>
         </div>
       `,
     });
@@ -1505,10 +1870,13 @@ function photoToBase64(photoUrl: string): string | null {
     const photoData = fs.readFileSync(photoPath);
     const ext = path.extname(photoPath).toLowerCase();
     const mimeType =
-      ext === ".png" ? "image/png" :
-      ext === ".webp" ? "image/webp" :
-      ext === ".heic" ? "image/heic" :
-      "image/jpeg";
+      ext === ".png"
+        ? "image/png"
+        : ext === ".webp"
+          ? "image/webp"
+          : ext === ".heic"
+            ? "image/heic"
+            : "image/jpeg";
 
     return `data:${mimeType};base64,${photoData.toString("base64")}`;
   } catch {

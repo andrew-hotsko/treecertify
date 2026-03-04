@@ -31,6 +31,18 @@
 - Mock fallback (no ANTHROPIC_API_KEY) does not fabricate observations — uses "No concerns noted" language when arborist left fields blank.
 - Streaming via SSE to the report editor UI. Excluded sections: "Tree Inventory" and "Arborist Certification Statement" (handled by PDF template).
 
+## PDF Generation
+- PDF route: `app/api/reports/[id]/pdf/route.ts` — Puppeteer renders HTML template to PDF.
+- Professional layout: Playfair Display headings, Source Sans 3 body, Dancing Script e-signatures.
+- Cover page: centered company logo (base64), company info, "Prepared For" block, arborist credentials.
+- Running headers (pages 2+): company name left, report title right, hairline rule. "Page X of Y" footer centered.
+- Table of Contents page after cover — lists all report sections.
+- Tree inventory table: alternating row shading, shield icon for protected trees with code reference, summary row with totals.
+- Photo documentation: 2-column grid grouped by tree, max 4 per page, captions + dates.
+- Limitations section: wrapped in gray background box for visual distinction from findings.
+- Signature block: formal certification statement, Dancing Script e-signature when certified, credential details table.
+- `photoToBase64()` converts `/api/uploads/` paths to base64 data URIs for Puppeteer rendering.
+
 ## Report Versioning
 - `ReportVersion` model stores full markdown snapshots at key moments: "AI Draft" (generation), "Edit" (before each save), "Pre-certification" (before certify).
 - Versions API: `GET /api/reports/[id]/versions` returns all versions newest-first.
