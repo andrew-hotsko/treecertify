@@ -37,11 +37,14 @@ import {
   List,
   Clock,
   AlertTriangle,
+  XCircle,
   ShieldCheck,
   Share2,
   Send,
   Settings2,
   X,
+  ClipboardCheck,
+  ExternalLink,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -112,6 +115,21 @@ interface Section {
   id: string;
   title: string;
   level: number;
+}
+
+interface ValidationCheck {
+  id: string;
+  label: string;
+  status: "pass" | "warning" | "fail";
+  message: string;
+  fixPath?: string;
+}
+
+interface ValidationResult {
+  checks: ValidationCheck[];
+  hasFailures: boolean;
+  hasWarnings: boolean;
+  allPassed: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -200,6 +218,11 @@ export default function PropertyReportPage() {
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
 
+  // Pre-certification validation state
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [validationLoading, setValidationLoading] = useState(false);
+  const [warningsAcknowledged, setWarningsAcknowledged] = useState(false);
+
   // Refs
   const previewRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -255,6 +278,32 @@ export default function PropertyReportPage() {
     }
     loadData();
   }, [propertyId]);
+
+  // -------------------------------------------------------------------------
+  // Fetch validation checks
+  // -------------------------------------------------------------------------
+
+  const fetchValidation = useCallback(async (reportId: string) => {
+    setValidationLoading(true);
+    try {
+      const res = await fetch(`/api/reports/${reportId}/validate`);
+      if (res.ok) {
+        const data = await res.json();
+        setValidationResult(data);
+      }
+    } catch {
+      // Validation fetch is best-effort
+    } finally {
+      setValidationLoading(false);
+    }
+  }, []);
+
+  // Run validation when report is loaded and not yet certified
+  useEffect(() => {
+    if (report && report.status !== "certified") {
+      fetchValidation(report.id);
+    }
+  }, [report?.id, report?.status, fetchValidation]);
 
   // -------------------------------------------------------------------------
   // Debounced preview (500ms)
@@ -524,7 +573,13 @@ export default function PropertyReportPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ eSignatureText: signatureText.trim() }),
       });
-      if (!res.ok) throw new Error("Failed to certify");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        if (errData?.validation) {
+          setValidationResult(errData.validation);
+        }
+        throw new Error(errData?.error || "Failed to certify");
+      }
       const updated = await res.json();
       setReport(updated);
       setCertifySuccess(true);
@@ -995,6 +1050,32 @@ export default function PropertyReportPage() {
                   </Button>
                 )}
 
+                {/* Validation status indicator */}
+                {validationResult && !validationLoading && (
+                  <span className="text-xs flex items-center gap-1">
+                    {validationResult.hasFailures ? (
+                      <>
+                        <XCircle className="h-3.5 w-3.5 text-red-500" />
+                        <span className="text-red-600">
+                          {validationResult.checks.filter((c) => c.status === "fail").length} issue{validationResult.checks.filter((c) => c.status === "fail").length !== 1 ? "s" : ""}
+                        </span>
+                      </>
+                    ) : validationResult.hasWarnings ? (
+                      <>
+                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                        <span className="text-amber-600">
+                          {validationResult.checks.filter((c) => c.status === "warning").length} warning{validationResult.checks.filter((c) => c.status === "warning").length !== 1 ? "s" : ""}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                        <span className="text-emerald-600">Ready</span>
+                      </>
+                    )}
+                  </span>
+                )}
+
                 {/* Certify */}
                 <Button
                   size="sm"
@@ -1005,6 +1086,8 @@ export default function PropertyReportPage() {
                     setCertifyAgreed(false);
                     setSignatureText("");
                     setCertifySuccess(false);
+                    setWarningsAcknowledged(false);
+                    if (report) fetchValidation(report.id);
                     setShowCertifyPanel(true);
                   }}
                 >
@@ -1345,7 +1428,7 @@ export default function PropertyReportPage() {
                     ))}
                   </div>
 
-                  {/* Step 1: Review */}
+                  {/* Step 1: Review + Validation Checklist */}
                   {certifyStep === 1 && (
                     <div className="space-y-3">
                       <div className="rounded-lg border p-4 space-y-2 text-sm">
@@ -1373,6 +1456,94 @@ export default function PropertyReportPage() {
                         </div>
                       </div>
 
+                      {/* Validation Checklist */}
+                      {validationLoading ? (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground p-3">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Running quality checks...
+                        </div>
+                      ) : validationResult ? (
+                        <div className="rounded-lg border p-3 space-y-1.5">
+                          <div className="flex items-center gap-2 mb-2">
+                            <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                              Quality Checklist
+                            </span>
+                            {validationResult.allPassed && (
+                              <Badge className="ml-auto bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-[10px]">All passed</Badge>
+                            )}
+                          </div>
+                          {/* Failures first */}
+                          {validationResult.checks
+                            .filter((c) => c.status === "fail")
+                            .map((check) => (
+                              <div key={check.id} className="flex items-start gap-2 text-sm p-2 rounded-md bg-red-50 border border-red-100">
+                                <XCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                                <div className="flex-1 min-w-0">
+                                  <span className="font-medium text-red-800">{check.label}</span>
+                                  <p className="text-xs text-red-600">{check.message}</p>
+                                </div>
+                                {check.fixPath && (
+                                  <Link href={check.fixPath} className="text-xs text-red-600 hover:text-red-800 flex items-center gap-0.5 shrink-0">
+                                    Fix <ExternalLink className="h-3 w-3" />
+                                  </Link>
+                                )}
+                              </div>
+                            ))}
+                          {/* Warnings */}
+                          {validationResult.checks
+                            .filter((c) => c.status === "warning")
+                            .map((check) => (
+                              <div key={check.id} className="flex items-start gap-2 text-sm p-2 rounded-md bg-amber-50 border border-amber-100">
+                                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                                <div className="flex-1 min-w-0">
+                                  <span className="font-medium text-amber-800">{check.label}</span>
+                                  <p className="text-xs text-amber-600">{check.message}</p>
+                                </div>
+                                {check.fixPath && (
+                                  <Link href={check.fixPath} className="text-xs text-amber-600 hover:text-amber-800 flex items-center gap-0.5 shrink-0">
+                                    Fix <ExternalLink className="h-3 w-3" />
+                                  </Link>
+                                )}
+                              </div>
+                            ))}
+                          {/* Passes */}
+                          {validationResult.checks
+                            .filter((c) => c.status === "pass")
+                            .map((check) => (
+                              <div key={check.id} className="flex items-start gap-2 text-sm p-2 rounded-md">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-muted-foreground">{check.label}</span>
+                                  <p className="text-xs text-muted-foreground/70">{check.message}</p>
+                                </div>
+                              </div>
+                            ))}
+
+                          {/* Blocking failures message */}
+                          {validationResult.hasFailures && (
+                            <p className="text-xs text-red-600 font-medium pt-1">
+                              Resolve required items before certifying
+                            </p>
+                          )}
+
+                          {/* Warning acknowledgement checkbox */}
+                          {!validationResult.hasFailures && validationResult.hasWarnings && (
+                            <label className="flex items-start gap-2 text-sm cursor-pointer p-2 rounded-md border border-amber-200 bg-amber-50/50 mt-1">
+                              <input
+                                type="checkbox"
+                                checked={warningsAcknowledged}
+                                onChange={(e) => setWarningsAcknowledged(e.target.checked)}
+                                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                              />
+                              <span className="text-amber-800">
+                                I have reviewed these items and confirm this report is ready for certification
+                              </span>
+                            </label>
+                          )}
+                        </div>
+                      ) : null}
+
                       <label className="flex items-start gap-2 text-sm cursor-pointer p-3 rounded-lg border hover:bg-muted/50 transition-colors">
                         <input
                           type="checkbox"
@@ -1386,7 +1557,11 @@ export default function PropertyReportPage() {
                       <div className="flex justify-end">
                         <Button
                           onClick={() => setCertifyStep(2)}
-                          disabled={!reviewChecked}
+                          disabled={
+                            !reviewChecked ||
+                            (validationResult?.hasFailures ?? false) ||
+                            (validationResult?.hasWarnings && !warningsAcknowledged)
+                          }
                           className="bg-emerald-700 hover:bg-emerald-600"
                         >
                           Next: Attestation

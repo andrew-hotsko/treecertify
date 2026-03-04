@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { validateReportForCertification } from "@/lib/report-validation";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(
@@ -24,6 +25,18 @@ export async function POST(
       return NextResponse.json(
         { error: "Report not found" },
         { status: 404 }
+      );
+    }
+
+    // Server-side validation gate — block if any check fails
+    const validation = await validateReportForCertification(id);
+    if (validation.hasFailures) {
+      return NextResponse.json(
+        {
+          error: "Report cannot be certified — resolve required items first",
+          validation,
+        },
+        { status: 400 }
       );
     }
 
