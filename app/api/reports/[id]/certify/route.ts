@@ -40,6 +40,18 @@ export async function POST(
       );
     }
 
+    // Snapshot content before certification
+    const certContent = existing.finalContent || existing.aiDraftContent;
+    if (certContent) {
+      await prisma.reportVersion.create({
+        data: {
+          reportId: id,
+          content: certContent,
+          label: "Pre-certification",
+        },
+      });
+    }
+
     const now = new Date();
 
     const report = await prisma.report.update({

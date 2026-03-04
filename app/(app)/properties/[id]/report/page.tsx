@@ -45,7 +45,22 @@ import {
   X,
   ClipboardCheck,
   ExternalLink,
+  History,
+  RotateCcw,
 } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -130,6 +145,13 @@ interface ValidationResult {
   hasFailures: boolean;
   hasWarnings: boolean;
   allPassed: boolean;
+}
+
+interface ReportVersionItem {
+  id: string;
+  label: string;
+  content: string;
+  createdAt: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -222,6 +244,14 @@ export default function PropertyReportPage() {
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [validationLoading, setValidationLoading] = useState(false);
   const [warningsAcknowledged, setWarningsAcknowledged] = useState(false);
+
+  // Version history state
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [versions, setVersions] = useState<ReportVersionItem[]>([]);
+  const [versionsLoading, setVersionsLoading] = useState(false);
+  const [previewVersion, setPreviewVersion] = useState<ReportVersionItem | null>(null);
+  const [showVersionPreview, setShowVersionPreview] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
   // Refs
   const previewRef = useRef<HTMLDivElement>(null);
@@ -650,6 +680,63 @@ export default function PropertyReportPage() {
     );
     setShowDeliveryDialog(true);
   }, [property, report]);
+
+  // -------------------------------------------------------------------------
+  // Version History
+  // -------------------------------------------------------------------------
+
+  const loadVersions = useCallback(async () => {
+    if (!report) return;
+    setVersionsLoading(true);
+    try {
+      const res = await fetch(`/api/reports/${report.id}/versions`);
+      if (res.ok) {
+        const data = await res.json();
+        setVersions(data);
+      }
+    } catch {
+      // Best-effort
+    } finally {
+      setVersionsLoading(false);
+    }
+  }, [report]);
+
+  const openVersionHistory = useCallback(() => {
+    setShowVersionHistory(true);
+    loadVersions();
+  }, [loadVersions]);
+
+  const restoreVersion = useCallback(
+    async (version: ReportVersionItem) => {
+      if (!report) return;
+      setRestoring(true);
+      try {
+        const res = await fetch(`/api/reports/${report.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            finalContent: version.content,
+            status: report.status === "draft" ? "review" : report.status,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to restore");
+        const updated = await res.json();
+        setReport(updated);
+        setContent(version.content);
+        savedContentRef.current = version.content;
+        setHasUnsavedChanges(false);
+        setPreviewHtml(renderMarkdownToHtml(version.content));
+        setShowVersionPreview(false);
+        setPreviewVersion(null);
+        setShowVersionHistory(false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Restore failed");
+      } finally {
+        setRestoring(false);
+      }
+    },
+    [report]
+  );
 
   // -------------------------------------------------------------------------
   // Update report options (PDF appendix toggles)
@@ -1124,6 +1211,18 @@ export default function PropertyReportPage() {
                 <Separator orientation="vertical" className="h-6" />
               </>
             )}
+
+            {/* Version History */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openVersionHistory}
+            >
+              <History className="h-3.5 w-3.5 mr-1.5" />
+              Versions
+            </Button>
+
+            <Separator orientation="vertical" className="h-6" />
 
             {/* Export actions — always visible */}
             <Button
@@ -1847,6 +1946,117 @@ export default function PropertyReportPage() {
           </Card>
         </div>
       )}
+      {/* ---- Version History Sheet ---- */}
+      <Sheet open={showVersionHistory} onOpenChange={setShowVersionHistory}>
+        <SheetContent className="w-[400px] sm:w-[450px]">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Version History
+            </SheetTitle>
+          </SheetHeader>
+          <div className="mt-4">
+            {versionsLoading ? (
+              <div className="flex items-center justify-center py-8 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                Loading versions...
+              </div>
+            ) : versions.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                No versions yet. Versions are created automatically when you save edits.
+              </p>
+            ) : (
+              <ScrollArea className="h-[calc(100vh-120px)]">
+                <div className="space-y-2 pr-4">
+                  {versions.map((v) => (
+                    <button
+                      key={v.id}
+                      onClick={() => {
+                        setPreviewVersion(v);
+                        setShowVersionPreview(true);
+                      }}
+                      className="w-full text-left p-3 rounded-lg border hover:bg-accent transition-colors"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <Badge
+                          variant={
+                            v.label === "AI Draft"
+                              ? "default"
+                              : v.label === "Pre-certification"
+                              ? "secondary"
+                              : v.label.startsWith("Restored")
+                              ? "outline"
+                              : "secondary"
+                          }
+                          className="text-xs"
+                        >
+                          {v.label}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {timeAgo(new Date(v.createdAt))}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                        {v.content.replace(/[#*_\-|>]/g, "").slice(0, 120)}...
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* ---- Version Preview Dialog ---- */}
+      <Dialog open={showVersionPreview} onOpenChange={setShowVersionPreview}>
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {previewVersion?.label}
+              <span className="text-sm font-normal text-muted-foreground">
+                {previewVersion && timeAgo(new Date(previewVersion.createdAt))}
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-1 mt-2 border rounded-md">
+            <div
+              className="prose prose-sm max-w-none p-6"
+              dangerouslySetInnerHTML={{
+                __html: previewVersion
+                  ? renderMarkdownToHtml(previewVersion.content)
+                  : "",
+              }}
+            />
+          </ScrollArea>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowVersionPreview(false)}
+            >
+              Close
+            </Button>
+            {!isCertified && (
+              <Button
+                onClick={() => {
+                  if (
+                    previewVersion &&
+                    window.confirm(
+                      `Restore this version? Your current content will be replaced with the "${previewVersion.label}" version.`
+                    )
+                  ) {
+                    restoreVersion(previewVersion);
+                  }
+                }}
+                disabled={restoring}
+              >
+                <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                {restoring ? "Restoring..." : "Restore this version"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

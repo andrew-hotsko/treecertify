@@ -617,6 +617,15 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
               },
             });
 
+            // Create "AI Draft" version snapshot
+            await prisma.reportVersion.create({
+              data: {
+                reportId: report.id,
+                content: fullText,
+                label: "AI Draft",
+              },
+            });
+
             controller.enqueue(
               encoder.encode(
                 `data: ${JSON.stringify({ type: "done", reportId: report.id })}\n\n`
@@ -652,6 +661,15 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
         arboristId,
         reportType: body.reportType,
         aiDraftContent,
+      },
+    });
+
+    // Create "AI Draft" version snapshot
+    await prisma.reportVersion.create({
+      data: {
+        reportId: report.id,
+        content: aiDraftContent,
+        label: "AI Draft",
       },
     });
 

@@ -57,6 +57,20 @@ export async function PUT(
       );
     }
 
+    // Snapshot previous content as a version before overwriting
+    if (body.finalContent !== undefined) {
+      const previousContent = existing.finalContent || existing.aiDraftContent;
+      if (previousContent && previousContent !== body.finalContent) {
+        await prisma.reportVersion.create({
+          data: {
+            reportId: id,
+            content: previousContent,
+            label: "Edit",
+          },
+        });
+      }
+    }
+
     const report = await prisma.report.update({
       where: { id },
       data: {
