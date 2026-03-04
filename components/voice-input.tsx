@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Mic, MicOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -12,8 +12,17 @@ interface VoiceInputProps {
 export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
 
   const startRecording = async () => {
     try {
@@ -56,6 +65,8 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
 
       mediaRecorder.start();
       setRecording(true);
+      setElapsed(0);
+      timerRef.current = setInterval(() => setElapsed((p) => p + 1), 1000);
     } catch (err) {
       console.error("Microphone access denied:", err);
     }
@@ -64,29 +75,40 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
   const stopRecording = () => {
     mediaRecorderRef.current?.stop();
     setRecording(false);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
   };
 
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      disabled={disabled || transcribing}
-      onClick={recording ? stopRecording : startRecording}
-      className={`h-7 w-7 p-0 ${
-        recording
-          ? "text-red-500 animate-pulse"
-          : "text-muted-foreground hover:text-foreground"
-      }`}
-      title={recording ? "Stop recording" : "Voice input"}
-    >
-      {transcribing ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-      ) : recording ? (
-        <MicOff className="h-3.5 w-3.5" />
-      ) : (
-        <Mic className="h-3.5 w-3.5" />
+    <div className="flex items-center gap-1.5">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={disabled || transcribing}
+        onClick={recording ? stopRecording : startRecording}
+        className={`h-9 w-9 p-0 ${
+          recording
+            ? "bg-red-100 text-red-600 animate-pulse ring-2 ring-red-300"
+            : "text-muted-foreground hover:text-foreground"
+        }`}
+        title={recording ? "Stop recording" : "Voice input"}
+      >
+        {transcribing ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : recording ? (
+          <MicOff className="h-4 w-4" />
+        ) : (
+          <Mic className="h-4 w-4" />
+        )}
+      </Button>
+      {recording && (
+        <span className="text-xs font-mono text-red-500 tabular-nums">
+          {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")}
+        </span>
       )}
-    </Button>
+    </div>
   );
 }

@@ -44,7 +44,7 @@ interface PropertyMapProps {
   flyToId?: string | null;
   interactive?: boolean;
   className?: string;
-  onMapReady?: (helpers: { getCenter: () => { lat: number; lng: number } }) => void;
+  onMapReady?: (helpers: { getCenter: () => { lat: number; lng: number }; fitAllTrees: () => void }) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -232,6 +232,7 @@ export function PropertyMap({
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const markerClickedRef = useRef(false);
   const circleSourceIdsRef = useRef<string[]>([]);
+  const initialFitDoneRef = useRef(false);
   const [activeStyle, setActiveStyle] = useState("satellite-streets-v12");
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -289,6 +290,12 @@ export function PropertyMap({
         getCenter: () => {
           const c = map.getCenter();
           return { lat: c.lat, lng: c.lng };
+        },
+        fitAllTrees: () => {
+          if (pins.length < 2) return;
+          const bounds = new mapboxgl.LngLatBounds();
+          pins.forEach((p) => bounds.extend([p.lng, p.lat]));
+          map.fitBounds(bounds, { padding: 50, maxZoom: 20, duration: 800 });
         },
       });
     }
@@ -363,6 +370,14 @@ export function PropertyMap({
 
       markersRef.current.push(marker);
     });
+
+    // Auto zoom-to-fit all pins on initial render
+    if (pins.length >= 2 && !initialFitDoneRef.current) {
+      initialFitDoneRef.current = true;
+      const bounds = new mapboxgl.LngLatBounds();
+      pins.forEach((p) => bounds.extend([p.lng, p.lat]));
+      map.fitBounds(bounds, { padding: 50, maxZoom: 20, duration: 800 });
+    }
   }, [pins, selectedPinId, dimmedPinIds, interactive, onPinClick, onPinMove, clearMarkers]);
 
   // ---- flyTo support ----

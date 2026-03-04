@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ButtonSelector } from "@/components/ui/button-selector";
+import { MultiCheckbox } from "@/components/ui/multi-checkbox";
 import { SpeciesSearch } from "@/components/species-search";
 import { ConditionRating } from "@/components/condition-rating";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -49,6 +50,61 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
+
+// ---------------------------------------------------------------------------
+// ISA Standard Observation Checklists
+// ---------------------------------------------------------------------------
+
+const HEALTH_OBSERVATIONS = [
+  "Chlorosis (yellowing)",
+  "Crown dieback",
+  "Decay / fungal fruiting bodies",
+  "Pest / insect damage",
+  "Girdling roots",
+  "Poor vigor / sparse canopy",
+  "Leaf scorch / burn",
+  "Crown thinning",
+  "Epicormic sprouting",
+  "Root damage / cut roots",
+  "Cankers / lesions",
+  "No significant concerns",
+];
+
+const STRUCTURAL_OBSERVATIONS = [
+  "Codominant stems",
+  "Included bark",
+  "Cavity / hollow",
+  "Lean (note degree if significant)",
+  "Root plate heaving / lifting",
+  "Asymmetric crown",
+  "Deadwood in crown",
+  "Cracks / splits",
+  "Weak branch attachments",
+  "Trunk wound / damage",
+  "Hangers / broken branches",
+  "No significant concerns",
+];
+
+function parseObservedLine(notes: string): string[] {
+  const match = notes.match(/^Observed:\s*(.+?)(\n|$)/);
+  if (!match) return [];
+  return match[1]
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function extractFreeText(notes: string): string {
+  return notes.replace(/^Observed:\s*.+?(\n\n|\n|$)/, "").trim();
+}
+
+function buildNotesWithObserved(checks: string[], freeText: string): string {
+  const prefix = checks.length > 0 ? `Observed: ${checks.join(", ")}` : "";
+  const trimmed = freeText.trim();
+  if (prefix && trimmed) return `${prefix}\n\n${trimmed}`;
+  if (prefix) return prefix;
+  return trimmed;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -188,6 +244,12 @@ export function TreeSidePanel({
   const [healthNotes, setHealthNotes] = useState(tree?.healthNotes ?? "");
   const [structuralNotes, setStructuralNotes] = useState(
     tree?.structuralNotes ?? ""
+  );
+  const [healthChecks, setHealthChecks] = useState<string[]>(() =>
+    parseObservedLine(tree?.healthNotes ?? "")
+  );
+  const [structuralChecks, setStructuralChecks] = useState<string[]>(() =>
+    parseObservedLine(tree?.structuralNotes ?? "")
   );
   const [recommendedAction, setRecommendedAction] = useState(
     tree?.recommendedAction ?? ""
@@ -635,14 +697,14 @@ export function TreeSidePanel({
             if (fields.canopySpreadFt !== undefined) setCanopySpreadFt(String(fields.canopySpreadFt));
             if (fields.conditionRating !== undefined) setConditionRating(fields.conditionRating);
             if (fields.healthNotes !== undefined) {
-              const existing = healthNotes || "";
-              const separator = existing.trim() ? " " : "";
-              setHealthNotes(existing + separator + fields.healthNotes);
+              const existing = extractFreeText(healthNotes);
+              const combined = existing ? existing + " " + fields.healthNotes : fields.healthNotes;
+              setHealthNotes(buildNotesWithObserved(healthChecks, combined));
             }
             if (fields.structuralNotes !== undefined) {
-              const existing = structuralNotes || "";
-              const separator = existing.trim() ? " " : "";
-              setStructuralNotes(existing + separator + fields.structuralNotes);
+              const existing = extractFreeText(structuralNotes);
+              const combined = existing ? existing + " " + fields.structuralNotes : fields.structuralNotes;
+              setStructuralNotes(buildNotesWithObserved(structuralChecks, combined));
             }
             if (fields.recommendedAction !== undefined) setRecommendedAction(fields.recommendedAction);
             if (fields.tagNumber !== undefined) setTagNumber(fields.tagNumber);
@@ -740,47 +802,96 @@ export function TreeSidePanel({
           />
         </div>
 
-        {/* Notes with Voice Input */}
+        {/* Health Observations + Notes */}
         <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Health Observations</Label>
+            <MultiCheckbox
+              options={HEALTH_OBSERVATIONS}
+              selected={healthChecks}
+              onChange={(selected) => {
+                setHealthChecks(selected);
+                setHealthNotes(
+                  buildNotesWithObserved(selected, extractFreeText(healthNotes))
+                );
+              }}
+              columns={2}
+              exclusiveOption="No significant concerns"
+            />
+          </div>
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <Label htmlFor="sp-health" className="text-xs">
-                Health Notes
+                Additional Health Notes
               </Label>
               <VoiceInput
                 onTranscript={(text) => {
-                  const existing = healthNotes || "";
-                  const separator = existing.trim() ? " " : "";
-                  setHealthNotes(existing + separator + text);
+                  const existing = extractFreeText(healthNotes);
+                  const combined = existing ? existing + " " + text : text;
+                  setHealthNotes(
+                    buildNotesWithObserved(healthChecks, combined)
+                  );
                 }}
               />
             </div>
             <Textarea
               id="sp-health"
-              placeholder="Describe observed health conditions..."
-              value={healthNotes}
-              onChange={(e) => setHealthNotes(e.target.value)}
+              placeholder="Additional observations not covered above..."
+              value={extractFreeText(healthNotes)}
+              onChange={(e) =>
+                setHealthNotes(
+                  buildNotesWithObserved(healthChecks, e.target.value)
+                )
+              }
               rows={2}
+            />
+          </div>
+        </div>
+
+        {/* Structural Observations + Notes */}
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Structural Observations</Label>
+            <MultiCheckbox
+              options={STRUCTURAL_OBSERVATIONS}
+              selected={structuralChecks}
+              onChange={(selected) => {
+                setStructuralChecks(selected);
+                setStructuralNotes(
+                  buildNotesWithObserved(
+                    selected,
+                    extractFreeText(structuralNotes)
+                  )
+                );
+              }}
+              columns={2}
+              exclusiveOption="No significant concerns"
             />
           </div>
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <Label htmlFor="sp-structural" className="text-xs">
-                Structural Notes
+                Additional Structural Notes
               </Label>
               <VoiceInput
                 onTranscript={(text) => {
-                  const existing = structuralNotes || "";
-                  const separator = existing.trim() ? " " : "";
-                  setStructuralNotes(existing + separator + text);
+                  const existing = extractFreeText(structuralNotes);
+                  const combined = existing ? existing + " " + text : text;
+                  setStructuralNotes(
+                    buildNotesWithObserved(structuralChecks, combined)
+                  );
                 }}
               />
             </div>
             <Textarea
               id="sp-structural"
-              placeholder="Describe structural defects or concerns..."
-              value={structuralNotes}
-              onChange={(e) => setStructuralNotes(e.target.value)}
+              placeholder="Additional structural observations not covered above..."
+              value={extractFreeText(structuralNotes)}
+              onChange={(e) =>
+                setStructuralNotes(
+                  buildNotesWithObserved(structuralChecks, e.target.value)
+                )
+              }
               rows={2}
             />
           </div>
@@ -1115,14 +1226,14 @@ export function TreeSidePanel({
                   if (fields.canopySpreadFt !== undefined) setCanopySpreadFt(String(fields.canopySpreadFt));
                   if (fields.conditionRating !== undefined) setConditionRating(fields.conditionRating);
                   if (fields.healthNotes !== undefined) {
-                    const existing = healthNotes || "";
-                    const separator = existing.trim() ? " " : "";
-                    setHealthNotes(existing + separator + fields.healthNotes);
+                    const existing = extractFreeText(healthNotes);
+                    const combined = existing ? existing + " " + fields.healthNotes : fields.healthNotes;
+                    setHealthNotes(buildNotesWithObserved(healthChecks, combined));
                   }
                   if (fields.structuralNotes !== undefined) {
-                    const existing = structuralNotes || "";
-                    const separator = existing.trim() ? " " : "";
-                    setStructuralNotes(existing + separator + fields.structuralNotes);
+                    const existing = extractFreeText(structuralNotes);
+                    const combined = existing ? existing + " " + fields.structuralNotes : fields.structuralNotes;
+                    setStructuralNotes(buildNotesWithObserved(structuralChecks, combined));
                   }
                   if (fields.recommendedAction !== undefined) setRecommendedAction(fields.recommendedAction);
                   if (fields.tagNumber !== undefined) setTagNumber(fields.tagNumber);

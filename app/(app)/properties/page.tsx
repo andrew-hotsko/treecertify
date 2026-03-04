@@ -5,7 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { PropertiesList } from "@/components/properties-list";
 
-export default async function PropertiesPage() {
+export default async function PropertiesPage({
+  searchParams,
+}: {
+  searchParams: { status?: string };
+}) {
   const arborist = await requireArborist();
   const properties = await prisma.property.findMany({
     where: { arboristId: arborist.id },
@@ -46,7 +50,7 @@ export default async function PropertiesPage() {
       </div>
 
       <div className="space-y-4">
-        <PropertiesList properties={serialized} />
+        <PropertiesList properties={serialized} initialFilter={searchParams.status} />
       </div>
     </div>
   );

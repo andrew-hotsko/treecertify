@@ -97,6 +97,7 @@ export async function GET(
       reportOpts.includeCoverLetter ??
       report.reportType === "removal_permit";
     const includeMitigation = reportOpts.includeMitigation ?? true;
+    const includeSiteMap = reportOpts.includeSiteMap ?? true;
 
     // Render markdown to HTML
     const bodyHtml = renderMarkdownToHtml(content);
@@ -784,9 +785,98 @@ export async function GET(
     }
 
     // =========================================================================
+    // SITE MAP — Mapbox Static Image with colored tree pins
+    // =========================================================================
+    let siteMapHtml = "";
+    const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+    if (
+      includeSiteMap &&
+      property.lat &&
+      property.lng &&
+      mapboxToken
+    ) {
+      try {
+        // Build pin overlays for Mapbox Static API
+        const pinOverlays: string[] = [];
+        for (const t of trees) {
+          if (t.pinLat == null || t.pinLng == null) continue;
+
+          // Determine pin color (same logic as property-map.tsx)
+          let color = "9ca3af"; // gray — unassessed
+          if (t.recommendedAction === "remove") {
+            color = "dc2626"; // red
+          } else if (t.conditionRating != null) {
+            if (t.conditionRating <= 1) color = "dc2626"; // red
+            else if (t.conditionRating === 2) color = "ea580c"; // orange
+            else if (t.conditionRating === 3) color = "eab308"; // yellow
+            else if (t.conditionRating === 4) color = "84cc16"; // lime
+            else if (t.conditionRating >= 5) color = "22c55e"; // green
+          }
+
+          pinOverlays.push(
+            `pin-s-${t.treeNumber}+${color}(${t.pinLng},${t.pinLat})`
+          );
+        }
+
+        if (pinOverlays.length > 0) {
+          const overlay = pinOverlays.join(",");
+          const staticUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/static/${overlay}/${property.lng},${property.lat},18,0/1200x800@2x?access_token=${mapboxToken}`;
+
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 10000);
+
+          const mapRes = await fetch(staticUrl, { signal: controller.signal });
+          clearTimeout(timeout);
+
+          if (mapRes.ok) {
+            const mapBuffer = Buffer.from(await mapRes.arrayBuffer());
+            const mapBase64 = `data:image/png;base64,${mapBuffer.toString("base64")}`;
+
+            // Count trees by condition for legend
+            const condCounts = { good: 0, fair: 0, poor: 0, critical: 0, unassessed: 0 };
+            for (const t of trees) {
+              if (t.pinLat == null || t.pinLng == null) continue;
+              if (t.recommendedAction === "remove" || (t.conditionRating != null && t.conditionRating <= 1)) condCounts.critical++;
+              else if (t.conditionRating === 2) condCounts.poor++;
+              else if (t.conditionRating === 3) condCounts.fair++;
+              else if (t.conditionRating != null && t.conditionRating >= 4) condCounts.good++;
+              else condCounts.unassessed++;
+            }
+
+            const legendItems: string[] = [];
+            if (condCounts.good > 0) legendItems.push(`<span class="legend-item"><span class="legend-dot" style="background:#22c55e"></span> Good/Excellent (${condCounts.good})</span>`);
+            if (condCounts.fair > 0) legendItems.push(`<span class="legend-item"><span class="legend-dot" style="background:#eab308"></span> Fair (${condCounts.fair})</span>`);
+            if (condCounts.poor > 0) legendItems.push(`<span class="legend-item"><span class="legend-dot" style="background:#ea580c"></span> Poor (${condCounts.poor})</span>`);
+            if (condCounts.critical > 0) legendItems.push(`<span class="legend-item"><span class="legend-dot" style="background:#dc2626"></span> Critical/Remove (${condCounts.critical})</span>`);
+            if (condCounts.unassessed > 0) legendItems.push(`<span class="legend-item"><span class="legend-dot" style="background:#9ca3af"></span> Unassessed (${condCounts.unassessed})</span>`);
+
+            siteMapHtml = `
+              <div class="page-break"></div>
+              <h2 class="section-title">Site Map</h2>
+              <div class="site-map-container">
+                <img class="site-map-image" src="${mapBase64}" alt="Satellite map showing assessed trees" />
+                <p class="site-map-caption">${esc(property.address)}, ${esc(property.city)} &mdash; ${pinOverlays.length} tree${pinOverlays.length !== 1 ? "s" : ""} assessed</p>
+                <div class="site-map-legend">${legendItems.join("")}</div>
+              </div>`;
+          }
+        }
+      } catch (err) {
+        // Gracefully degrade — skip site map if fetch fails
+        console.error("Site map generation failed:", err);
+      }
+    }
+
+    // =========================================================================
     // TABLE OF CONTENTS — section list
     // =========================================================================
     const tocSections: { title: string; desc: string }[] = [];
+    if (siteMapHtml) {
+      tocSections.push({
+        title: "Site Map",
+        desc: "Satellite overview with tree locations",
+      });
+    }
     tocSections.push({
       title: "Tree Inventory",
       desc: `${trees.length} trees assessed`,
@@ -1197,6 +1287,47 @@ export async function GET(
       font-size: 9pt;
       color: #999;
       font-style: italic;
+    }
+
+    /* =========================================================================
+       SITE MAP
+       ========================================================================= */
+    .site-map-container {
+      text-align: center;
+      margin-top: 10px;
+    }
+    .site-map-image {
+      width: 100%;
+      max-width: 100%;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+    }
+    .site-map-caption {
+      margin-top: 10px;
+      font-size: 10pt;
+      color: #555;
+      font-style: italic;
+    }
+    .site-map-legend {
+      margin-top: 8px;
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 9pt;
+      color: #666;
+    }
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .legend-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1px solid rgba(0,0,0,0.15);
     }
 
     /* =========================================================================
@@ -1726,6 +1857,9 @@ export async function GET(
       This report contains ${trees.length} trees assessed across ${tocSections.length} sections.
     </p>
   </div>
+
+  <!-- ========== SITE MAP ========== -->
+  ${siteMapHtml}
 
   <!-- ========== TREE INVENTORY TABLE ========== -->
   <div class="page-break"></div>

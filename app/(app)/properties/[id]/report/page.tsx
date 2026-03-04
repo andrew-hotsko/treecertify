@@ -123,6 +123,7 @@ interface ReportOptions {
   includeTraq?: boolean;
   includeCoverLetter?: boolean;
   includeMitigation?: boolean;
+  includeSiteMap?: boolean;
 }
 
 interface ArboristInfo {
@@ -1124,7 +1125,7 @@ export default function PropertyReportPage() {
                 </div>
 
                 {/* Report Options (PDF appendix toggles) */}
-                {(reportType === "health_assessment" || reportType === "removal_permit") && (
+                {(reportType === "health_assessment" || reportType === "removal_permit" || reportType === "tree_valuation" || reportType === "construction_encroachment") && (
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" size="sm">
@@ -1165,6 +1166,16 @@ export default function PropertyReportPage() {
                           <Switch
                             checked={reportOptions.includeMitigation ?? true}
                             onCheckedChange={(checked) => updateReportOptions({ includeMitigation: checked })}
+                          />
+                        </label>
+                        <label className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-medium">Site Map</p>
+                            <p className="text-xs text-muted-foreground">Satellite map with tree pins</p>
+                          </div>
+                          <Switch
+                            checked={reportOptions.includeSiteMap ?? true}
+                            onCheckedChange={(checked) => updateReportOptions({ includeSiteMap: checked })}
                           />
                         </label>
                       </div>

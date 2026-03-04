@@ -70,5 +70,23 @@
 - If report is not certified, shows "Assessment In Progress" banner and hides report details.
 - Action translations: retain → "healthy and will be preserved", remove → "removal recommended", prune → "maintenance pruning recommended", monitor → "will be monitored".
 
+## Observation Checkboxes
+- ISA-standard health and structural observations are shown as checkbox grids in the tree side panel, above the free-text notes textareas.
+- 12 health observations (chlorosis, crown dieback, decay, pest damage, etc.) and 12 structural observations (codominant stems, included bark, cavities, etc.).
+- "No significant concerns" is an exclusive toggle — selecting it unchecks all others and vice versa.
+- Stored in existing `healthNotes`/`structuralNotes` fields using `"Observed: X, Y\n\n{free text}"` prefix format. No schema changes needed.
+- Helper functions: `parseObservedLine()`, `extractFreeText()`, `buildNotesWithObserved()` in `components/tree-side-panel.tsx`.
+- These are standard ISA terminology — not customizable per arborist.
+
+## Dictation
+- Inline mic button on each notes field = raw OpenAI Whisper transcription (no Claude parsing). Component: `components/voice-input.tsx`.
+- Smart Dictation (separate modal) = full Claude field extraction with ISA terminology matching.
+- Voice input has a visible red pulsing recording state with elapsed timer for field usability.
+
+## Map Snapshot
+- PDF site map uses Mapbox Static Images API with colored pin overlays matching the interactive map's condition-based color scheme.
+- Configurable via `includeSiteMap` in report options (default: true). Graceful degradation if Mapbox fetch fails.
+- Pin colors: green (good/excellent), yellow (fair), orange (poor), red (critical/remove), gray (unassessed).
+
 ## Session Completion
 - When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.

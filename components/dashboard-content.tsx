@@ -15,8 +15,14 @@ import {
   Plus,
   Send,
   AlertTriangle,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  ClipboardList,
+  FileText,
+  Award,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -63,11 +69,20 @@ interface PermitStats {
   needingRevision: number;
 }
 
+interface NextActions {
+  needTreeAssessment: number;
+  needReport: number;
+  readyToCertify: number;
+}
+
 interface DashboardContentProps {
   properties: DashboardProperty[];
   totalTrees: number;
   activityFeed?: ActivityItem[];
   permitStats?: PermitStats;
+  nextActions?: NextActions;
+  treesThisWeek?: number;
+  treesLastWeek?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -144,6 +159,9 @@ export function DashboardContent({
   totalTrees,
   activityFeed,
   permitStats,
+  nextActions,
+  treesThisWeek,
+  treesLastWeek,
 }: DashboardContentProps) {
   const [filter, setFilter] = useState<FilterStatus>("all");
 
@@ -212,19 +230,13 @@ export function DashboardContent({
         {stats.map((stat) => {
           const Icon = stat.icon;
           const isClickable = stat.filterKey !== null;
-          const isActive = stat.filterKey === filter;
-          return (
+          const cardContent = (
             <Card
               key={stat.title}
               className={cn(
-                isClickable && "cursor-pointer transition-colors hover:border-gray-300",
-                isActive && "ring-2 ring-emerald-500 border-emerald-500"
+                "transition-all",
+                isClickable && "hover:shadow-md hover:border-gray-300"
               )}
-              onClick={() => {
-                if (stat.filterKey) {
-                  setFilter(filter === stat.filterKey ? "all" : stat.filterKey);
-                }
-              }}
             >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-gray-500">
@@ -236,13 +248,93 @@ export function DashboardContent({
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-gray-900">
-                  {stat.value}
+                  {stat.value.toLocaleString()}
                 </div>
+                {stat.title === "Trees Assessed" && treesThisWeek != null && (
+                  <div className="flex items-center gap-1 mt-1">
+                    {treesThisWeek > (treesLastWeek ?? 0) ? (
+                      <TrendingUp className="h-3 w-3 text-emerald-500" />
+                    ) : treesThisWeek < (treesLastWeek ?? 0) ? (
+                      <TrendingDown className="h-3 w-3 text-amber-500" />
+                    ) : (
+                      <Minus className="h-3 w-3 text-gray-400" />
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {treesThisWeek} this week
+                    </span>
+                  </div>
+                )}
               </CardContent>
             </Card>
           );
+
+          if (isClickable) {
+            return (
+              <Link key={stat.title} href={`/properties?status=${stat.filterKey}`}>
+                {cardContent}
+              </Link>
+            );
+          }
+          return <div key={stat.title}>{cardContent}</div>;
         })}
       </div>
+
+      {/* Next Action Needed */}
+      {nextActions && (nextActions.needTreeAssessment + nextActions.needReport + nextActions.readyToCertify > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-900">
+              Next Action Needed
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {nextActions.needTreeAssessment > 0 && (
+                <Link
+                  href="/properties?status=inProgress"
+                  className="flex items-center justify-between p-3 rounded-lg bg-amber-50 hover:bg-amber-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <ClipboardList className="h-4 w-4 text-amber-600" />
+                    <span className="text-sm text-gray-900">
+                      {nextActions.needTreeAssessment} propert{nextActions.needTreeAssessment !== 1 ? "ies" : "y"} need tree assessment
+                    </span>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-amber-600" />
+                </Link>
+              )}
+              {nextActions.needReport > 0 && (
+                <Link
+                  href="/properties?status=inProgress"
+                  className="flex items-center justify-between p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm text-gray-900">
+                      {nextActions.needReport} propert{nextActions.needReport !== 1 ? "ies" : "y"} need a report
+                    </span>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-blue-600" />
+                </Link>
+              )}
+              {nextActions.readyToCertify > 0 && (
+                <Link
+                  href="/properties?status=draft"
+                  className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Award className="h-4 w-4 text-emerald-600" />
+                    <span className="text-sm text-gray-900">
+                      {nextActions.readyToCertify} report{nextActions.readyToCertify !== 1 ? "s" : ""} ready to certify
+                    </span>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-emerald-600" />
+                </Link>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Permit Pipeline Card */}
       {permitStats && (permitStats.pendingSubmission + permitStats.submittedOrReview + permitStats.approved + permitStats.needingRevision > 0) && (
@@ -461,11 +553,16 @@ export function DashboardContent({
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{item.address}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-gray-900 truncate">{item.address}</p>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 hidden sm:inline-flex">
+                        {item.city}
+                      </Badge>
+                    </div>
                     <p className="text-xs text-muted-foreground">{getActivityDescription(item)}</p>
                   </div>
                   <span className="text-xs text-muted-foreground shrink-0">
-                    {format(new Date(item.updatedAt), "MMM d")}
+                    {formatDistanceToNow(new Date(item.updatedAt), { addSuffix: true })}
                   </span>
                 </Link>
               ))}

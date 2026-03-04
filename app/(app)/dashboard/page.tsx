@@ -87,6 +87,33 @@ export default async function DashboardPage() {
     ).length,
   };
 
+  // Next Actions
+  const nextActions = {
+    needTreeAssessment: allProperties.filter((p) => p.trees.length === 0).length,
+    needReport: allProperties.filter((p) => p.trees.length > 0 && !p.reports[0]).length,
+    readyToCertify: allProperties.filter(
+      (p) => p.reports[0] && (p.reports[0].status === "draft" || p.reports[0].status === "review")
+    ).length,
+  };
+
+  // Weekly activity comparison
+  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+  const [treesThisWeek, treesLastWeek] = await Promise.all([
+    prisma.treeRecord.count({
+      where: {
+        property: { arboristId: arborist.id },
+        createdAt: { gte: oneWeekAgo },
+      },
+    }),
+    prisma.treeRecord.count({
+      where: {
+        property: { arboristId: arborist.id },
+        createdAt: { gte: twoWeeksAgo, lt: oneWeekAgo },
+      },
+    }),
+  ]);
+
   const greeting = getGreeting();
   const contextMessage = getContextMessage({ draftCount, overdueCount, totalTrees });
 
@@ -134,6 +161,9 @@ export default async function DashboardPage() {
         totalTrees={totalTrees}
         activityFeed={activityFeed}
         permitStats={permitStats}
+        nextActions={nextActions}
+        treesThisWeek={treesThisWeek}
+        treesLastWeek={treesLastWeek}
       />
     </div>
   );

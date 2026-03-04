@@ -47,6 +47,7 @@ interface PropertyItem {
 
 interface PropertiesListProps {
   properties: PropertyItem[];
+  initialFilter?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -106,8 +107,12 @@ function formatReportType(reportType: string) {
 // Component
 // ---------------------------------------------------------------------------
 
-export function PropertiesList({ properties }: PropertiesListProps) {
-  const [filter, setFilter] = useState<FilterStatus>("all");
+const VALID_FILTERS: FilterStatus[] = ["all", "inProgress", "draft", "certified"];
+
+export function PropertiesList({ properties, initialFilter }: PropertiesListProps) {
+  const [filter, setFilter] = useState<FilterStatus>(
+    VALID_FILTERS.includes(initialFilter as FilterStatus) ? (initialFilter as FilterStatus) : "all"
+  );
   const [sortKey, setSortKey] = useState<SortKey>("recent");
   const [search, setSearch] = useState("");
   const [showSort, setShowSort] = useState(false);
