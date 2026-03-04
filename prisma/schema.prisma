@@ -33,8 +33,9 @@ model Arborist {
 
   createdAt DateTime @default(now())
 
-  properties Property[]
-  reports    Report[]
+  properties   Property[]
+  reports      Report[]
+  apiUsageLogs ApiUsageLog[]
 }
 
 model Property {
@@ -233,4 +234,21 @@ model ReportVersion {
   createdAt DateTime @default(now())
 
   report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model ApiUsageLog {
+  id              String   @id @default(cuid())
+  arboristId      String
+  propertyId      String?
+  reportId        String?
+  provider        String   // "anthropic" or "openai"
+  endpoint        String   // "generate-report", "parse-audio", "transcribe"
+  model           String   // "claude-sonnet-4-20250514", "whisper-1"
+  inputTokens     Int      @default(0)
+  outputTokens    Int      @default(0)
+  audioDuration   Float?   // seconds, for Whisper
+  estimatedCostUsd Float   @default(0)
+  createdAt       DateTime @default(now())
+
+  arborist Arborist @relation(fields: [arboristId], references: [id])
 }

@@ -17,6 +17,10 @@ import {
   FileText,
   X,
   Camera,
+  DollarSign,
+  Sparkles,
+  Mic,
+  Cpu,
 } from "lucide-react";
 
 interface ArboristProfile {
@@ -60,6 +64,27 @@ export default function SettingsPage() {
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // Usage data state
+  interface UsageData {
+    monthly: {
+      cost: number;
+      inputTokens: number;
+      outputTokens: number;
+      callCount: number;
+      reportCount: number;
+      avgCostPerReport: number;
+      byEndpoint: Record<string, { count: number; cost: number }>;
+    };
+    allTime: {
+      cost: number;
+      callCount: number;
+      inputTokens: number;
+      outputTokens: number;
+    };
+  }
+  const [usageData, setUsageData] = useState<UsageData | null>(null);
+  const [usageLoading, setUsageLoading] = useState(false);
 
   // Form state
   const [form, setForm] = useState({
@@ -135,6 +160,24 @@ export default function SettingsPage() {
       }
     }
     load();
+  }, []);
+
+  // Load usage data
+  useEffect(() => {
+    async function loadUsage() {
+      setUsageLoading(true);
+      try {
+        const res = await fetch("/api/arborist/usage");
+        if (res.ok) {
+          setUsageData(await res.json());
+        }
+      } catch {
+        // Non-critical — silently fail
+      } finally {
+        setUsageLoading(false);
+      }
+    }
+    loadUsage();
   }, []);
 
   const updateField = (field: string, value: string) => {
@@ -657,7 +700,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* Save Button */}
-      <div className="flex justify-end">
+      <div className="flex justify-end mb-8">
         <Button
           onClick={saveProfile}
           disabled={saving}
@@ -667,6 +710,103 @@ export default function SettingsPage() {
           {saving ? "Saving..." : "Save Profile"}
         </Button>
       </div>
+
+      {/* Usage & Costs */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <DollarSign className="h-5 w-5 text-emerald-600" />
+            Usage &amp; Costs
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {usageLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+            </div>
+          ) : usageData ? (
+            <div className="space-y-5">
+              {/* Monthly overview stats */}
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+                  This Month
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <p className="text-lg font-semibold text-gray-900">
+                      ${usageData.monthly.cost.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-gray-500">Total Cost</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <p className="text-lg font-semibold text-gray-900">
+                      {usageData.monthly.callCount}
+                    </p>
+                    <p className="text-xs text-gray-500">API Calls</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <p className="text-lg font-semibold text-gray-900">
+                      ${usageData.monthly.avgCostPerReport.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-gray-500">Avg / Report</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Breakdown by endpoint */}
+              {Object.keys(usageData.monthly.byEndpoint).length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+                    Breakdown by Endpoint
+                  </p>
+                  <div className="space-y-2">
+                    {Object.entries(usageData.monthly.byEndpoint).map(
+                      ([endpoint, data]) => (
+                        <div
+                          key={endpoint}
+                          className="flex items-center justify-between text-sm"
+                        >
+                          <span className="flex items-center gap-2 text-gray-700">
+                            {endpoint === "generate-report" && (
+                              <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+                            )}
+                            {endpoint === "parse-audio" && (
+                              <Cpu className="h-3.5 w-3.5 text-blue-500" />
+                            )}
+                            {endpoint === "transcribe" && (
+                              <Mic className="h-3.5 w-3.5 text-amber-500" />
+                            )}
+                            {endpoint.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                          </span>
+                          <span className="text-gray-500">
+                            {data.count} calls &middot; ${data.cost.toFixed(3)}
+                          </span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* All time */}
+              <div className="border-t pt-3">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
+                  All Time
+                </p>
+                <p className="text-sm text-gray-600">
+                  {usageData.allTime.callCount} API calls &middot; $
+                  {usageData.allTime.cost.toFixed(2)} estimated cost
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 text-center py-4">
+              No usage data available yet. API costs will appear here after
+              generating reports or using voice dictation.
+            </p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

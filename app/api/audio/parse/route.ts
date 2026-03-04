@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { requireArborist } from "@/lib/auth";
+import { logApiUsage } from "@/lib/api-usage";
 
 export async function POST(req: Request) {
-  await requireArborist();
+  const arborist = await requireArborist();
 
   const { text } = await req.json();
   if (!text?.trim()) {
@@ -30,6 +31,16 @@ export async function POST(req: Request) {
 
 Only include fields that were clearly stated. Do not guess or infer values that weren't mentioned. Return ONLY valid JSON, no explanation.`,
     messages: [{ role: "user", content: text }],
+  });
+
+  // Log API usage (fire-and-forget)
+  logApiUsage({
+    arboristId: arborist.id,
+    provider: "anthropic",
+    endpoint: "parse-audio",
+    model: "claude-sonnet-4-20250514",
+    inputTokens: response.usage?.input_tokens ?? 0,
+    outputTokens: response.usage?.output_tokens ?? 0,
   });
 
   try {

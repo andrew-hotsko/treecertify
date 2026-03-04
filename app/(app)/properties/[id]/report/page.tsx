@@ -263,6 +263,7 @@ export default function PropertyReportPage() {
   const [previewVersion, setPreviewVersion] = useState<ReportVersionItem | null>(null);
   const [showVersionPreview, setShowVersionPreview] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  const [reportCost, setReportCost] = useState<number | null>(null);
 
   // Refs
   const previewRef = useRef<HTMLDivElement>(null);
@@ -319,6 +320,17 @@ export default function PropertyReportPage() {
     }
     loadData();
   }, [propertyId]);
+
+  // Fetch per-report API cost
+  useEffect(() => {
+    if (!report?.id) return;
+    fetch(`/api/reports/usage?reportId=${report.id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.totalCost != null) setReportCost(data.totalCost);
+      })
+      .catch(() => {});
+  }, [report?.id]);
 
   // -------------------------------------------------------------------------
   // Fetch validation checks
@@ -1059,6 +1071,12 @@ export default function PropertyReportPage() {
                 {hasUnsavedChanges && (
                   <span className="text-amber-600 font-medium">
                     Unsaved changes
+                  </span>
+                )}
+                {reportCost != null && reportCost > 0 && (
+                  <span className="flex items-center gap-1 text-gray-400" title="Estimated API cost for this report">
+                    <Sparkles className="h-3 w-3" />
+                    API: ${reportCost.toFixed(3)}
                   </span>
                 )}
               </div>

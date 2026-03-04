@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOrdinanceByCity } from "@/lib/ordinances";
 import { getReportTemplate } from "@/lib/report-templates";
 import Anthropic from "@anthropic-ai/sdk";
+import { logApiUsage } from "@/lib/api-usage";
 
 interface TreeRecordData {
   treeNumber: number;
@@ -590,6 +591,8 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
       const readableStream = new ReadableStream({
         async start(controller) {
           let fullText = "";
+          let usageInput = 0;
+          let usageOutput = 0;
 
           try {
             for await (const event of stream) {
@@ -604,6 +607,10 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
                     `data: ${JSON.stringify({ type: "text", text })}\n\n`
                   )
                 );
+              } else if (event.type === "message_delta") {
+                usageOutput = (event as unknown as { usage?: { output_tokens?: number } }).usage?.output_tokens ?? 0;
+              } else if (event.type === "message_start") {
+                usageInput = (event as unknown as { message?: { usage?: { input_tokens?: number } } }).message?.usage?.input_tokens ?? 0;
               }
             }
 
@@ -624,6 +631,18 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
                 content: fullText,
                 label: "AI Draft",
               },
+            });
+
+            // Log API usage (fire-and-forget)
+            logApiUsage({
+              arboristId,
+              propertyId: body.propertyId,
+              reportId: report.id,
+              provider: "anthropic",
+              endpoint: "generate-report",
+              model: "claude-sonnet-4-20250514",
+              inputTokens: usageInput,
+              outputTokens: usageOutput,
             });
 
             controller.enqueue(

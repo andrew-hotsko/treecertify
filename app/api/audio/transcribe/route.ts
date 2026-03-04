@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getCurrentArborist } from "@/lib/auth";
+import { logApiUsage } from "@/lib/api-usage";
 
 export async function POST(req: Request) {
   try {
@@ -25,7 +27,20 @@ export async function POST(req: Request) {
       model: "whisper-1",
       file,
       language: "en",
+      response_format: "verbose_json",
     });
+
+    // Log API usage if arborist is authenticated (fire-and-forget)
+    const arborist = await getCurrentArborist();
+    if (arborist) {
+      logApiUsage({
+        arboristId: arborist.id,
+        provider: "openai",
+        endpoint: "transcribe",
+        model: "whisper-1",
+        audioDuration: (transcription as unknown as { duration?: number }).duration ?? null,
+      });
+    }
 
     return NextResponse.json({ text: transcription.text });
   } catch (error) {
