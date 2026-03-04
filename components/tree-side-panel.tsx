@@ -48,6 +48,7 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -283,6 +284,112 @@ export function TreeSidePanel({
   // ---- Floating dictation modal ----
   const [showDictationModal, setShowDictationModal] = useState(false);
 
+  // ---- Auto-save draft ----
+  const draftKey = `treecertify_draft_${propertyId}_${tree?.id || "new_" + treeNumber}`;
+  const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+  const [draftTimestamp, setDraftTimestamp] = useState<number | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const draftRef = useRef<Record<string, any> | null>(null);
+
+  // Check for existing draft on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(draftKey);
+      if (!stored) return;
+      const draft = JSON.parse(stored);
+      const hasContent =
+        draft.speciesCommon || draft.dbhInches || draft.healthNotes || draft.structuralNotes;
+      if (hasContent) {
+        draftRef.current = draft;
+        setDraftTimestamp(draft.timestamp);
+        setShowDraftBanner(true);
+      }
+    } catch {
+      /* ignore */
+    }
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
+  // Auto-save draft every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      try {
+        localStorage.setItem(
+          draftKey,
+          JSON.stringify({
+            tagNumber,
+            speciesCommon,
+            speciesScientific,
+            dbhInches,
+            heightFt,
+            canopySpreadFt,
+            conditionRating,
+            healthNotes,
+            structuralNotes,
+            recommendedAction,
+            typeData,
+            overrideProtection,
+            overrideIsProtected,
+            overrideReason,
+            timestamp: Date.now(),
+          })
+        );
+        setDraftSavedAt(Date.now());
+      } catch {
+        /* localStorage full */
+      }
+    }, 30_000);
+
+    return () => clearInterval(interval);
+  }, [
+    draftKey,
+    tagNumber,
+    speciesCommon,
+    speciesScientific,
+    dbhInches,
+    heightFt,
+    canopySpreadFt,
+    conditionRating,
+    healthNotes,
+    structuralNotes,
+    recommendedAction,
+    typeData,
+    overrideProtection,
+    overrideIsProtected,
+    overrideReason,
+  ]);
+
+  function restoreDraft() {
+    const d = draftRef.current;
+    if (!d) return;
+    if (d.tagNumber !== undefined) setTagNumber(d.tagNumber);
+    if (d.speciesCommon !== undefined) setSpeciesCommon(d.speciesCommon);
+    if (d.speciesScientific !== undefined) setSpeciesScientific(d.speciesScientific);
+    if (d.dbhInches !== undefined) setDbhInches(d.dbhInches);
+    if (d.heightFt !== undefined) setHeightFt(d.heightFt);
+    if (d.canopySpreadFt !== undefined) setCanopySpreadFt(d.canopySpreadFt);
+    if (d.conditionRating !== undefined) setConditionRating(d.conditionRating);
+    if (d.healthNotes !== undefined) setHealthNotes(d.healthNotes);
+    if (d.structuralNotes !== undefined) setStructuralNotes(d.structuralNotes);
+    if (d.recommendedAction !== undefined) setRecommendedAction(d.recommendedAction);
+    if (d.typeData !== undefined) setTypeData(d.typeData);
+    if (d.overrideProtection !== undefined) setOverrideProtection(d.overrideProtection);
+    if (d.overrideIsProtected !== undefined) setOverrideIsProtected(d.overrideIsProtected);
+    if (d.overrideReason !== undefined) setOverrideReason(d.overrideReason);
+    setShowDraftBanner(false);
+  }
+
+  function dismissDraft() {
+    setShowDraftBanner(false);
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {
+      /* ignore */
+    }
+  }
+
   // ---- Derived ----
   const statusDot =
     tree?.status === "certified"
@@ -344,6 +451,13 @@ export function TreeSidePanel({
           ? JSON.stringify(typeData)
           : undefined,
     });
+    // Clear draft after save (data is either sent to server or queued for offline sync)
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {
+      /* ignore */
+    }
+    setDraftSavedAt(null);
   }
 
   const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -418,6 +532,24 @@ export function TreeSidePanel({
           <p className="text-xs text-muted-foreground font-mono">
             {tree.pinLat.toFixed(6)}, {tree.pinLng.toFixed(6)}
           </p>
+        </div>
+      )}
+
+      {/* Draft restore banner */}
+      {showDraftBanner && draftTimestamp && (
+        <div className="mx-4 mt-2 rounded-lg border border-amber-300 bg-amber-50 p-3">
+          <p className="text-xs text-amber-800 font-medium">
+            Unsaved changes found from{" "}
+            {formatDistanceToNow(new Date(draftTimestamp), { addSuffix: true })}
+          </p>
+          <div className="flex gap-2 mt-2">
+            <Button size="sm" variant="outline" onClick={restoreDraft} className="text-xs h-7">
+              Restore
+            </Button>
+            <Button size="sm" variant="ghost" onClick={dismissDraft} className="text-xs h-7">
+              Dismiss
+            </Button>
+          </div>
         </div>
       )}
 
@@ -1028,7 +1160,13 @@ export function TreeSidePanel({
       </Tabs>
 
       {/* Action buttons */}
-      <div className="flex items-center gap-2 border-t px-4 py-3">
+      <div className="border-t px-4 py-3 space-y-1.5">
+        {draftSavedAt && (
+          <p className="text-[10px] text-muted-foreground text-center">
+            Draft saved {formatDistanceToNow(new Date(draftSavedAt), { addSuffix: true })}
+          </p>
+        )}
+      <div className="flex items-center gap-2">
         <Button
           onClick={handleSave}
           disabled={saving || !speciesCommon || !dbhInches}
@@ -1066,6 +1204,7 @@ export function TreeSidePanel({
         <Button variant="outline" onClick={onClose} disabled={saving}>
           Close
         </Button>
+      </div>
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ import {
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useConnectivity } from "@/lib/connectivity";
 
 const navItems = [
   {
@@ -44,6 +45,7 @@ interface SidebarProps {
 
 export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl }: SidebarProps) {
   const pathname = usePathname();
+  const { isOnline, pendingCount } = useConnectivity();
 
   return (
     <aside className="hidden md:flex fixed inset-y-0 left-0 z-50 w-64 flex-col bg-[hsl(var(--sidebar))] text-[hsl(var(--sidebar-foreground))]">
@@ -95,23 +97,36 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl }: SidebarPr
       {/* User section */}
       <div className="border-t border-[hsl(var(--sidebar-muted))] p-4">
         <div className="flex items-center gap-3">
-          {profilePhotoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={profilePhotoUrl}
-              alt={arboristName}
-              className="h-8 w-8 rounded-full object-cover"
+          <div className="relative">
+            {profilePhotoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profilePhotoUrl}
+                alt={arboristName}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[hsl(var(--sidebar-muted))]">
+                <User className="h-5 w-5" />
+              </div>
+            )}
+            <span
+              className={cn(
+                "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[hsl(var(--sidebar))]",
+                isOnline ? "bg-emerald-500" : "bg-red-500 animate-pulse"
+              )}
             />
-          ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[hsl(var(--sidebar-muted))]">
-              <User className="h-5 w-5" />
-            </div>
-          )}
+          </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{arboristName}</p>
             <p className="text-xs text-[hsl(var(--sidebar-foreground))]/50 truncate">
               ISA {isaCertNum}
             </p>
+            {pendingCount > 0 && (
+              <p className="text-[10px] text-orange-400 font-medium">
+                {pendingCount} pending
+              </p>
+            )}
           </div>
         </div>
       </div>

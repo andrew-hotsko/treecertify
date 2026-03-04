@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,14 @@ import {
   Trash2,
   Pencil,
   RotateCcw,
+  Clock,
 } from "lucide-react";
+import {
+  enqueuePhoto,
+  getQueuedPhotosForTree,
+  type QueuedPhoto,
+} from "@/lib/photo-queue";
+import { useToast } from "@/hooks/use-toast";
 
 // Dynamically import markup editor (Fabric.js needs window/DOM)
 const PhotoMarkupEditor = dynamic(
@@ -67,6 +74,10 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
   const [lightboxViewOriginal, setLightboxViewOriginal] = useState(false);
   const [revertingId, setRevertingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  // Offline photo queue
+  const [queuedPhotos, setQueuedPhotos] = useState<QueuedPhoto[]>([]);
 
   const basePath = `/api/properties/${propertyId}/trees/${treeId}/photos`;
 
@@ -86,6 +97,27 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
   useEffect(() => {
     fetchPhotos();
   }, [fetchPhotos]);
+
+  // Load queued (offline) photos for this tree
+  useEffect(() => {
+    getQueuedPhotosForTree(treeId)
+      .then(setQueuedPhotos)
+      .catch(() => {});
+  }, [treeId]);
+
+  // Memoize blob URLs for queued photos (revoke on unmount/change)
+  const queuedPhotoUrls = useMemo(() => {
+    return queuedPhotos.map((qp) => ({
+      ...qp,
+      previewUrl: URL.createObjectURL(qp.file),
+    }));
+  }, [queuedPhotos]);
+
+  useEffect(() => {
+    return () => {
+      queuedPhotoUrls.forEach((qp) => URL.revokeObjectURL(qp.previewUrl));
+    };
+  }, [queuedPhotoUrls]);
 
   // ---- Upload ----
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -107,9 +139,26 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
       if (res.ok) {
         const data = await res.json();
         setPhotos(data);
+      } else {
+        throw new Error("Upload failed");
       }
     } catch (err) {
       console.error("Upload failed:", err);
+
+      // Queue files for offline upload via IndexedDB
+      try {
+        for (let i = 0; i < files.length; i++) {
+          await enqueuePhoto({ propertyId, treeId, file: files[i] });
+        }
+        const queued = await getQueuedPhotosForTree(treeId);
+        setQueuedPhotos(queued);
+        toast({
+          title: "Photos saved offline",
+          description: "Photos will upload when you're back online.",
+        });
+      } catch {
+        // IndexedDB unavailable — fall back to silent failure
+      }
     } finally {
       setUploading(false);
       // Reset input so the same file(s) can be re-selected
@@ -253,7 +302,7 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
       </div>
 
       {/* Thumbnail Grid */}
-      {photos.length === 0 ? (
+      {photos.length === 0 && queuedPhotoUrls.length === 0 ? (
         <button
           onClick={() => fileInputRef.current?.click()}
           className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/25 p-8 text-muted-foreground hover:border-muted-foreground/40 hover:text-muted-foreground/80 transition-colors w-full"
@@ -343,6 +392,26 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
                   </p>
                 </button>
               )}
+            </div>
+          ))}
+
+          {/* Queued (offline) photo thumbnails */}
+          {queuedPhotoUrls.map((qp) => (
+            <div key={qp.id} className="relative">
+              <div className="relative aspect-square w-full overflow-hidden rounded-md border bg-muted opacity-75">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={qp.previewUrl}
+                  alt="Pending upload"
+                  className="h-full w-full object-cover"
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <Clock className="h-5 w-5 text-white" />
+                </div>
+              </div>
+              <p className="text-[10px] text-orange-500 mt-1 truncate">
+                Pending upload
+              </p>
             </div>
           ))}
         </div>

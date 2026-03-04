@@ -1,8 +1,12 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { enqueueRequest, processQueue } from "@/lib/api-queue";
+import { processPhotoQueue } from "@/lib/photo-queue";
+import { useConnectivity } from "@/lib/connectivity";
+import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -204,6 +208,39 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   const reportType = property.reportType ?? "health_assessment";
   const reportTypeConfig = getReportTypeConfig(reportType);
 
+  // ---- Connectivity + offline queue ----
+  const { isOnline, setPendingCount } = useConnectivity();
+  const { toast } = useToast();
+  const prevOnlineRef = useRef(isOnline);
+
+  // Process queued saves + photos when coming back online
+  useEffect(() => {
+    if (isOnline && !prevOnlineRef.current) {
+      (async () => {
+        const { succeeded, failed } = await processQueue(setPendingCount);
+        const photoResult = await processPhotoQueue();
+        const totalSucceeded = succeeded + photoResult.succeeded;
+        const totalFailed = failed + photoResult.failed;
+
+        if (totalSucceeded > 0) {
+          toast({
+            title: "All changes synced",
+            description: `${totalSucceeded} change${totalSucceeded !== 1 ? "s" : ""} synced successfully.`,
+          });
+          router.refresh();
+        }
+        if (totalFailed > 0) {
+          toast({
+            title: "Some changes failed to sync",
+            description: `${totalFailed} change${totalFailed !== 1 ? "s" : ""} could not be synced after multiple retries.`,
+            variant: "destructive",
+          });
+        }
+      })();
+    }
+    prevOnlineRef.current = isOnline;
+  }, [isOnline, setPendingCount, toast, router]);
+
   // ---- Derived ----
   const selectedTree = trees.find((t) => t.id === selectedTreeId) ?? null;
 
@@ -307,16 +344,26 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
       );
 
       try {
-        await fetch(`/api/trees/${id}`, {
+        const res = await fetch(`/api/trees/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pinLat: lat, pinLng: lng }),
         });
+        if (!res.ok) throw new Error("Pin move failed");
       } catch {
-        // Revert on failure - refetch would be ideal but keep it simple
+        // Queue for offline sync
+        enqueueRequest(
+          {
+            endpoint: `/api/trees/${id}`,
+            method: "PUT",
+            body: JSON.stringify({ pinLat: lat, pinLng: lng }),
+            propertyId: property.id,
+          },
+          setPendingCount
+        );
       }
     },
-    []
+    [property.id, setPendingCount]
   );
 
   const handleSave = useCallback(
@@ -404,11 +451,132 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         }
       } catch (err) {
         console.error("Save failed:", err);
+
+        // ---- OFFLINE FALLBACK: Queue the request + optimistic update ----
+        if (pendingPin) {
+          const body = {
+            ...data,
+            pinLat: pendingPin.lat,
+            pinLng: pendingPin.lng,
+            treeNumber: trees.length + 1,
+          };
+          const treeLocalId = `offline_${Date.now()}`;
+          enqueueRequest(
+            {
+              endpoint: `/api/properties/${property.id}/trees`,
+              method: "POST",
+              body: JSON.stringify(body),
+              treeLocalId,
+              propertyId: property.id,
+            },
+            setPendingCount
+          );
+
+          // Optimistic local state update with temp ID
+          const tempTree: TreeData = {
+            id: treeLocalId,
+            treeNumber: trees.length + 1,
+            pinLat: pendingPin.lat,
+            pinLng: pendingPin.lng,
+            speciesCommon: data.speciesCommon,
+            speciesScientific: data.speciesScientific,
+            dbhInches: data.dbhInches,
+            heightFt: data.heightFt,
+            canopySpreadFt: data.canopySpreadFt,
+            conditionRating: data.conditionRating,
+            healthNotes: data.healthNotes,
+            structuralNotes: data.structuralNotes,
+            recommendedAction: data.recommendedAction,
+            isProtected: data.isProtected,
+            protectionReason: data.protectionReason,
+            mitigationRequired: data.mitigationRequired,
+            status: "draft",
+            typeSpecificData: data.typeSpecificData,
+          };
+          setTrees((prev) => [...prev, tempTree]);
+          setLastSavedTree(tempTree);
+          setLastSavedNumber(tempTree.treeNumber);
+
+          // Track recent species
+          if (data.speciesCommon?.trim()) {
+            setRecentSpecies((prev) => {
+              const filtered = prev.filter(
+                (s) => s.common !== data.speciesCommon
+              );
+              return [
+                { common: data.speciesCommon, scientific: data.speciesScientific },
+                ...filtered,
+              ].slice(0, 3);
+            });
+          }
+
+          // Preserve Quick Add flow
+          if (quickAddMode) {
+            const mapCenter = mapGetCenterRef.current?.();
+            const nextCenter = mapCenter ?? {
+              lat: pendingPin.lat + 0.00002,
+              lng: pendingPin.lng + 0.00002,
+            };
+            setPendingPin(nextCenter);
+            setSelectedTreeId(null);
+          } else {
+            setPendingPin(null);
+            setSelectedTreeId(null);
+            setShowSidePanel(false);
+            setShowPlacementPrompt(true);
+          }
+        } else if (selectedTreeId) {
+          enqueueRequest(
+            {
+              endpoint: `/api/trees/${selectedTreeId}`,
+              method: "PUT",
+              body: JSON.stringify(data),
+              propertyId: property.id,
+            },
+            setPendingCount
+          );
+
+          // Optimistic local state update
+          setTrees((prev) =>
+            prev.map((t) =>
+              t.id === selectedTreeId
+                ? {
+                    ...t,
+                    ...data,
+                    typeSpecificData: data.typeSpecificData ?? t.typeSpecificData,
+                  }
+                : t
+            )
+          );
+          setLastSavedTree(
+            trees.find((t) => t.id === selectedTreeId)
+              ? { ...trees.find((t) => t.id === selectedTreeId)!, ...data }
+              : null
+          );
+
+          // Track recent species
+          if (data.speciesCommon?.trim()) {
+            setRecentSpecies((prev) => {
+              const filtered = prev.filter(
+                (s) => s.common !== data.speciesCommon
+              );
+              return [
+                { common: data.speciesCommon, scientific: data.speciesScientific },
+                ...filtered,
+              ].slice(0, 3);
+            });
+          }
+        }
+
+        toast({
+          title: "Saved offline",
+          description: "Your changes will sync when you're back online.",
+        });
       } finally {
         setSaving(false);
       }
     },
-    [pendingPin, selectedTreeId, property.id, trees.length, quickAddMode]
+    [pendingPin, selectedTreeId, property.id, trees, trees.length, quickAddMode, setPendingCount, toast]
   );
 
   const handleDelete = useCallback(async () => {
