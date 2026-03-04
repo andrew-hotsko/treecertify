@@ -44,6 +44,7 @@ interface PropertyMapProps {
   flyToId?: string | null;
   interactive?: boolean;
   className?: string;
+  onMapReady?: (helpers: { getCenter: () => { lat: number; lng: number } }) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -224,6 +225,7 @@ export function PropertyMap({
   flyToId,
   interactive = true,
   className,
+  onMapReady,
 }: PropertyMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -280,6 +282,16 @@ export function PropertyMap({
     });
 
     mapRef.current = map;
+
+    // Expose helpers to parent
+    if (onMapReady) {
+      onMapReady({
+        getCenter: () => {
+          const c = map.getCenter();
+          return { lat: c.lat, lng: c.lng };
+        },
+      });
+    }
 
     return () => {
       clearMarkers();

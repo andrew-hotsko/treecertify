@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { TreeSidePanel, type TreeFormData } from "@/components/tree-side-panel";
 import { TreeSummaryPanel } from "@/components/tree-summary-panel";
 import type { TreePin, CircleOverlay } from "@/components/property-map";
@@ -33,6 +34,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ShieldCheck,
+  Zap,
 } from "lucide-react";
 
 // Dynamically import PropertyMap with SSR disabled (Mapbox GL needs window/DOM)
@@ -143,8 +145,17 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   const [showPlacementPrompt, setShowPlacementPrompt] = useState(false);
   const [lastSavedNumber, setLastSavedNumber] = useState(0);
 
+  // Quick Add mode — keep panel open after save, auto-create next pending pin
+  const [quickAddMode, setQuickAddMode] = useState(false);
+  const mapGetCenterRef = useRef<(() => { lat: number; lng: number }) | null>(null);
+
   // Copy from last tree
   const [lastSavedTree, setLastSavedTree] = useState<TreeData | null>(null);
+
+  // Recent species tracking (last 3 unique species for quick-tap chips)
+  const [recentSpecies, setRecentSpecies] = useState<
+    { common: string; scientific: string }[]
+  >([]);
 
   // Tree list panel (desktop only)
   const [showTreeList, setShowTreeList] = useState(true);
@@ -329,14 +340,39 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           const newTree = await res.json();
 
           setTrees((prev) => [...prev, newTree]);
-          setPendingPin(null);
           setLastSavedTree(newTree);
-
-          // Quick-entry: auto-close panel and show placement prompt
-          setSelectedTreeId(null);
-          setShowSidePanel(false);
           setLastSavedNumber(newTree.treeNumber);
-          setShowPlacementPrompt(true);
+
+          // Track recent species
+          if (data.speciesCommon?.trim()) {
+            setRecentSpecies((prev) => {
+              const filtered = prev.filter(
+                (s) => s.common !== data.speciesCommon
+              );
+              return [
+                { common: data.speciesCommon, scientific: data.speciesScientific },
+                ...filtered,
+              ].slice(0, 3);
+            });
+          }
+
+          if (quickAddMode) {
+            // Quick Add: create new pending pin at map center, reset panel
+            const mapCenter = mapGetCenterRef.current?.();
+            const nextCenter = mapCenter ?? {
+              lat: pendingPin.lat + 0.00002,
+              lng: pendingPin.lng + 0.00002,
+            };
+            setPendingPin(nextCenter);
+            setSelectedTreeId(null);
+            // showSidePanel stays true — panel resets via new pendingPin
+          } else {
+            // Normal: close panel and show placement prompt
+            setPendingPin(null);
+            setSelectedTreeId(null);
+            setShowSidePanel(false);
+            setShowPlacementPrompt(true);
+          }
         } else if (selectedTreeId) {
           // Update existing tree
           const res = await fetch(`/api/trees/${selectedTreeId}`, {
@@ -352,6 +388,19 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             prev.map((t) => (t.id === selectedTreeId ? updatedTree : t))
           );
           setLastSavedTree(updatedTree);
+
+          // Track recent species
+          if (data.speciesCommon?.trim()) {
+            setRecentSpecies((prev) => {
+              const filtered = prev.filter(
+                (s) => s.common !== data.speciesCommon
+              );
+              return [
+                { common: data.speciesCommon, scientific: data.speciesScientific },
+                ...filtered,
+              ].slice(0, 3);
+            });
+          }
         }
       } catch (err) {
         console.error("Save failed:", err);
@@ -359,7 +408,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         setSaving(false);
       }
     },
-    [pendingPin, selectedTreeId, property.id, trees.length]
+    [pendingPin, selectedTreeId, property.id, trees.length, quickAddMode]
   );
 
   const handleDelete = useCallback(async () => {
@@ -387,6 +436,13 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     setSelectedTreeId(null);
     setPendingPin(null);
   }, []);
+
+  const handleMapReady = useCallback(
+    (helpers: { getCenter: () => { lat: number; lng: number } }) => {
+      mapGetCenterRef.current = helpers.getCenter;
+    },
+    []
+  );
 
   const handleSelectTreeFromSummary = useCallback((id: string) => {
     setPendingPin(null);
@@ -542,6 +598,24 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Quick Add toggle */}
+          <div className="flex items-center gap-1.5">
+            <label
+              htmlFor="quick-add-toggle"
+              className={`flex items-center gap-1 text-xs cursor-pointer select-none ${
+                quickAddMode ? "text-amber-700 font-medium" : "text-muted-foreground"
+              }`}
+            >
+              <Zap className={`h-3.5 w-3.5 ${quickAddMode ? "text-amber-500" : ""}`} />
+              <span className="hidden sm:inline">Quick Add</span>
+            </label>
+            <Switch
+              id="quick-add-toggle"
+              checked={quickAddMode}
+              onCheckedChange={setQuickAddMode}
+              className="scale-75"
+            />
+          </div>
           <Badge variant="secondary" className="gap-1">
             <TreePine className="h-3 w-3" />
             {trees.length} tree{trees.length !== 1 ? "s" : ""}
@@ -1149,6 +1223,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             center={center}
             pins={pins}
             dimmedPinIds={dimmedPinIds}
+            onMapReady={handleMapReady}
             circles={
               reportType === "construction_encroachment"
                 ? trees
@@ -1179,6 +1254,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           <TreeSidePanel
             tree={sidePanelTree}
             treeNumber={sidePanelTreeNumber}
+            totalTrees={trees.length}
             propertyId={property.id}
             propertyCity={property.city}
             reportType={reportType}
@@ -1189,6 +1265,8 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             onClose={handleClosePanel}
             saving={saving}
             lastSavedTree={lastSavedTree}
+            recentSpecies={recentSpecies}
+            quickAddMode={quickAddMode}
           />
         )}
       </div>

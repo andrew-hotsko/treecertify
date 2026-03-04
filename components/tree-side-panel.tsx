@@ -45,6 +45,7 @@ import {
   Info,
   Copy,
   ClipboardList,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -117,6 +118,7 @@ interface TreeRecord {
 interface TreeSidePanelProps {
   tree: TreeRecord | null;
   treeNumber: number;
+  totalTrees?: number;
   propertyId: string;
   propertyCity: string;
   reportType?: string;
@@ -125,6 +127,8 @@ interface TreeSidePanelProps {
   onClose: () => void;
   saving?: boolean;
   lastSavedTree?: TreeRecord | null;
+  recentSpecies?: { common: string; scientific: string }[];
+  quickAddMode?: boolean;
 }
 
 const ACTION_OPTIONS = [
@@ -150,6 +154,7 @@ interface QuickPhoto {
 export function TreeSidePanel({
   tree,
   treeNumber,
+  totalTrees,
   propertyId,
   propertyCity,
   reportType,
@@ -158,6 +163,8 @@ export function TreeSidePanel({
   onClose,
   saving = false,
   lastSavedTree,
+  recentSpecies = [],
+  quickAddMode = false,
 }: TreeSidePanelProps) {
   // ---- Form state ----
   const [tagNumber, setTagNumber] = useState(tree?.tagNumber ?? "");
@@ -273,6 +280,9 @@ export function TreeSidePanel({
     };
   }, [speciesCommon, dbhInches, checkProtection]);
 
+  // ---- Floating dictation modal ----
+  const [showDictationModal, setShowDictationModal] = useState(false);
+
   // ---- Derived ----
   const statusDot =
     tree?.status === "certified"
@@ -385,6 +395,11 @@ export function TreeSidePanel({
         <div className="flex items-center gap-2">
           <span className={`h-2.5 w-2.5 rounded-full ${statusDot}`} />
           <h2 className="text-lg font-semibold">Tree #{treeNumber}</h2>
+          {quickAddMode && isNewTree && totalTrees != null && (
+            <span className="text-xs text-muted-foreground">
+              of {totalTrees + 1}
+            </span>
+          )}
           <Input
             placeholder="Tag #"
             value={tagNumber}
@@ -505,6 +520,23 @@ export function TreeSidePanel({
         {/* Species */}
         <div className="space-y-2">
           <Label>Species</Label>
+
+          {/* Recent species chips */}
+          {recentSpecies.length > 0 && !speciesCommon && (
+            <div className="flex gap-1.5 overflow-x-auto pb-0.5 -mt-0.5">
+              {recentSpecies.map((sp) => (
+                <button
+                  key={sp.common}
+                  type="button"
+                  onClick={() => handleSpeciesChange(sp.common, sp.scientific)}
+                  className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 whitespace-nowrap transition-colors flex-shrink-0"
+                >
+                  {sp.common}
+                </button>
+              ))}
+            </div>
+          )}
+
           <SpeciesSearch
             value={speciesCommon}
             onChange={handleSpeciesChange}
@@ -907,6 +939,67 @@ export function TreeSidePanel({
             )}
           </div>
         )}
+
+        {/* Spacer so floating button doesn't overlap content */}
+        <div className="h-14" />
+
+        {/* Floating dictation button */}
+        <div className="sticky bottom-2 flex justify-end pointer-events-none">
+          <button
+            type="button"
+            onClick={() => setShowDictationModal(true)}
+            className="pointer-events-auto w-12 h-12 rounded-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
+            title="Smart Dictate — fill fields with voice"
+          >
+            <Mic className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Dictation modal overlay */}
+        {showDictationModal && (
+          <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center bg-black/40">
+            <div className="bg-white rounded-t-2xl md:rounded-2xl shadow-2xl w-full max-w-sm mx-auto p-5 space-y-3 animate-in slide-in-from-bottom-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                  <Mic className="h-4 w-4 text-emerald-600" />
+                  Smart Dictation
+                </h3>
+                <button
+                  onClick={() => setShowDictationModal(false)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Describe the tree and its condition. AI will extract species, DBH, condition, and notes.
+              </p>
+              <SmartDictation
+                onApply={(fields) => {
+                  if (fields.speciesCommon !== undefined) setSpeciesCommon(fields.speciesCommon);
+                  if (fields.speciesScientific !== undefined) setSpeciesScientific(fields.speciesScientific);
+                  if (fields.dbhInches !== undefined) setDbhInches(String(fields.dbhInches));
+                  if (fields.heightFt !== undefined) setHeightFt(String(fields.heightFt));
+                  if (fields.canopySpreadFt !== undefined) setCanopySpreadFt(String(fields.canopySpreadFt));
+                  if (fields.conditionRating !== undefined) setConditionRating(fields.conditionRating);
+                  if (fields.healthNotes !== undefined) {
+                    const existing = healthNotes || "";
+                    const separator = existing.trim() ? " " : "";
+                    setHealthNotes(existing + separator + fields.healthNotes);
+                  }
+                  if (fields.structuralNotes !== undefined) {
+                    const existing = structuralNotes || "";
+                    const separator = existing.trim() ? " " : "";
+                    setStructuralNotes(existing + separator + fields.structuralNotes);
+                  }
+                  if (fields.recommendedAction !== undefined) setRecommendedAction(fields.recommendedAction);
+                  if (fields.tagNumber !== undefined) setTagNumber(fields.tagNumber);
+                  setShowDictationModal(false);
+                }}
+              />
+            </div>
+          </div>
+        )}
         </TabsContent>
 
         {/* Photos Tab */}
@@ -945,6 +1038,11 @@ export function TreeSidePanel({
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
               Saving...
+            </>
+          ) : quickAddMode && isNewTree ? (
+            <>
+              <Zap className="h-4 w-4" />
+              Save &amp; Next
             </>
           ) : (
             <>
