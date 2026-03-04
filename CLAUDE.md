@@ -89,5 +89,22 @@
 - Configurable via `includeSiteMap` in report options (default: true). Graceful degradation if Mapbox fetch fails.
 - Pin colors: green (good/excellent), yellow (fair), orange (poor), red (critical/remove), gray (unassessed).
 
+## Beta Onboarding
+- 3-step onboarding flow at `/onboarding`: Step 1 (Professional Credentials), Step 2 (Company Branding with live cover page preview), Step 3 (First Property walkthrough with supported city validation).
+- `Arborist.onboardingStep` tracks progress (0=not started, 1=credentials, 2=branding, 3=complete). On page mount, profile is fetched and flow resumes at `onboardingStep + 1`.
+- Step-based saves via `POST /api/arborist/onboard` with `body.step` (1 or 2). `PATCH` marks complete (`onboardingStep = 3`).
+- Step 3 creates a real property via existing `POST /api/properties`, then calls PATCH to finalize.
+- Supported cities (5): Palo Alto, Menlo Park, Atherton, Woodside, Portola Valley. Unsupported cities show amber warning but still allow property creation.
+
+## In-App Feedback
+- `FeedbackButton` component: floating emerald FAB (bottom-right) on all `/(app)/` pages. Dialog with type selector (bug/suggestion/question), description textarea, and auto-screenshot via `html2canvas`.
+- Screenshot capture: dynamic import of `html2canvas`, 0.5x scale, uploaded to `POST /api/feedback/screenshot` → stored in `uploads/feedback/`.
+- Feedback API: `POST /api/feedback` creates a `Feedback` record with auto-captured context (pageUrl, metadata JSON with userAgent, propertyId, viewport, timestamp).
+- `Feedback` model: id, arboristId, type, description, screenshotUrl, pageUrl, metadata, status (new/reviewed/resolved), createdAt.
+
+## Dashboard Welcome State
+- Dashboard computes `welcomeState`: `no_properties` | `no_trees` | `no_reports` | `normal`.
+- `WelcomeCard` component renders above stat cards for non-normal states with contextual CTA (dashed-border emerald card).
+
 ## Session Completion
 - When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.

@@ -89,6 +89,22 @@ export function getArboristServingUrl(
 }
 
 /**
+ * Get the absolute upload directory for feedback screenshots, creating it if needed.
+ */
+export function getFeedbackUploadDir(): string {
+  const dir = path.join(UPLOADS_ROOT, "feedback");
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+/**
+ * Get the serving URL for a feedback screenshot.
+ */
+export function getFeedbackServingUrl(filename: string): string {
+  return `/api/uploads/feedback/${filename}`;
+}
+
+/**
  * Generate a collision-safe filename from the original.
  * Format: {timestamp}_{random}_{sanitized-original}
  */

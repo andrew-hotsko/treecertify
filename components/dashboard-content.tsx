@@ -75,6 +75,8 @@ interface NextActions {
   readyToCertify: number;
 }
 
+type WelcomeState = "no_properties" | "no_trees" | "no_reports" | "normal";
+
 interface DashboardContentProps {
   properties: DashboardProperty[];
   totalTrees: number;
@@ -83,6 +85,7 @@ interface DashboardContentProps {
   nextActions?: NextActions;
   treesThisWeek?: number;
   treesLastWeek?: number;
+  welcomeState?: WelcomeState;
 }
 
 // ---------------------------------------------------------------------------
@@ -154,6 +157,59 @@ function getActivityDescription(item: ActivityItem): string {
   return "Property created";
 }
 
+const WELCOME_CONFIG: Record<
+  Exclude<WelcomeState, "normal">,
+  { icon: typeof MapPin; title: string; description: string; href: string; cta: string }
+> = {
+  no_properties: {
+    icon: MapPin,
+    title: "Create your first property",
+    description: "Get started by adding a property address and pinning trees on the map.",
+    href: "/properties/new",
+    cta: "New Property",
+  },
+  no_trees: {
+    icon: TreePine,
+    title: "Add tree assessments",
+    description: "Open a property and pin trees on the map to begin your assessment.",
+    href: "/properties",
+    cta: "View Properties",
+  },
+  no_reports: {
+    icon: FileText,
+    title: "Ready to generate your first report?",
+    description: "Your trees are assessed. Generate an AI-powered arborist report.",
+    href: "/properties",
+    cta: "View Properties",
+  },
+};
+
+function WelcomeCard({ state }: { state: Exclude<WelcomeState, "normal"> }) {
+  const config = WELCOME_CONFIG[state];
+  const Icon = config.icon;
+
+  return (
+    <div className="rounded-xl border-2 border-dashed border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-white p-8 text-center">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
+        <Icon className="h-7 w-7 text-emerald-600" />
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900">{config.title}</h3>
+      <p className="mt-1 text-sm text-gray-500 max-w-sm mx-auto">
+        {config.description}
+      </p>
+      <Button
+        asChild
+        className="mt-5 bg-emerald-600 hover:bg-emerald-700"
+      >
+        <Link href={config.href}>
+          <Plus className="mr-2 h-4 w-4" />
+          {config.cta}
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
 export function DashboardContent({
   properties,
   totalTrees,
@@ -162,6 +218,7 @@ export function DashboardContent({
   nextActions,
   treesThisWeek,
   treesLastWeek,
+  welcomeState = "normal",
 }: DashboardContentProps) {
   const [filter, setFilter] = useState<FilterStatus>("all");
 
@@ -225,6 +282,9 @@ export function DashboardContent({
 
   return (
     <>
+      {/* Welcome Card for new/returning users */}
+      {welcomeState !== "normal" && <WelcomeCard state={welcomeState} />}
+
       {/* Stat Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => {

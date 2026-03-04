@@ -117,6 +117,17 @@ export default async function DashboardPage() {
   const greeting = getGreeting();
   const contextMessage = getContextMessage({ draftCount, overdueCount, totalTrees });
 
+  // Welcome state for new/returning users
+  const hasReports = allProperties.some((p) => p.reports.length > 0);
+  const welcomeState: "no_properties" | "no_trees" | "no_reports" | "normal" =
+    allProperties.length === 0
+      ? "no_properties"
+      : totalTrees === 0
+        ? "no_trees"
+        : !hasReports
+          ? "no_reports"
+          : "normal";
+
   const activityFeed = recentActivity.map((p) => ({
     id: p.id,
     address: p.address,
@@ -164,6 +175,7 @@ export default async function DashboardPage() {
         nextActions={nextActions}
         treesThisWeek={treesThisWeek}
         treesLastWeek={treesLastWeek}
+        welcomeState={welcomeState}
       />
     </div>
   );

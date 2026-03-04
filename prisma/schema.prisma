@@ -30,12 +30,14 @@ model Arborist {
   traqCertified    Boolean  @default(false)
   additionalCerts  String   @default("[]") // JSON array: ["BCMA", "Utility Specialist", etc.]
   reportDefaults   String?  // JSON string for report template defaults
+  onboardingStep   Int      @default(0) // 0=not started, 1=credentials, 2=branding, 3=complete
 
   createdAt DateTime @default(now())
 
   properties   Property[]
   reports      Report[]
   apiUsageLogs ApiUsageLog[]
+  feedbacks    Feedback[]
 }
 
 model Property {
@@ -251,4 +253,17 @@ model ApiUsageLog {
   createdAt       DateTime @default(now())
 
   arborist Arborist @relation(fields: [arboristId], references: [id])
+}
+
+model Feedback {
+  id            String   @id @default(cuid())
+  arboristId    String
+  arborist      Arborist @relation(fields: [arboristId], references: [id])
+  type          String   // "bug", "suggestion", "question"
+  description   String
+  screenshotUrl String?
+  pageUrl       String?
+  metadata      String?  // JSON: { userAgent, propertyId, viewport, timestamp }
+  status        String   @default("new") // new, reviewed, resolved
+  createdAt     DateTime @default(now())
 }
