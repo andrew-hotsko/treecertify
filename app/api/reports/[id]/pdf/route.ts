@@ -206,6 +206,8 @@ export async function GET(
                   isAnnotated?: boolean;
                   originalUrl?: string | null;
                   createdAt?: Date | string;
+                  category?: string | null;
+                  exifTakenAt?: Date | string | null;
                 },
                 i: number
               ) => {
@@ -215,18 +217,23 @@ export async function GET(
                     : photo.url;
                 const base64 = photoToBase64(srcUrl);
                 const imgSrc = base64 || srcUrl;
-                const photoDate = photo.createdAt
-                  ? new Date(photo.createdAt).toLocaleDateString("en-US", {
+                // Prefer EXIF date, fall back to upload date
+                const dateSource = photo.exifTakenAt || photo.createdAt;
+                const photoDate = dateSource
+                  ? new Date(dateSource).toLocaleDateString("en-US", {
                       year: "numeric",
                       month: "short",
                       day: "numeric",
                     })
                   : "";
+                const catLabel = photo.category
+                  ? photo.category.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())
+                  : "";
                 return `
             <div class="photo-cell">
               <img src="${imgSrc}" alt="Tree #${tree.treeNumber} photo ${chunkIdx * 4 + i + 1}" />
               <div class="photo-meta">
-                <span class="photo-ref">Tree #${tree.treeNumber}${photo.isAnnotated ? " (annotated)" : ""}</span>
+                <span class="photo-ref">Tree #${tree.treeNumber}${catLabel ? ` &mdash; ${catLabel}` : ""}${photo.isAnnotated ? " (annotated)" : ""}</span>
                 ${photo.caption ? `<span class="photo-caption-text">${esc(photo.caption)}</span>` : ""}
                 ${photoDate ? `<span class="photo-date">${photoDate}</span>` : ""}
               </div>

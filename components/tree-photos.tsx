@@ -21,6 +21,9 @@ import {
   Pencil,
   RotateCcw,
   Clock,
+  CheckCircle2,
+  Circle,
+  Tag,
 } from "lucide-react";
 import {
   enqueuePhoto,
@@ -28,6 +31,11 @@ import {
   type QueuedPhoto,
 } from "@/lib/photo-queue";
 import { useToast } from "@/hooks/use-toast";
+import {
+  getCategoriesForReportType,
+  autoCaptionFromCategory,
+  type PhotoCategory,
+} from "@/lib/photo-categories";
 
 // Dynamically import markup editor (Fabric.js needs window/DOM)
 const PhotoMarkupEditor = dynamic(
@@ -52,18 +60,31 @@ interface TreePhoto {
   createdAt: string;
   isAnnotated?: boolean;
   originalUrl?: string | null;
+  category?: string | null;
+  exifLat?: number | null;
+  exifLng?: number | null;
+  exifTakenAt?: string | null;
 }
 
 interface TreePhotosProps {
   propertyId: string;
   treeId: string;
+  reportType?: string;
+  treeNumber?: number;
+  speciesCommon?: string;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
+export function TreePhotos({
+  propertyId,
+  treeId,
+  reportType,
+  treeNumber,
+  speciesCommon,
+}: TreePhotosProps) {
   const [photos, setPhotos] = useState<TreePhoto[]>([]);
   const [uploading, setUploading] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -76,10 +97,20 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  // Category picker state — shows after file selection
+  const [pendingFiles, setPendingFiles] = useState<File[] | null>(null);
+  const [pendingCategories, setPendingCategories] = useState<string[]>([]);
+
   // Offline photo queue
   const [queuedPhotos, setQueuedPhotos] = useState<QueuedPhoto[]>([]);
 
   const basePath = `/api/properties/${propertyId}/trees/${treeId}/photos`;
+
+  // Photo categories for this report type
+  const categories: PhotoCategory[] = useMemo(
+    () => (reportType ? getCategoriesForReportType(reportType) : []),
+    [reportType]
+  );
 
   // ---- Fetch photos ----
   const fetchPhotos = useCallback(async () => {
@@ -119,16 +150,67 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
     };
   }, [queuedPhotoUrls]);
 
-  // ---- Upload ----
-  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  // ---- Checklist: which categories are covered ----
+  const coveredCategories = useMemo(() => {
+    const set = new Set<string>();
+    photos.forEach((p) => {
+      if (p.category) set.add(p.category);
+    });
+    return set;
+  }, [photos]);
+
+  // ---- File selection → show category picker ----
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    const fileArr = Array.from(files);
+
+    if (categories.length > 0) {
+      // Show category picker
+      setPendingFiles(fileArr);
+      setPendingCategories(fileArr.map(() => ""));
+    } else {
+      // No categories — upload directly
+      uploadFiles(fileArr, []);
+    }
+
+    // Reset input so the same file(s) can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  // ---- Upload with categories ----
+  async function uploadFiles(files: File[], cats: string[]) {
     setUploading(true);
+    setPendingFiles(null);
     try {
       const formData = new FormData();
       for (let i = 0; i < files.length; i++) {
         formData.append("files", files[i]);
+      }
+
+      // Auto-generate captions from categories
+      const captions: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        if (cats[i] && treeNumber && reportType) {
+          captions.push(
+            autoCaptionFromCategory(
+              cats[i],
+              treeNumber,
+              speciesCommon || "",
+              reportType
+            )
+          );
+        } else {
+          captions.push("");
+        }
+      }
+
+      if (cats.some((c) => c)) {
+        formData.append("categories", JSON.stringify(cats));
+      }
+      if (captions.some((c) => c)) {
+        formData.append("captions", JSON.stringify(captions));
       }
 
       const res = await fetch(basePath, {
@@ -161,8 +243,24 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
       }
     } finally {
       setUploading(false);
-      // Reset input so the same file(s) can be re-selected
-      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  // ---- Category update on existing photo ----
+  async function updateCategory(photoId: string, category: string | null) {
+    try {
+      const res = await fetch(`${basePath}/${photoId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category }),
+      });
+      if (res.ok) {
+        setPhotos((prev) =>
+          prev.map((p) => (p.id === photoId ? { ...p, category } : p))
+        );
+      }
+    } catch (err) {
+      console.error("Category update failed:", err);
     }
   }
 
@@ -173,11 +271,11 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
       if (res.ok) {
         setPhotos((prev) => prev.filter((p) => p.id !== photoId));
         setDeleteConfirmId(null);
-        // Close lightbox if the deleted photo was open
         if (lightboxIndex !== null) {
           const deletedIdx = photos.findIndex((p) => p.id === photoId);
           if (deletedIdx === lightboxIndex) setLightboxIndex(null);
-          else if (deletedIdx < lightboxIndex) setLightboxIndex(lightboxIndex - 1);
+          else if (deletedIdx < lightboxIndex)
+            setLightboxIndex(lightboxIndex - 1);
         }
       }
     } catch (err) {
@@ -209,7 +307,6 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
   // ---- Markup save callback ----
   const handleMarkupSave = useCallback(
     (annotatedUrl: string) => {
-      // Update photo in local state
       setPhotos((prev) =>
         prev.map((p) =>
           p.id === markupPhotoId
@@ -218,7 +315,6 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
         )
       );
       setMarkupPhotoId(null);
-      // Re-fetch to get all updated fields
       fetchPhotos();
     },
     [markupPhotoId, fetchPhotos]
@@ -228,10 +324,9 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
   async function handleRevertAnnotation(photoId: string) {
     setRevertingId(photoId);
     try {
-      const res = await fetch(
-        `${basePath}/${photoId}/annotate`,
-        { method: "DELETE" }
-      );
+      const res = await fetch(`${basePath}/${photoId}/annotate`, {
+        method: "DELETE",
+      });
       if (res.ok) {
         await fetchPhotos();
       }
@@ -255,18 +350,73 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
     }
   }
 
-  // Which URL to show in lightbox (original or annotated)
   const lightboxUrl =
     lightboxPhoto && lightboxViewOriginal && lightboxPhoto.originalUrl
       ? lightboxPhoto.originalUrl
       : lightboxPhoto?.url;
 
-  // The photo being marked up
   const markupPhoto = photos.find((p) => p.id === markupPhotoId);
+
+  // Format EXIF date
+  function formatExifDate(dateStr: string | null | undefined): string {
+    if (!dateStr) return "";
+    try {
+      return new Date(dateStr).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    } catch {
+      return "";
+    }
+  }
+
+  // Get category label from value
+  function getCategoryLabel(catValue: string | null | undefined): string {
+    if (!catValue) return "";
+    const cat = categories.find((c) => c.value === catValue);
+    return cat?.label || catValue.replace(/_/g, " ");
+  }
 
   // ---- Render ----
   return (
     <div className="space-y-3">
+      {/* Required Photos Checklist */}
+      {categories.length > 0 && (
+        <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5">
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+            Recommended Photos
+          </p>
+          <div className="space-y-1">
+            {categories.map((cat) => {
+              const covered = coveredCategories.has(cat.value);
+              return (
+                <div
+                  key={cat.value}
+                  className="flex items-center gap-2 text-xs"
+                >
+                  {covered ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                  ) : (
+                    <Circle className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                  )}
+                  <span
+                    className={`${cat.required ? "font-semibold" : ""} ${covered ? "text-green-700" : "text-muted-foreground"}`}
+                  >
+                    {cat.label}
+                    {cat.required && !covered && (
+                      <span className="text-amber-600 ml-1">*</span>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Header + Upload Button */}
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-muted-foreground">
@@ -301,6 +451,75 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
         />
       </div>
 
+      {/* Category Picker Dialog — shown after file selection */}
+      {pendingFiles && pendingFiles.length > 0 && (
+        <Dialog
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) {
+              // Upload without categories if dismissed
+              uploadFiles(pendingFiles, pendingCategories);
+            }
+          }}
+        >
+          <DialogContent className="max-w-sm">
+            <DialogTitle className="text-sm font-semibold">
+              Categorize Photo{pendingFiles.length > 1 ? "s" : ""}
+            </DialogTitle>
+            <div className="space-y-3">
+              {pendingFiles.map((file, idx) => (
+                <div key={idx} className="space-y-2">
+                  {pendingFiles.length > 1 && (
+                    <p className="text-xs text-muted-foreground">
+                      {file.name}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap gap-1.5">
+                    {categories.map((cat) => (
+                      <button
+                        key={cat.value}
+                        onClick={() => {
+                          setPendingCategories((prev) => {
+                            const next = [...prev];
+                            next[idx] =
+                              next[idx] === cat.value ? "" : cat.value;
+                            return next;
+                          });
+                        }}
+                        className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                          pendingCategories[idx] === cat.value
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : "bg-background hover:bg-muted border-border"
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2 mt-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => uploadFiles(pendingFiles, [])}
+              >
+                Skip
+              </Button>
+              <Button
+                size="sm"
+                onClick={() =>
+                  uploadFiles(pendingFiles, pendingCategories)
+                }
+              >
+                Upload
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Thumbnail Grid */}
       {photos.length === 0 && queuedPhotoUrls.length === 0 ? (
         <button
@@ -329,6 +548,16 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
                   className="h-full w-full object-cover"
                 />
 
+                {/* Category badge */}
+                {photo.category && (
+                  <Badge
+                    variant="secondary"
+                    className="absolute top-1 left-1 text-[8px] px-1 py-0 bg-emerald-700 text-white hover:bg-emerald-700 max-w-[90%] truncate"
+                  >
+                    {getCategoryLabel(photo.category)}
+                  </Badge>
+                )}
+
                 {/* Annotated badge */}
                 {photo.isAnnotated && (
                   <Badge
@@ -343,6 +572,28 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
               {/* Hover overlay with markup button */}
               <div className="absolute inset-0 rounded-md bg-black/0 group-hover:bg-black/30 transition-colors pointer-events-none" />
               <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* Category tag button */}
+                {categories.length > 0 && (
+                  <button
+                    className="rounded-full bg-black/60 p-1 text-white hover:bg-emerald-600 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Cycle through categories + uncategorized
+                      const currentIdx = categories.findIndex(
+                        (c) => c.value === photo.category
+                      );
+                      const nextIdx = (currentIdx + 1) % (categories.length + 1);
+                      const nextCat =
+                        nextIdx < categories.length
+                          ? categories[nextIdx].value
+                          : null;
+                      updateCategory(photo.id, nextCat);
+                    }}
+                    title="Change category"
+                  >
+                    <Tag className="h-3 w-3" />
+                  </button>
+                )}
                 <button
                   className="rounded-full bg-black/60 p-1 text-white hover:bg-blue-600 transition-colors"
                   onClick={(e) => {
@@ -365,7 +616,7 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
                 </button>
               </div>
 
-              {/* Caption */}
+              {/* Caption + EXIF date */}
               {editingCaptionId === photo.id ? (
                 <Input
                   value={captionDraft}
@@ -391,6 +642,11 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
                     {photo.caption || "Add caption..."}
                   </p>
                 </button>
+              )}
+              {photo.exifTakenAt && (
+                <p className="text-[9px] text-muted-foreground/60 truncate">
+                  Taken: {formatExifDate(photo.exifTakenAt)}
+                </p>
               )}
             </div>
           ))}
@@ -488,8 +744,13 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
                   </button>
                 )}
 
-                {/* Counter + Annotated badge */}
+                {/* Counter + badges */}
                 <div className="absolute top-3 right-3 flex items-center gap-2">
+                  {lightboxPhoto.category && (
+                    <Badge className="bg-emerald-700 text-white hover:bg-emerald-700 text-xs">
+                      {getCategoryLabel(lightboxPhoto.category)}
+                    </Badge>
+                  )}
                   {lightboxPhoto.isAnnotated && (
                     <Badge className="bg-blue-600 text-white hover:bg-blue-600 text-xs">
                       Annotated
@@ -510,6 +771,13 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
                   >
                     {lightboxViewOriginal ? "View Annotated" : "View Original"}
                   </button>
+                )}
+
+                {/* EXIF date in lightbox */}
+                {lightboxPhoto.exifTakenAt && (
+                  <div className="absolute bottom-3 left-3 rounded-full bg-black/60 px-3 py-1 text-xs text-white">
+                    Taken: {formatExifDate(lightboxPhoto.exifTakenAt)}
+                  </div>
                 )}
               </div>
 
@@ -533,6 +801,27 @@ export function TreePhotos({ propertyId, treeId }: TreePhotosProps) {
                     if (e.key === "Enter") saveCaption(lightboxPhoto.id);
                   }}
                 />
+
+                {/* Category picker in lightbox */}
+                {categories.length > 0 && (
+                  <select
+                    value={lightboxPhoto.category || ""}
+                    onChange={(e) =>
+                      updateCategory(
+                        lightboxPhoto.id,
+                        e.target.value || null
+                      )
+                    }
+                    className="text-xs border rounded px-2 py-1.5 bg-background"
+                  >
+                    <option value="">No category</option>
+                    {categories.map((cat) => (
+                      <option key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
 
                 {/* Mark up button */}
                 <Button

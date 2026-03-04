@@ -1137,7 +1137,13 @@ export function TreeSidePanel({
         {/* Photos Tab */}
         <TabsContent value="photos" className="flex-1 overflow-y-auto px-4 py-4 mt-0">
           {isExisting && tree?.id ? (
-            <TreePhotos propertyId={propertyId} treeId={tree.id} />
+            <TreePhotos
+              propertyId={propertyId}
+              treeId={tree.id}
+              reportType={reportType}
+              treeNumber={treeNumber}
+              speciesCommon={speciesCommon}
+            />
           ) : (
             <div className="flex flex-col items-center justify-center gap-2 py-12 text-center text-muted-foreground">
               <Camera className="h-8 w-8" />

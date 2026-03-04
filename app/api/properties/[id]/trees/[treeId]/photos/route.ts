@@ -10,6 +10,42 @@ import {
 import fs from "fs";
 import path from "path";
 
+/**
+ * Extract EXIF GPS coords and date from a JPEG buffer.
+ * Returns partial data — fields may be undefined if not present.
+ */
+function extractExif(buffer: Buffer): {
+  lat?: number;
+  lng?: number;
+  takenAt?: Date;
+} {
+  try {
+    // exif-parser works on JPEG/TIFF buffers
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const ExifParser = require("exif-parser");
+    const parser = ExifParser.create(buffer);
+    parser.enableSimpleValues(true);
+    const result = parser.parse();
+
+    const tags = result.tags || {};
+    const lat =
+      typeof tags.GPSLatitude === "number" ? tags.GPSLatitude : undefined;
+    const lng =
+      typeof tags.GPSLongitude === "number" ? tags.GPSLongitude : undefined;
+
+    let takenAt: Date | undefined;
+    // DateTimeOriginal is a unix timestamp (seconds) in exif-parser
+    if (tags.DateTimeOriginal && typeof tags.DateTimeOriginal === "number") {
+      takenAt = new Date(tags.DateTimeOriginal * 1000);
+    }
+
+    return { lat, lng, takenAt };
+  } catch {
+    // Not a JPEG, no EXIF, or parse error — return empty
+    return {};
+  }
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string; treeId: string } }
@@ -48,6 +84,10 @@ export async function POST(
     const files = formData.getAll("files") as File[];
     const captionsRaw = formData.get("captions") as string | null;
     const captions: string[] = captionsRaw ? JSON.parse(captionsRaw) : [];
+    const categoriesRaw = formData.get("categories") as string | null;
+    const categories: string[] = categoriesRaw
+      ? JSON.parse(categoriesRaw)
+      : [];
 
     if (!files.length) {
       return NextResponse.json(
@@ -64,7 +104,6 @@ export async function POST(
     let nextSortOrder = (maxSort._max.sortOrder ?? -1) + 1;
 
     const uploadDir = getUploadDir(treeId, "photos");
-    const created = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -84,20 +123,26 @@ export async function POST(
       const buffer = Buffer.from(await file.arrayBuffer());
       fs.writeFileSync(filePath, buffer);
 
+      // Extract EXIF data
+      const exif = extractExif(buffer);
+
       const url = getServingUrl(treeId, "photos", filename);
       const caption = captions[i] || null;
+      const category = categories[i] || null;
 
-      const photo = await prisma.treePhoto.create({
+      await prisma.treePhoto.create({
         data: {
           treeRecordId: treeId,
           filename,
           url,
           caption,
+          category,
           sortOrder: nextSortOrder++,
+          ...(exif.lat !== undefined && { exifLat: exif.lat }),
+          ...(exif.lng !== undefined && { exifLng: exif.lng }),
+          ...(exif.takenAt !== undefined && { exifTakenAt: exif.takenAt }),
         },
       });
-
-      created.push(photo);
     }
 
     // Return all photos for the tree

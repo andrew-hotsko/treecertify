@@ -132,6 +132,14 @@ model TreePhoto {
   originalUrl      String?
   isAnnotated      Boolean @default(false)
 
+  // Photo categorization
+  category String? // e.g. "full_tree", "defect_detail", "root_collar", etc.
+
+  // EXIF metadata extracted on upload
+  exifLat     Float?
+  exifLng     Float?
+  exifTakenAt DateTime?
+
   treeRecord TreeRecord @relation(fields: [treeRecordId], references: [id], onDelete: Cascade)
 }
 

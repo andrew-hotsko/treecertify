@@ -23,6 +23,7 @@ export async function PUT(
       data: {
         ...(body.caption !== undefined && { caption: body.caption }),
         ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
+        ...(body.category !== undefined && { category: body.category }),
       },
     });
 

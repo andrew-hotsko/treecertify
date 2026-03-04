@@ -43,6 +43,15 @@
 - Signature block: formal certification statement, Dancing Script e-signature when certified, credential details table.
 - `photoToBase64()` converts `/api/uploads/` paths to base64 data URIs for Puppeteer rendering.
 
+## Photo Documentation Workflow
+- Photo categories defined in `lib/photo-categories.ts` — per-report-type checklists (removal_permit, health_assessment, construction_encroachment, tree_valuation).
+- TreePhoto schema fields: `category String?`, `exifLat Float?`, `exifLng Float?`, `exifTakenAt DateTime?`.
+- EXIF extraction via `exif-parser` in the photo upload API route — extracts GPS coords and DateTimeOriginal from JPEG headers.
+- Category picker: shown as pill buttons after file selection. Categories stored on TreePhoto, auto-caption generated from category + tree info.
+- Required photos checklist shown at top of Photos tab in tree-side-panel. "Full tree" is required for all report types.
+- Validation: warning check "full_tree_photo" flags trees with photos but no "Full tree" categorized photo.
+- PDF includes category labels and EXIF dates (preferred over upload date) under each photo.
+
 ## Report Versioning
 - `ReportVersion` model stores full markdown snapshots at key moments: "AI Draft" (generation), "Edit" (before each save), "Pre-certification" (before certify).
 - Versions API: `GET /api/reports/[id]/versions` returns all versions newest-first.

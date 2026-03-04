@@ -34,7 +34,7 @@ export async function validateReportForCertification(
         include: {
           trees: {
             include: {
-              treePhotos: { select: { id: true } },
+              treePhotos: { select: { id: true, category: true } },
             },
           },
         },
@@ -163,6 +163,30 @@ export async function validateReportForCertification(
       label: "Tree photos",
       status: "pass",
       message: "All trees have at least one photo",
+    });
+  }
+
+  // 5b. Trees missing a "full tree" photo (categorized)
+  const treesWithPhotosButNoFullTree = trees.filter(
+    (t) =>
+      t.treePhotos.length > 0 &&
+      !t.treePhotos.some((p) => p.category === "full_tree")
+  );
+  if (treesWithPhotosButNoFullTree.length > 0) {
+    const nums = treesWithPhotosButNoFullTree.map((t) => `#${t.treeNumber}`).join(", ");
+    checks.push({
+      id: "full_tree_photo",
+      label: "Full tree photo",
+      status: "warning",
+      message: `${treesWithPhotosButNoFullTree.length} tree${treesWithPhotosButNoFullTree.length === 1 ? " is" : "s are"} missing a photo categorized as "Full tree" (${nums})`,
+      fixPath: `/properties/${property.id}`,
+    });
+  } else if (trees.length > 0 && treesWithoutPhotos.length === 0) {
+    checks.push({
+      id: "full_tree_photo",
+      label: "Full tree photo",
+      status: "pass",
+      message: "All trees have a full tree photo",
     });
   }
 
