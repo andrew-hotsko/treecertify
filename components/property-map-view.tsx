@@ -44,7 +44,17 @@ import {
 // Dynamically import PropertyMap with SSR disabled (Mapbox GL needs window/DOM)
 const PropertyMap = dynamic(
   () => import("@/components/property-map").then((mod) => mod.PropertyMap),
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-neutral-200 animate-pulse">
+        <div className="text-center text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-forest" />
+          <p className="text-sm">Loading map...</p>
+        </div>
+      </div>
+    ),
+  }
 );
 
 // ---------------------------------------------------------------------------
@@ -848,7 +858,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               <span className="hidden sm:inline">Share</span>
             </Button>
             {showSharePopover && shareToken && (
-              <div className="absolute right-0 top-full mt-2 z-50 w-80 bg-white rounded-lg border shadow-lg p-4 space-y-3">
+              <div className="absolute right-0 top-full mt-2 z-50 w-80 bg-neutral-50 rounded-lg border shadow-lg p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold">Share Link</h3>
                   <button
@@ -865,7 +875,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                   <input
                     readOnly
                     value={`${typeof window !== "undefined" ? window.location.origin : ""}/share/${shareToken}`}
-                    className="flex-1 text-xs bg-gray-50 border rounded px-2 py-1.5 text-gray-700 select-all"
+                    className="flex-1 text-xs bg-neutral-100 border rounded px-2 py-1.5 text-neutral-700 select-all"
                     onClick={(e) => (e.target as HTMLInputElement).select()}
                   />
                   <Button
@@ -875,7 +885,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                     className="shrink-0"
                   >
                     {shareCopied ? (
-                      <span className="text-emerald-600 text-xs">Copied!</span>
+                      <span className="text-forest text-xs">Copied!</span>
                     ) : (
                       <>
                         <Copy className="h-3.5 w-3.5 mr-1" />
@@ -1173,7 +1183,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           onClick={() => setAudioOpen((v) => !v)}
         >
           <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-            <Mic className="h-4 w-4 text-emerald-600" />
+            <Mic className="h-4 w-4 text-forest" />
             Site Audio Notes
             <span className="ml-auto flex items-center justify-center h-11 w-11 -mr-3">
               <ChevronDown
@@ -1213,8 +1223,8 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                 onClick={() => setActiveFilter(filter.key)}
                 className={`text-xs px-2.5 py-1 rounded-full whitespace-nowrap transition-colors ${
                   activeFilter === filter.key
-                    ? "bg-emerald-600 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    ? "bg-forest text-white"
+                    : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300"
                 }`}
               >
                 {filter.label} ({filter.count})
@@ -1227,13 +1237,13 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
       <div className="flex gap-0 rounded-xl border overflow-hidden relative">
         {/* Quick-entry placement prompt */}
         {showPlacementPrompt && !selectedTreeId && !pendingPin && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-emerald-600 text-white px-4 py-2 rounded-full shadow-lg text-sm font-medium flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-forest text-white px-4 py-2 rounded-full shadow-lg text-sm font-medium flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
             <span>&#10003; Tree #{lastSavedNumber} saved</span>
-            <span className="text-emerald-200">&middot;</span>
+            <span className="text-forest-muted">&middot;</span>
             <span>Tap map to place Tree #{lastSavedNumber + 1}</span>
             <button
               onClick={() => setShowPlacementPrompt(false)}
-              className="ml-1 text-emerald-200 hover:text-white"
+              className="ml-1 text-forest-muted hover:text-white"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -1242,7 +1252,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
 
         {/* Tree List Panel — desktop only */}
         {showTreeList && trees.length > 0 && (
-          <div className="hidden md:flex flex-col w-60 border-r bg-white overflow-hidden flex-shrink-0">
+          <div className="hidden md:flex flex-col w-60 border-r bg-neutral-50 overflow-hidden flex-shrink-0">
             <div className="p-3 border-b flex items-center justify-between">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Trees ({trees.length})
@@ -1264,9 +1274,9 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                     <button
                       key={tree.id}
                       onClick={() => handleSelectTreeFromList(tree.id)}
-                      className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 transition-colors flex items-center gap-2 ${
+                      className={`w-full text-left px-3 py-2 text-xs hover:bg-neutral-100 transition-colors flex items-center gap-2 ${
                         selectedTreeId === tree.id
-                          ? "bg-emerald-50 border-l-2 border-emerald-600"
+                          ? "bg-forest/5 border-l-2 border-forest"
                           : ""
                       } ${isDimmed ? "opacity-40" : ""}`}
                     >
@@ -1294,7 +1304,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                         </div>
                       </div>
                       {tree.isProtected && (
-                        <ShieldCheck className="h-3 w-3 text-emerald-600 flex-shrink-0" />
+                        <ShieldCheck className="h-3 w-3 text-forest flex-shrink-0" />
                       )}
                     </button>
                   );
@@ -1309,7 +1319,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           {!showTreeList && trees.length > 0 && (
             <button
               onClick={() => setShowTreeList(true)}
-              className="hidden md:flex absolute top-4 left-4 z-10 bg-white/95 backdrop-blur-sm rounded-lg shadow-md border px-2 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground items-center gap-1"
+              className="hidden md:flex absolute top-4 left-4 z-10 bg-neutral-50/95 backdrop-blur-sm rounded-lg shadow-md border px-2 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground items-center gap-1"
             >
               <PanelLeftOpen className="h-3.5 w-3.5" />
               Trees
@@ -1318,17 +1328,17 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
 
           {/* Tree count progress badge */}
           {trees.length > 0 && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm rounded-full shadow-md border px-3 py-1.5 text-xs font-medium flex items-center gap-2">
-              <TreePine className="h-3.5 w-3.5 text-emerald-600" />
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-neutral-50/95 backdrop-blur-sm rounded-full shadow-md border px-3 py-1.5 text-xs font-medium flex items-center gap-2">
+              <TreePine className="h-3.5 w-3.5 text-forest" />
               <span>
                 {trees.length} tree{trees.length !== 1 ? "s" : ""}
               </span>
               <span className="text-muted-foreground">&middot;</span>
-              <span className="text-emerald-600">{assessedCount} assessed</span>
+              <span className="text-forest">{assessedCount} assessed</span>
               {protectedCount > 0 && (
                 <>
                   <span className="text-muted-foreground">&middot;</span>
-                  <span className="text-emerald-600">
+                  <span className="text-forest">
                     {protectedCount} protected
                   </span>
                 </>
@@ -1339,7 +1349,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           {/* Map Legend */}
           <div className="absolute bottom-4 left-4 z-10">
             {showLegend ? (
-              <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-md border p-2.5 text-[10px]">
+              <div className="bg-neutral-50/95 backdrop-blur-sm rounded-lg shadow-md border p-2.5 text-[10px]">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="font-semibold text-muted-foreground uppercase tracking-wider">
                     Legend
@@ -1397,7 +1407,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             ) : (
               <button
                 onClick={() => setShowLegend(true)}
-                className="bg-white/95 backdrop-blur-sm rounded-lg shadow-md border px-2.5 py-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground"
+                className="bg-neutral-50/95 backdrop-blur-sm rounded-lg shadow-md border px-2.5 py-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground"
               >
                 Legend
               </button>
