@@ -97,11 +97,11 @@ type FilterStatus = "all" | "inProgress" | "draft" | "certified";
 function getWorkflowStatus(property: DashboardProperty) {
   const latestReport = property.reports[0];
   if (property.trees.length === 0)
-    return { label: "No Trees", color: "bg-gray-100 text-gray-600" };
+    return { label: "No Trees", color: "bg-neutral-200 text-neutral-600" };
   if (!latestReport)
     return { label: "Assessing", color: "bg-amber-100 text-amber-700" };
   if (latestReport.status === "certified")
-    return { label: "Certified", color: "bg-emerald-100 text-emerald-700" };
+    return { label: "Certified", color: "bg-forest/10 text-forest" };
   return { label: "Draft", color: "bg-blue-100 text-blue-700" };
 }
 
@@ -189,17 +189,17 @@ function WelcomeCard({ state }: { state: Exclude<WelcomeState, "normal"> }) {
   const Icon = config.icon;
 
   return (
-    <div className="rounded-xl border-2 border-dashed border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-white p-8 text-center">
-      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
-        <Icon className="h-7 w-7 text-emerald-600" />
+    <div className="rounded-xl border-2 border-dashed border-forest/20 bg-gradient-to-br from-forest/5 to-neutral-50 p-8 text-center">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-forest/10">
+        <Icon className="h-7 w-7 text-forest" />
       </div>
-      <h3 className="text-lg font-semibold text-gray-900">{config.title}</h3>
-      <p className="mt-1 text-sm text-gray-500 max-w-sm mx-auto">
+      <h3 className="text-lg font-semibold text-neutral-900">{config.title}</h3>
+      <p className="mt-1 text-sm text-neutral-500 max-w-sm mx-auto">
         {config.description}
       </p>
       <Button
         asChild
-        className="mt-5 bg-emerald-600 hover:bg-emerald-700"
+        className="mt-5 bg-forest hover:bg-forest-light"
       >
         <Link href={config.href}>
           <Plus className="mr-2 h-4 w-4" />
@@ -259,16 +259,16 @@ export function DashboardContent({
       title: "Certified",
       value: counts.certified,
       icon: ShieldCheck,
-      accent: "text-emerald-600",
-      bg: "bg-emerald-50",
+      accent: "text-forest",
+      bg: "bg-forest/5",
       filterKey: "certified" as FilterStatus,
     },
     {
       title: "Trees Assessed",
       value: totalTrees,
       icon: TreePine,
-      accent: "text-emerald-600",
-      bg: "bg-emerald-50",
+      accent: "text-forest",
+      bg: "bg-forest/5",
       filterKey: null,
     },
   ];
@@ -295,11 +295,11 @@ export function DashboardContent({
               key={stat.title}
               className={cn(
                 "transition-all",
-                isClickable && "hover:shadow-md hover:border-gray-300"
+                isClickable && "hover:shadow-md hover:border-neutral-300"
               )}
             >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">
+                <CardTitle className="text-sm font-medium text-neutral-500">
                   {stat.title}
                 </CardTitle>
                 <div className={`rounded-md p-2 ${stat.bg}`}>
@@ -307,17 +307,17 @@ export function DashboardContent({
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-gray-900">
+                <div className="text-3xl font-bold font-mono text-neutral-900">
                   {stat.value.toLocaleString()}
                 </div>
                 {stat.title === "Trees Assessed" && treesThisWeek != null && (
                   <div className="flex items-center gap-1 mt-1">
                     {treesThisWeek > (treesLastWeek ?? 0) ? (
-                      <TrendingUp className="h-3 w-3 text-emerald-500" />
+                      <TrendingUp className="h-3 w-3 text-forest-light" />
                     ) : treesThisWeek < (treesLastWeek ?? 0) ? (
                       <TrendingDown className="h-3 w-3 text-amber-500" />
                     ) : (
-                      <Minus className="h-3 w-3 text-gray-400" />
+                      <Minus className="h-3 w-3 text-neutral-400" />
                     )}
                     <span className="text-xs text-muted-foreground">
                       {treesThisWeek} this week
@@ -343,7 +343,7 @@ export function DashboardContent({
       {nextActions && (nextActions.needTreeAssessment + nextActions.needReport + nextActions.readyToCertify > 0) && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg font-semibold text-gray-900">
+            <CardTitle className="text-lg font-semibold font-display text-neutral-900">
               Next Action Needed
             </CardTitle>
           </CardHeader>
@@ -356,7 +356,7 @@ export function DashboardContent({
                 >
                   <div className="flex items-center gap-3">
                     <ClipboardList className="h-4 w-4 text-amber-600" />
-                    <span className="text-sm text-gray-900">
+                    <span className="text-sm text-neutral-900">
                       {nextActions.needTreeAssessment} propert{nextActions.needTreeAssessment !== 1 ? "ies" : "y"} need tree assessment
                     </span>
                   </div>
@@ -370,7 +370,7 @@ export function DashboardContent({
                 >
                   <div className="flex items-center gap-3">
                     <FileText className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm text-gray-900">
+                    <span className="text-sm text-neutral-900">
                       {nextActions.needReport} propert{nextActions.needReport !== 1 ? "ies" : "y"} need a report
                     </span>
                   </div>
@@ -380,15 +380,15 @@ export function DashboardContent({
               {nextActions.readyToCertify > 0 && (
                 <Link
                   href="/properties?status=draft"
-                  className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 transition-colors"
+                  className="flex items-center justify-between p-3 rounded-lg bg-forest/5 hover:bg-forest/10 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <Award className="h-4 w-4 text-emerald-600" />
-                    <span className="text-sm text-gray-900">
+                    <Award className="h-4 w-4 text-forest" />
+                    <span className="text-sm text-neutral-900">
                       {nextActions.readyToCertify} report{nextActions.readyToCertify !== 1 ? "s" : ""} ready to certify
                     </span>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-emerald-600" />
+                  <ArrowRight className="h-4 w-4 text-forest" />
                 </Link>
               )}
             </div>
@@ -400,38 +400,38 @@ export function DashboardContent({
       {permitStats && (permitStats.pendingSubmission + permitStats.submittedOrReview + permitStats.approved + permitStats.needingRevision > 0) && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg font-semibold text-gray-900">
+            <CardTitle className="text-lg font-semibold font-display text-neutral-900">
               Permit Pipeline
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
-                <Send className="h-4 w-4 text-gray-500" />
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-neutral-100">
+                <Send className="h-4 w-4 text-neutral-500" />
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{permitStats.pendingSubmission}</p>
-                  <p className="text-xs text-gray-500">Pending Submission</p>
+                  <p className="text-2xl font-bold font-mono text-neutral-900">{permitStats.pendingSubmission}</p>
+                  <p className="text-xs text-neutral-500">Pending Submission</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50">
                 <Clock className="h-4 w-4 text-amber-600" />
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{permitStats.submittedOrReview}</p>
-                  <p className="text-xs text-gray-500">Submitted / Under Review</p>
+                  <p className="text-2xl font-bold font-mono text-neutral-900">{permitStats.submittedOrReview}</p>
+                  <p className="text-xs text-neutral-500">Submitted / Under Review</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50">
-                <ShieldCheck className="h-4 w-4 text-emerald-600" />
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-forest/5">
+                <ShieldCheck className="h-4 w-4 text-forest" />
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{permitStats.approved}</p>
-                  <p className="text-xs text-gray-500">Approved</p>
+                  <p className="text-2xl font-bold font-mono text-neutral-900">{permitStats.approved}</p>
+                  <p className="text-xs text-neutral-500">Approved</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-3 rounded-lg bg-red-50">
                 <AlertTriangle className="h-4 w-4 text-red-500" />
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{permitStats.needingRevision}</p>
-                  <p className="text-xs text-gray-500">Needing Revision</p>
+                  <p className="text-2xl font-bold font-mono text-neutral-900">{permitStats.needingRevision}</p>
+                  <p className="text-xs text-neutral-500">Needing Revision</p>
                 </div>
               </div>
             </div>
@@ -442,13 +442,13 @@ export function DashboardContent({
       {/* Properties Card */}
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-lg font-semibold text-gray-900">
+          <CardTitle className="text-lg font-semibold font-display text-neutral-900">
             Properties
           </CardTitle>
           <Button variant="ghost" size="sm" asChild>
             <Link
               href="/properties"
-              className="text-emerald-600 hover:text-emerald-700"
+              className="text-forest hover:text-forest"
             >
               View all
               <ArrowRight className="ml-1 h-4 w-4" />
@@ -466,8 +466,8 @@ export function DashboardContent({
                 className={cn(
                   "px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
                   filter === f.key
-                    ? "bg-emerald-600 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    ? "bg-forest text-white"
+                    : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300"
                 )}
               >
                 {f.label}
@@ -479,22 +479,22 @@ export function DashboardContent({
         <CardContent>
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="rounded-full bg-gray-50 p-3 mb-4">
-                <MapPin className="h-6 w-6 text-gray-400" />
+              <div className="rounded-full bg-neutral-100 p-3 mb-4">
+                <MapPin className="h-6 w-6 text-neutral-400" />
               </div>
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-medium text-neutral-900">
                 {filter === "all" ? "No properties yet" : "No properties match this filter"}
               </p>
               {filter === "all" && (
                 <>
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm text-neutral-500">
                     Start by adding your first property and pinning trees on the
                     map.
                   </p>
                   <Button
                     asChild
                     size="sm"
-                    className="mt-4 bg-emerald-600 hover:bg-emerald-700"
+                    className="mt-4 bg-forest hover:bg-forest-light"
                   >
                     <Link href="/properties/new">
                       <Plus className="mr-2 h-4 w-4" />
@@ -505,7 +505,7 @@ export function DashboardContent({
               )}
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-neutral-200">
               {filtered.map((property) => {
                 const treeCount = property.trees.length;
                 const protectedCount = property.trees.filter(
@@ -518,15 +518,15 @@ export function DashboardContent({
                   <Link
                     key={property.id}
                     href={`/properties/${property.id}`}
-                    className="flex items-center justify-between gap-4 py-3.5 px-1 rounded-lg transition-colors hover:bg-gray-50 -mx-1 first:pt-0"
+                    className="flex items-center justify-between gap-4 py-3.5 px-1 rounded-lg transition-colors hover:bg-neutral-100 -mx-1 first:pt-0"
                   >
                     <div className="flex items-center gap-4 min-w-0">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50">
-                        <MapPin className="h-4 w-4 text-emerald-600" />
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-forest/5">
+                        <MapPin className="h-4 w-4 text-forest" />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-medium text-gray-900">
+                          <p className="truncate text-sm font-medium text-neutral-900">
                             {property.address}
                           </p>
                           {property.address === "123 Sample Street" && (
@@ -537,11 +537,11 @@ export function DashboardContent({
                               Sample
                             </Badge>
                           )}
-                          <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 hidden sm:inline">
+                          <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-neutral-200 text-neutral-600 hidden sm:inline">
                             {formatReportType(property.reportType)}
                           </span>
                         </div>
-                        <p className="truncate text-xs text-gray-500">
+                        <p className="truncate text-xs text-neutral-500">
                           {property.city}
                           {property.county ? `, ${property.county} County` : ""}
                         </p>
@@ -559,17 +559,17 @@ export function DashboardContent({
                           {dueIndicator.label}
                         </span>
                       )}
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <div className="flex items-center gap-1.5 text-xs text-neutral-500">
                         <TreePine className="h-3.5 w-3.5" />
                         <span className="font-mono">{treeCount}</span>
                         {protectedCount > 0 && (
-                          <span className="flex items-center gap-0.5 text-emerald-600">
+                          <span className="flex items-center gap-0.5 text-forest">
                             <ShieldCheck className="h-3 w-3" />
                             {protectedCount}
                           </span>
                         )}
                       </div>
-                      <span className="hidden md:inline-block text-xs text-gray-400">
+                      <span className="hidden md:inline-block text-xs text-neutral-400">
                         {format(new Date(property.updatedAt), "MMM d, yyyy")}
                       </span>
                       <span
@@ -593,7 +593,7 @@ export function DashboardContent({
       {activityFeed && activityFeed.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg font-semibold text-gray-900">
+            <CardTitle className="text-lg font-semibold font-display text-neutral-900">
               Recent Activity
             </CardTitle>
           </CardHeader>
@@ -603,18 +603,18 @@ export function DashboardContent({
                 <Link
                   key={item.id}
                   href={`/properties/${item.id}`}
-                  className="flex items-center gap-3 text-sm hover:bg-gray-50 rounded-lg p-2 -mx-2 transition-colors"
+                  className="flex items-center gap-3 text-sm hover:bg-neutral-100 rounded-lg p-2 -mx-2 transition-colors"
                 >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-50">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-forest/5">
                     {item.certifiedAt ? (
-                      <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                      <ShieldCheck className="h-3.5 w-3.5 text-forest" />
                     ) : (
-                      <Clock className="h-3.5 w-3.5 text-gray-400" />
+                      <Clock className="h-3.5 w-3.5 text-neutral-400" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="font-medium text-gray-900 truncate">{item.address}</p>
+                      <p className="font-medium text-neutral-900 truncate">{item.address}</p>
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 hidden sm:inline-flex">
                         {item.city}
                       </Badge>
@@ -642,7 +642,7 @@ export function DashboardContent({
             Ready to start?{" "}
             <Link
               href="/properties/new"
-              className="text-emerald-600 font-medium hover:underline"
+              className="text-forest font-medium hover:underline"
             >
               Create your first property &rarr;
             </Link>

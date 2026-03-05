@@ -584,7 +584,7 @@ export function TreeSidePanel({
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="flex items-center gap-2">
           <span className={`h-2.5 w-2.5 rounded-full ${statusDot}`} />
-          <h2 className="text-lg font-semibold">Tree #{treeNumber}</h2>
+          <h2 className="text-lg font-semibold">Tree #<span className="font-mono">{treeNumber}</span></h2>
           {quickAddMode && isNewTree && totalTrees != null && (
             <span className="text-xs text-muted-foreground">
               of {totalTrees + 1}
@@ -946,8 +946,8 @@ export function TreeSidePanel({
             <div
               className={`rounded-lg border-2 p-3 text-sm ${
                 protectionResult.isProtected
-                  ? "border-forest-light bg-forest/5 dark:bg-emerald-950/30"
-                  : "border-neutral-300 bg-neutral-100 dark:bg-gray-900/30"
+                  ? "border-forest-light bg-forest/5"
+                  : "border-neutral-300 bg-neutral-100"
               }`}
             >
               <div className="flex items-center gap-2">
@@ -959,8 +959,8 @@ export function TreeSidePanel({
                 <span
                   className={`font-semibold ${
                     protectionResult.isProtected
-                      ? "text-forest dark:text-emerald-400"
-                      : "text-neutral-600 dark:text-gray-400"
+                      ? "text-forest"
+                      : "text-neutral-600"
                   }`}
                 >
                   {protectionResult.isProtected ? "Protected" : "Not Protected"}
@@ -974,8 +974,8 @@ export function TreeSidePanel({
               <p
                 className={`mt-1.5 text-xs ${
                   protectionResult.isProtected
-                    ? "text-forest dark:text-emerald-300"
-                    : "text-neutral-500 dark:text-gray-400"
+                    ? "text-forest"
+                    : "text-neutral-500"
                 }`}
               >
                 {protectionResult.reason ||

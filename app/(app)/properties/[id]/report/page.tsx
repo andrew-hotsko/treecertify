@@ -236,6 +236,7 @@ export default function PropertyReportPage() {
   const [saving, setSaving] = useState(false);
   const [certifying, setCertifying] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -274,6 +275,8 @@ export default function PropertyReportPage() {
   const autoSaveRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const savedContentRef = useRef("");
   const lastSavedRef = useRef<Date | null>(null);
+  const generationStartRef = useRef<number>(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   // Derived state
   const isCertified = report?.status === "certified";
@@ -536,6 +539,19 @@ export default function PropertyReportPage() {
   // -------------------------------------------------------------------------
   // Generate report
   // -------------------------------------------------------------------------
+
+  // Elapsed time counter for AI generation
+  useEffect(() => {
+    if (!generating) {
+      setElapsedSeconds(0);
+      return;
+    }
+    generationStartRef.current = Date.now();
+    const interval = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - generationStartRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [generating]);
 
   const generateReport = async () => {
     setGenerating(true);
@@ -840,7 +856,7 @@ export default function PropertyReportPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-forest" />
       </div>
     );
   }
@@ -1016,7 +1032,12 @@ export default function PropertyReportPage() {
                             ? `${streamingText.split(/\s+/).length} words generated`
                             : "Connecting to AI..."}
                         </span>
-                        <span>This may take 30–60 seconds</span>
+                        <span>
+                          {elapsedSeconds > 0 && `${elapsedSeconds}s elapsed · `}
+                          {elapsedSeconds > 45
+                            ? "Taking longer than usual — hang tight"
+                            : "This may take 30–60 seconds"}
+                        </span>
                       </div>
                     </CardContent>
                   </Card>
@@ -1052,7 +1073,7 @@ export default function PropertyReportPage() {
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold">Report Editor</h1>
+                <h1 className="text-lg font-bold font-display">Report Editor</h1>
                 <StatusBadge status={report.status} />
                 <Badge variant="outline" className="text-xs">
                   {getReportTypeConfig(report.reportType)?.label ||
@@ -1077,7 +1098,7 @@ export default function PropertyReportPage() {
                   </span>
                 )}
                 {reportCost != null && reportCost > 0 && (
-                  <span className="flex items-center gap-1 text-gray-400" title="Estimated API cost for this report">
+                  <span className="flex items-center gap-1 text-neutral-400" title="Estimated API cost for this report">
                     <Sparkles className="h-3 w-3" />
                     API: ${reportCost.toFixed(3)}
                   </span>
@@ -1230,8 +1251,8 @@ export default function PropertyReportPage() {
                       </>
                     ) : (
                       <>
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                        <span className="text-emerald-600">Ready</span>
+                        <CheckCircle2 className="h-3.5 w-3.5 text-forest-light" />
+                        <span className="text-forest">Ready</span>
                       </>
                     )}
                   </span>
@@ -1240,7 +1261,7 @@ export default function PropertyReportPage() {
                 {/* Certify */}
                 <Button
                   size="sm"
-                  className="bg-emerald-700 hover:bg-emerald-600"
+                  className="bg-forest hover:bg-forest-light"
                   onClick={() => {
                     setCertifyStep(1);
                     setReviewChecked(false);
@@ -1302,7 +1323,9 @@ export default function PropertyReportPage() {
             <Button
               variant="outline"
               size="sm"
+              disabled={pdfLoading}
               onClick={async () => {
+                setPdfLoading(true);
                 try {
                   const res = await fetch(`/api/reports/${report.id}/pdf`);
                   if (!res.ok) throw new Error(`PDF generation failed (${res.status})`);
@@ -1322,11 +1345,17 @@ export default function PropertyReportPage() {
                     description: "Could not generate PDF. Please try again.",
                     variant: "destructive",
                   });
+                } finally {
+                  setPdfLoading(false);
                 }
               }}
             >
-              <Download className="h-3.5 w-3.5 mr-1.5" />
-              PDF
+              {pdfLoading ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              {pdfLoading ? "Generating..." : "PDF"}
             </Button>
             <Button
               variant="outline"
@@ -1568,7 +1597,7 @@ export default function PropertyReportPage() {
             <ScrollArea className="h-full">
               <div className="max-w-4xl mx-auto py-6 px-4">
                 {isCertified && (
-                  <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 mb-4">
+                  <div className="flex items-center gap-2 rounded-lg border border-forest/20 bg-forest/5 p-3 text-sm text-emerald-800 mb-4">
                     <Lock className="h-4 w-4 shrink-0" />
                     This report has been certified and is locked. Use
                     &ldquo;Unlock &amp; Revise&rdquo; to make changes.
@@ -1614,7 +1643,7 @@ export default function PropertyReportPage() {
               {certifySuccess ? (
                 <div className="text-center py-8 space-y-4">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 mb-2">
-                    <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+                    <CheckCircle2 className="h-8 w-8 text-forest" />
                   </div>
                   <h3 className="text-xl font-bold text-emerald-800">Report Certified</h3>
                   <p className="text-sm text-muted-foreground">
@@ -1626,7 +1655,7 @@ export default function PropertyReportPage() {
                   {/* Header with step indicator */}
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold flex items-center gap-2">
-                      <ShieldCheck className="h-5 w-5 text-emerald-700" />
+                      <ShieldCheck className="h-5 w-5 text-forest" />
                       Certify Report
                     </h3>
                     <Button
@@ -1645,8 +1674,8 @@ export default function PropertyReportPage() {
                         <div
                           className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
                             certifyStep >= step
-                              ? "bg-emerald-600 text-white"
-                              : "bg-gray-200 text-gray-500"
+                              ? "bg-forest text-white"
+                              : "bg-neutral-200 text-neutral-500"
                           }`}
                         >
                           {step}
@@ -1654,7 +1683,7 @@ export default function PropertyReportPage() {
                         <span className={`text-xs font-medium ${certifyStep >= step ? "text-foreground" : "text-muted-foreground"}`}>
                           {step === 1 ? "Review" : step === 2 ? "Attest" : "Sign"}
                         </span>
-                        {step < 3 && <div className={`flex-1 h-0.5 ${certifyStep > step ? "bg-emerald-600" : "bg-gray-200"}`} />}
+                        {step < 3 && <div className={`flex-1 h-0.5 ${certifyStep > step ? "bg-forest" : "bg-neutral-200"}`} />}
                       </div>
                     ))}
                   </div>
@@ -1679,7 +1708,7 @@ export default function PropertyReportPage() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Arborist</span>
-                          <span className="font-medium">{arborist?.name} (ISA #{arborist?.isaCertificationNum})</span>
+                          <span className="font-medium">{arborist?.name} (ISA #<span className="font-mono">{arborist?.isaCertificationNum}</span>)</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Date</span>
@@ -1701,7 +1730,7 @@ export default function PropertyReportPage() {
                               Quality Checklist
                             </span>
                             {validationResult.allPassed && (
-                              <Badge className="ml-auto bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-[10px]">All passed</Badge>
+                              <Badge className="ml-auto bg-emerald-100 text-forest hover:bg-emerald-100 text-[10px]">All passed</Badge>
                             )}
                           </div>
                           {/* Failures first */}
@@ -1743,7 +1772,7 @@ export default function PropertyReportPage() {
                             .filter((c) => c.status === "pass")
                             .map((check) => (
                               <div key={check.id} className="flex items-start gap-2 text-sm p-2 rounded-md">
-                                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                                <CheckCircle2 className="h-4 w-4 text-forest-light shrink-0 mt-0.5" />
                                 <div className="flex-1 min-w-0">
                                   <span className="text-muted-foreground">{check.label}</span>
                                   <p className="text-xs text-muted-foreground/70">{check.message}</p>
@@ -1765,7 +1794,7 @@ export default function PropertyReportPage() {
                                 type="checkbox"
                                 checked={warningsAcknowledged}
                                 onChange={(e) => setWarningsAcknowledged(e.target.checked)}
-                                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                                className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-amber-600 focus:ring-amber-500"
                               />
                               <span className="text-amber-800">
                                 I have reviewed these items and confirm this report is ready for certification
@@ -1780,7 +1809,7 @@ export default function PropertyReportPage() {
                           type="checkbox"
                           checked={reviewChecked}
                           onChange={(e) => setReviewChecked(e.target.checked)}
-                          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-forest focus:ring-forest-light"
                         />
                         <span>I have reviewed the report content and all tree data is accurate.</span>
                       </label>
@@ -1793,7 +1822,7 @@ export default function PropertyReportPage() {
                             (validationResult?.hasFailures ?? false) ||
                             (validationResult?.hasWarnings && !warningsAcknowledged)
                           }
-                          className="bg-emerald-700 hover:bg-emerald-600"
+                          className="bg-forest hover:bg-forest-light"
                         >
                           Next: Attestation
                         </Button>
@@ -1804,9 +1833,9 @@ export default function PropertyReportPage() {
                   {/* Step 2: Attestation */}
                   {certifyStep === 2 && (
                     <div className="space-y-3">
-                      <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-sm leading-relaxed">
-                        <p className="font-semibold text-emerald-900 mb-2">Professional Certification Statement</p>
-                        <p className="text-emerald-800">
+                      <div className="p-4 rounded-lg bg-forest/5 border border-forest/20 text-sm leading-relaxed">
+                        <p className="font-semibold text-forest mb-2">Professional Certification Statement</p>
+                        <p className="text-forest/90">
                           I certify that I have personally inspected the tree(s) described in this report and
                           that the information contained herein is accurate to the best of my professional
                           knowledge and belief. I am an ISA Certified Arborist and the opinions expressed are
@@ -1820,7 +1849,7 @@ export default function PropertyReportPage() {
                           type="checkbox"
                           checked={certifyAgreed}
                           onChange={(e) => setCertifyAgreed(e.target.checked)}
-                          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-forest focus:ring-forest-light"
                         />
                         <span>I agree to the above certification statement and confirm all information is accurate.</span>
                       </label>
@@ -1832,7 +1861,7 @@ export default function PropertyReportPage() {
                         <Button
                           onClick={() => setCertifyStep(3)}
                           disabled={!certifyAgreed}
-                          className="bg-emerald-700 hover:bg-emerald-600"
+                          className="bg-forest hover:bg-forest-light"
                         >
                           Next: Sign
                         </Button>
@@ -1876,8 +1905,8 @@ export default function PropertyReportPage() {
 
                       {/* Signature preview */}
                       {signatureText.trim() && (
-                        <div className="p-4 rounded-lg border bg-white text-center">
-                          <p className="text-2xl italic text-gray-800" style={{ fontFamily: "Georgia, serif" }}>
+                        <div className="p-4 rounded-lg border bg-neutral-50 text-center">
+                          <p className="text-2xl italic text-neutral-800" style={{ fontFamily: "Georgia, serif" }}>
                             {signatureText}
                           </p>
                           <p className="text-xs text-muted-foreground mt-2">
@@ -1898,7 +1927,7 @@ export default function PropertyReportPage() {
                             certifying ||
                             (arborist?.signatureName ? !signatureNameMatch : false)
                           }
-                          className="bg-emerald-700 hover:bg-emerald-600"
+                          className="bg-forest hover:bg-forest-light"
                         >
                           {certifying ? (
                             <>
@@ -1924,9 +1953,9 @@ export default function PropertyReportPage() {
 
       {/* ---- Certified details bar ---- */}
       {isCertified && report && (
-        <div className="flex-none border-t bg-emerald-50/50 dark:bg-emerald-950/10 px-6 py-3">
+        <div className="flex-none border-t bg-forest/5 dark:bg-emerald-950/10 px-6 py-3">
           <div className="flex items-center gap-4 text-sm">
-            <CheckCircle2 className="h-5 w-5 text-emerald-700" />
+            <CheckCircle2 className="h-5 w-5 text-forest" />
             <span className="font-medium text-emerald-800">
               Certified
             </span>

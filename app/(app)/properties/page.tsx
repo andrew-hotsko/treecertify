@@ -34,7 +34,7 @@ export default async function PropertiesPage({
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold font-display text-foreground">
             Properties
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -42,7 +42,7 @@ export default async function PropertiesPage({
           </p>
         </div>
         <Link href="/properties/new" className="self-start sm:self-auto">
-          <Button className="bg-emerald-700 hover:bg-emerald-600">
+          <Button className="bg-forest hover:bg-forest-light">
             <Plus className="h-4 w-4 mr-2" />
             New Property
           </Button>

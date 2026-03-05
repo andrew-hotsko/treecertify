@@ -37,7 +37,7 @@ export default async function OrdinancesPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground">
+        <h1 className="text-2xl font-bold font-display text-foreground">
           Municipal Ordinance Database
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -63,11 +63,11 @@ export default async function OrdinancesPage() {
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                   <div>
                     <CardTitle className="text-xl flex items-center gap-2">
-                      <BookOpen className="h-5 w-5 text-emerald-600 shrink-0" />
+                      <BookOpen className="h-5 w-5 text-forest shrink-0" />
                       {ord.cityName}
                     </CardTitle>
                     {ord.codeReference && (
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <p className="text-sm text-muted-foreground font-mono mt-1">
                         {ord.codeReference}
                       </p>
                     )}
@@ -76,7 +76,7 @@ export default async function OrdinancesPage() {
                     {ord.certifierRequirement && (
                       <Badge
                         variant="outline"
-                        className="border-emerald-200 text-emerald-700 bg-emerald-50"
+                        className="border-forest/20 text-forest bg-forest/5"
                       >
                         {ord.certifierRequirement}
                       </Badge>
@@ -86,7 +86,7 @@ export default async function OrdinancesPage() {
                         href={ord.ordinanceUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-500"
+                        className="inline-flex items-center gap-1 text-sm text-forest hover:text-forest-light"
                       >
                         View Code
                         <ExternalLink className="h-3 w-3" />
@@ -99,14 +99,14 @@ export default async function OrdinancesPage() {
                 {/* Default thresholds */}
                 <div className="flex gap-6">
                   {ord.defaultDbhThresholdNative && (
-                    <div className="bg-emerald-50 rounded-lg px-4 py-3">
-                      <p className="text-xs text-emerald-600 font-medium uppercase tracking-wide">
+                    <div className="bg-forest/5 rounded-lg px-4 py-3">
+                      <p className="text-xs text-forest font-medium uppercase tracking-wide">
                         Native Threshold
                       </p>
-                      <p className="text-2xl font-mono font-bold text-emerald-800">
+                      <p className="text-2xl font-mono font-bold text-forest">
                         {ord.defaultDbhThresholdNative}&quot;
                       </p>
-                      <p className="text-xs text-emerald-600">DBH</p>
+                      <p className="text-xs text-forest">DBH</p>
                     </div>
                   )}
                   {ord.defaultDbhThresholdNonnative && (
@@ -125,7 +125,7 @@ export default async function OrdinancesPage() {
                 {/* Protected Species Table */}
                 <div>
                   <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
-                    <Shield className="h-4 w-4 text-emerald-600" />
+                    <Shield className="h-4 w-4 text-forest" />
                     Protected Species
                   </h4>
                   <div className="overflow-x-auto -mx-1">
@@ -170,7 +170,7 @@ export default async function OrdinancesPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
                     <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
-                      <Scale className="h-4 w-4 text-emerald-600" />
+                      <Scale className="h-4 w-4 text-forest" />
                       Mitigation Requirements
                     </h4>
                     <dl className="space-y-2 text-sm">

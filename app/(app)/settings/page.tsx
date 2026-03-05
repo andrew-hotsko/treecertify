@@ -305,14 +305,14 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-forest" />
       </div>
     );
   }
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-1">Settings</h1>
+      <h1 className="text-2xl font-bold font-display mb-1">Settings</h1>
       <p className="text-muted-foreground mb-6">
         Manage your arborist profile and company branding
       </p>
@@ -321,7 +321,7 @@ export default function SettingsPage() {
         <div
           className={`rounded-lg border p-3 text-sm mb-6 ${
             message.type === "success"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+              ? "bg-forest/5 border-forest/20 text-forest"
               : "bg-red-50 border-red-200 text-red-700"
           }`}
         >
@@ -333,14 +333,14 @@ export default function SettingsPage() {
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Camera className="h-5 w-5 text-emerald-600" />
+            <Camera className="h-5 w-5 text-forest" />
             Profile Photo
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-6">
             <div className="relative shrink-0">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-dashed border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 overflow-hidden">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-dashed border-neutral-200 bg-neutral-50 overflow-hidden">
                 {profile?.profilePhotoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -349,7 +349,7 @@ export default function SettingsPage() {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <User className="h-8 w-8 text-zinc-300 dark:text-zinc-600" />
+                  <User className="h-8 w-8 text-neutral-300" />
                 )}
               </div>
               {profile?.profilePhotoUrl && (
@@ -399,13 +399,13 @@ export default function SettingsPage() {
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <ImageIcon className="h-5 w-5 text-emerald-600" />
+            <ImageIcon className="h-5 w-5 text-forest" />
             Company Logo
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-6">
-            <div className="flex h-24 w-24 items-center justify-center rounded-lg border-2 border-dashed border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 overflow-hidden shrink-0">
+            <div className="flex h-24 w-24 items-center justify-center rounded-lg border-2 border-dashed border-neutral-200 bg-neutral-50 overflow-hidden shrink-0">
               {profile?.companyLogoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -414,7 +414,7 @@ export default function SettingsPage() {
                   className="h-full w-full object-contain p-1"
                 />
               ) : (
-                <Building2 className="h-8 w-8 text-zinc-300 dark:text-zinc-600" />
+                <Building2 className="h-8 w-8 text-neutral-300" />
               )}
             </div>
             <div className="space-y-2">
@@ -467,7 +467,7 @@ export default function SettingsPage() {
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <User className="h-5 w-5 text-emerald-600" />
+            <User className="h-5 w-5 text-forest" />
             Arborist Information
           </CardTitle>
         </CardHeader>
@@ -529,7 +529,7 @@ export default function SettingsPage() {
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, traqCertified: e.target.checked }))
               }
-              className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+              className="h-4 w-4 rounded border-neutral-300 text-forest focus:ring-forest-light"
             />
             <Label htmlFor="traq-certified" className="cursor-pointer">
               TRAQ Qualified (ISA Tree Risk Assessment Qualification)
@@ -554,7 +554,7 @@ export default function SettingsPage() {
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Globe className="h-5 w-5 text-emerald-600" />
+            <Globe className="h-5 w-5 text-forest" />
             Company Details
           </CardTitle>
         </CardHeader>
@@ -613,7 +613,7 @@ export default function SettingsPage() {
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <FileText className="h-5 w-5 text-emerald-600" />
+            <FileText className="h-5 w-5 text-forest" />
             Report Defaults
           </CardTitle>
         </CardHeader>
@@ -641,12 +641,12 @@ export default function SettingsPage() {
                       [key]: !prev[key],
                     }))
                   }
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${
-                    reportDefaults[key] ? "bg-emerald-500" : "bg-gray-200"
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-light focus-visible:ring-offset-2 ${
+                    reportDefaults[key] ? "bg-forest/50" : "bg-neutral-300"
                   }`}
                 >
                   <span
-                    className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform duration-200 ease-in-out ${
+                    className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-neutral-50 shadow-lg ring-0 transition-transform duration-200 ease-in-out ${
                       reportDefaults[key] ? "translate-x-5" : "translate-x-0"
                     }`}
                   />
@@ -704,7 +704,7 @@ export default function SettingsPage() {
         <Button
           onClick={saveProfile}
           disabled={saving}
-          className="bg-emerald-700 hover:bg-emerald-600"
+          className="bg-forest hover:bg-forest-light"
         >
           <Save className="h-4 w-4 mr-2" />
           {saving ? "Saving..." : "Save Profile"}
@@ -715,40 +715,40 @@ export default function SettingsPage() {
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <DollarSign className="h-5 w-5 text-emerald-600" />
+            <DollarSign className="h-5 w-5 text-forest" />
             Usage &amp; Costs
           </CardTitle>
         </CardHeader>
         <CardContent>
           {usageLoading ? (
             <div className="flex justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+              <Loader2 className="h-5 w-5 animate-spin text-neutral-400" />
             </div>
           ) : usageData ? (
             <div className="space-y-5">
               {/* Monthly overview stats */}
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+                <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
                   This Month
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="bg-gray-50 rounded-lg p-3 text-center">
-                    <p className="text-lg font-semibold text-gray-900">
+                  <div className="bg-neutral-100 rounded-lg p-3 text-center">
+                    <p className="text-lg font-semibold font-mono text-neutral-900">
                       ${usageData.monthly.cost.toFixed(2)}
                     </p>
-                    <p className="text-xs text-gray-500">Total Cost</p>
+                    <p className="text-xs text-neutral-500">Total Cost</p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-3 text-center">
-                    <p className="text-lg font-semibold text-gray-900">
+                  <div className="bg-neutral-100 rounded-lg p-3 text-center">
+                    <p className="text-lg font-semibold font-mono text-neutral-900">
                       {usageData.monthly.callCount}
                     </p>
-                    <p className="text-xs text-gray-500">API Calls</p>
+                    <p className="text-xs text-neutral-500">API Calls</p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-3 text-center">
-                    <p className="text-lg font-semibold text-gray-900">
+                  <div className="bg-neutral-100 rounded-lg p-3 text-center">
+                    <p className="text-lg font-semibold font-mono text-neutral-900">
                       ${usageData.monthly.avgCostPerReport.toFixed(2)}
                     </p>
-                    <p className="text-xs text-gray-500">Avg / Report</p>
+                    <p className="text-xs text-neutral-500">Avg / Report</p>
                   </div>
                 </div>
               </div>
@@ -756,7 +756,7 @@ export default function SettingsPage() {
               {/* Breakdown by endpoint */}
               {Object.keys(usageData.monthly.byEndpoint).length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+                  <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
                     Breakdown by Endpoint
                   </p>
                   <div className="space-y-2">
@@ -766,7 +766,7 @@ export default function SettingsPage() {
                           key={endpoint}
                           className="flex items-center justify-between text-sm"
                         >
-                          <span className="flex items-center gap-2 text-gray-700">
+                          <span className="flex items-center gap-2 text-neutral-700">
                             {endpoint === "generate-report" && (
                               <Sparkles className="h-3.5 w-3.5 text-purple-500" />
                             )}
@@ -778,7 +778,7 @@ export default function SettingsPage() {
                             )}
                             {endpoint.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                           </span>
-                          <span className="text-gray-500">
+                          <span className="text-neutral-500">
                             {data.count} calls &middot; ${data.cost.toFixed(3)}
                           </span>
                         </div>
@@ -790,17 +790,17 @@ export default function SettingsPage() {
 
               {/* All time */}
               <div className="border-t pt-3">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
+                <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">
                   All Time
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-neutral-600">
                   {usageData.allTime.callCount} API calls &middot; $
                   {usageData.allTime.cost.toFixed(2)} estimated cost
                 </p>
               </div>
             </div>
           ) : (
-            <p className="text-sm text-gray-500 text-center py-4">
+            <p className="text-sm text-neutral-500 text-center py-4">
               No usage data available yet. API costs will appear here after
               generating reports or using voice dictation.
             </p>

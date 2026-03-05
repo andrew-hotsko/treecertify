@@ -780,7 +780,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           </Link>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold truncate">
+              <h1 className="text-lg font-semibold font-display truncate">
                 {property.address}
               </h1>
               {reportTypeConfig && (

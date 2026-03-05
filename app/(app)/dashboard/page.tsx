@@ -143,22 +143,22 @@ export default async function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">
+          <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight text-neutral-900">
             {greeting}, {arborist.name.split(" ")[0]}
           </h1>
-          <p className="mt-1 text-sm text-gray-500 truncate">
-            ISA #{arborist.isaCertificationNum} &middot;{" "}
+          <p className="mt-1 text-sm text-neutral-500 truncate">
+            ISA #<span className="font-mono">{arborist.isaCertificationNum}</span> &middot;{" "}
             {arborist.companyName ?? "Independent Arborist"}
           </p>
           {contextMessage && (
-            <p className="mt-1 text-sm text-emerald-600 font-medium">
+            <p className="mt-1 text-sm text-forest font-medium">
               {contextMessage}
             </p>
           )}
         </div>
         <Button
           asChild
-          className="bg-emerald-600 hover:bg-emerald-700 self-start sm:self-auto"
+          className="bg-forest hover:bg-forest-light self-start sm:self-auto"
         >
           <Link href="/properties/new">
             <Plus className="mr-2 h-4 w-4" />
