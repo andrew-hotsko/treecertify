@@ -95,6 +95,7 @@ export async function PUT(
         ...(body.denialReason !== undefined && { denialReason: body.denialReason }),
         ...(body.approvedAt !== undefined && { approvedAt: body.approvedAt }),
         ...(body.permitExpiresAt !== undefined && { permitExpiresAt: body.permitExpiresAt }),
+        ...(body.clientNote !== undefined && { clientNote: body.clientNote }),
       },
     });
 

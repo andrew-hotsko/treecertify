@@ -153,5 +153,17 @@
 - Permit pipeline cards in the dashboard are clickable when count > 0, linking to `/properties?permitStatus=X`.
 - Properties list accepts `initialPermitFilter` prop and shows a filter banner with clear button.
 
+## Smart Share Page
+- Share page (`app/share/[token]/page.tsx`) is a public RSC — fetches property + latest report + arborist via share token.
+- Document-like layout: `max-w-2xl` container for focused reading experience.
+- **Branded header**: company logo, "CERTIFIED ARBORIST REPORT" label (or "DRAFT — PENDING CERTIFICATION"), property address, arborist name/ISA cert, certification date with green checkmark.
+- **Client note**: arborist can write a personal note in the report page (certified view only) via `clientNote` field on Report model. Displayed at top of share page in forest-tinted card with "FROM YOUR ARBORIST" label.
+- **Plain-language summary**: template-based stats (not AI) per report type — removal (removal/retention/protected counts), health (good/fair/needs attention), valuation (total appraised value parsed from `typeSpecificData`), construction (protection/removal counts). 2×2 stat grid with explanation paragraph.
+- **Enhanced tree cards**: condition color dot, species common + scientific name, measurements row (DBH/height/spread in font-mono), condition in plain English, action text, protected badge with ShieldCheck icon.
+- **City-specific "What Happens Next"**: static submission guides in `lib/city-submission-guides.ts` for 5 Peninsula cities. 4-step numbered flow (submit, documents, review, after approval) with tips and city website link. Generic fallback for unsupported cities. Simpler guidance for non-removal report types.
+- **PDF download**: contextual text per report type ("Submit this PDF with your permit application to [City] [Department]"). Full-width button on mobile.
+- **Arborist contact card**: tap-to-call and tap-to-email buttons in forest-tinted style, website link.
+- Not-certified state: shows only branded header (DRAFT badge), amber in-progress banner, tree count, arborist contact. Hides summary, tree details, next steps, PDF.
+
 ## Session Completion
 - When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.

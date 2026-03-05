@@ -207,6 +207,9 @@ model Report {
   pdfUrl         String?
   reportOptions  String  @default("{}") // JSON — toggleable options like includeTraq, includeCoverLetter
 
+  // Client-facing note from arborist (shown on share page)
+  clientNote           String?
+
   // Permit lifecycle tracking
   permitStatus         String?    // submitted, under_review, approved, denied, revision_requested
   submittedAt          DateTime?

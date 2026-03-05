@@ -129,6 +129,7 @@ interface Report {
   denialReason: string | null;
   approvedAt: string | null;
   permitExpiresAt: string | null;
+  clientNote: string | null;
 }
 
 interface ReportOptions {
@@ -258,6 +259,10 @@ export default function PropertyReportPage() {
   const [qualityWarnings, setQualityWarnings] = useState<string[]>([]);
   const [streamingText, setStreamingText] = useState("");
 
+  // Client note (shown on share page)
+  const [clientNote, setClientNote] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
+
   // Report options state (PDF appendix toggles)
   const [reportOptions, setReportOptions] = useState<ReportOptions>({});
 
@@ -333,6 +338,7 @@ export default function PropertyReportPage() {
           try {
             setReportOptions(JSON.parse(r.reportOptions || "{}"));
           } catch { /* default empty */ }
+          setClientNote(r.clientNote ?? "");
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load");
@@ -462,6 +468,30 @@ export default function PropertyReportPage() {
     },
     [report]
   );
+
+  const saveClientNote = useCallback(async () => {
+    if (!report) return;
+    setSavingNote(true);
+    try {
+      const res = await fetch(`/api/reports/${report.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientNote }),
+      });
+      if (!res.ok) throw new Error("Failed to save note");
+      const updated = await res.json();
+      setReport(updated);
+      toast({ title: "Note saved" });
+    } catch (err) {
+      toast({
+        title: "Failed to save note",
+        description: err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingNote(false);
+    }
+  }, [report, clientNote, toast]);
 
   // -------------------------------------------------------------------------
   // Auto-save every 30s
@@ -621,6 +651,7 @@ export default function PropertyReportPage() {
                   eSignatureText: null,
                   certifiedAt: null,
                   status: "draft",
+                  clientNote: null,
                   permitStatus: null,
                   submittedAt: null,
                   submittedTo: null,
@@ -1646,6 +1677,38 @@ export default function PropertyReportPage() {
                     onUpdatePermitStatus={updatePermitStatus}
                   />
                 )}
+
+                {/* ---- Note to Client ---- */}
+                {isCertified && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                      Note to Client
+                    </p>
+                    <p className="text-xs text-neutral-500">
+                      This note appears at the top of the shared report page.
+                    </p>
+                    <Textarea
+                      value={clientNote}
+                      onChange={(e) => setClientNote(e.target.value)}
+                      placeholder="Add a personal note for the homeowner — e.g., recommended next steps, timeline, or anything they should know..."
+                      rows={3}
+                      className="resize-none"
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={saveClientNote}
+                        disabled={
+                          savingNote ||
+                          clientNote === (report?.clientNote ?? "")
+                        }
+                      >
+                        {savingNote ? "Saving…" : "Save Note"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <ReportPreview
                   content={content}
                   property={property}
