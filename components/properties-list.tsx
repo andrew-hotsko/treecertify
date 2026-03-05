@@ -60,11 +60,11 @@ type SortKey = "recent" | "oldest" | "cityAZ" | "dueSoonest";
 function getWorkflowStatus(property: PropertyItem) {
   const latestReport = property.reports[0];
   if (property.trees.length === 0)
-    return { label: "No Trees", color: "bg-gray-100 text-gray-600" };
+    return { label: "No Trees", color: "bg-neutral-200 text-neutral-600" };
   if (!latestReport)
     return { label: "Assessing", color: "bg-amber-100 text-amber-700" };
   if (latestReport.status === "certified")
-    return { label: "Certified", color: "bg-emerald-100 text-emerald-700" };
+    return { label: "Certified", color: "bg-forest/10 text-forest" };
   return { label: "Draft", color: "bg-blue-100 text-blue-700" };
 }
 
@@ -233,13 +233,13 @@ export function PropertiesList({ properties, initialFilter }: PropertiesListProp
         <div className="relative">
           <button
             onClick={() => setShowSort(!showSort)}
-            className="flex items-center gap-2 px-3 py-2 text-sm border rounded-md bg-white hover:bg-gray-50 text-gray-700"
+            className="flex items-center gap-2 px-3 py-2 text-sm border rounded-md bg-neutral-50 hover:bg-neutral-100 text-neutral-700"
           >
             {sortOptions.find((s) => s.key === sortKey)?.label}
             <ChevronDown className="h-3.5 w-3.5" />
           </button>
           {showSort && (
-            <div className="absolute right-0 top-full mt-1 bg-white border rounded-md shadow-lg z-10 py-1 min-w-[160px]">
+            <div className="absolute right-0 top-full mt-1 bg-neutral-50 border rounded-md shadow-lg z-10 py-1 min-w-[160px]">
               {sortOptions.map((opt) => (
                 <button
                   key={opt.key}
@@ -248,10 +248,10 @@ export function PropertiesList({ properties, initialFilter }: PropertiesListProp
                     setShowSort(false);
                   }}
                   className={cn(
-                    "w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50",
+                    "w-full text-left px-3 py-1.5 text-sm hover:bg-neutral-100",
                     sortKey === opt.key
-                      ? "text-emerald-700 font-medium"
-                      : "text-gray-600"
+                      ? "text-forest font-medium"
+                      : "text-neutral-600"
                   )}
                 >
                   {opt.label}
@@ -269,7 +269,7 @@ export function PropertiesList({ properties, initialFilter }: PropertiesListProp
             <select
               value={cityFilter}
               onChange={(e) => setCityFilter(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded-md border bg-white text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="text-xs px-2.5 py-1.5 rounded-md border bg-neutral-50 text-neutral-700 hover:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-forest-light"
             >
               <option value="all">All Cities</option>
               {uniqueCities.map((city) => (
@@ -281,7 +281,7 @@ export function PropertiesList({ properties, initialFilter }: PropertiesListProp
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded-md border bg-white text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="text-xs px-2.5 py-1.5 rounded-md border bg-neutral-50 text-neutral-700 hover:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-forest-light"
             >
               <option value="all">All Report Types</option>
               {uniqueTypes.map((type) => (
@@ -301,8 +301,8 @@ export function PropertiesList({ properties, initialFilter }: PropertiesListProp
             className={cn(
               "px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
               filter === f.key
-                ? "bg-emerald-600 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                ? "bg-forest text-white"
+                : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300"
             )}
           >
             {f.label}
@@ -314,24 +314,24 @@ export function PropertiesList({ properties, initialFilter }: PropertiesListProp
       {filteredProperties.length === 0 ? (
         <Card className="py-16">
           <CardContent className="flex flex-col items-center justify-center text-center">
-            <div className="rounded-full bg-gray-50 p-4 mb-4">
-              <MapPin className="h-8 w-8 text-gray-400" />
+            <div className="rounded-full bg-neutral-100 p-4 mb-4">
+              <MapPin className="h-8 w-8 text-neutral-400" />
             </div>
-            <p className="text-sm font-medium text-gray-900">
+            <p className="text-sm font-medium text-neutral-900">
               {properties.length === 0
                 ? "No properties yet"
                 : "No properties match your search"}
             </p>
             {properties.length === 0 && (
               <>
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-neutral-500">
                   Add your first property to start pinning trees on the
                   satellite map and generating AI-assisted reports.
                 </p>
                 <Button
                   asChild
                   size="sm"
-                  className="mt-4 bg-emerald-600 hover:bg-emerald-700"
+                  className="mt-4 bg-forest hover:bg-forest-light"
                 >
                   <Link href="/properties/new">
                     <Plus className="mr-2 h-4 w-4" />
@@ -361,13 +361,13 @@ export function PropertiesList({ properties, initialFilter }: PropertiesListProp
                 href={`/properties/${property.id}`}
                 className="block"
               >
-                <Card className="hover:border-emerald-300 transition-colors cursor-pointer">
+                <Card className="hover:border-forest/30 transition-colors cursor-pointer">
                   <CardContent className="p-4 sm:p-5">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                         <div className="flex-shrink-0 hidden sm:block">
-                          <div className="rounded-full bg-emerald-50 p-2">
-                            <MapPin className="h-5 w-5 text-emerald-600" />
+                          <div className="rounded-full bg-forest/5 p-2">
+                            <MapPin className="h-5 w-5 text-forest" />
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
@@ -383,7 +383,7 @@ export function PropertiesList({ properties, initialFilter }: PropertiesListProp
                                 Sample
                               </Badge>
                             )}
-                            <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
+                            <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-neutral-200 text-neutral-600">
                               {formatReportType(property.reportType)}
                             </span>
                             <span
@@ -419,14 +419,14 @@ export function PropertiesList({ properties, initialFilter }: PropertiesListProp
                       <div className="flex items-center gap-3 sm:gap-5 flex-shrink-0">
                         <div className="hidden sm:block text-right">
                           <div className="flex items-center gap-2 text-sm">
-                            <TreePine className="h-4 w-4 text-emerald-600" />
+                            <TreePine className="h-4 w-4 text-forest" />
                             <span className="font-mono font-medium">
                               {treeCount}
                             </span>
                           </div>
                           <div className="flex items-center gap-2 mt-0.5">
                             {protectedCount > 0 && (
-                              <span className="flex items-center gap-1 text-xs text-emerald-600">
+                              <span className="flex items-center gap-1 text-xs text-forest">
                                 <ShieldCheck className="h-3 w-3" />
                                 {protectedCount}
                               </span>
@@ -441,7 +441,7 @@ export function PropertiesList({ properties, initialFilter }: PropertiesListProp
 
                         {/* Mobile tree count */}
                         <span className="flex items-center gap-1 sm:hidden text-xs shrink-0">
-                          <TreePine className="h-3.5 w-3.5 text-emerald-600" />
+                          <TreePine className="h-3.5 w-3.5 text-forest" />
                           <span className="font-mono">{treeCount}</span>
                         </span>
 

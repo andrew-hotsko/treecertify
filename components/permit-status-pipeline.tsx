@@ -60,7 +60,7 @@ const STAGES: Stage[] = [
 ];
 
 const TERMINAL_STAGES: Record<string, { label: string; friendlyLabel: string; icon: React.ElementType; color: string }> = {
-  approved: { label: "Approved", friendlyLabel: "Permit Approved", icon: ShieldCheck, color: "emerald" },
+  approved: { label: "Approved", friendlyLabel: "Permit Approved", icon: ShieldCheck, color: "forest" },
   denied: { label: "Denied", friendlyLabel: "Permit Denied", icon: XCircle, color: "red" },
   revision_requested: { label: "Revision Requested", friendlyLabel: "Revision Needed", icon: AlertTriangle, color: "amber" },
 };
@@ -131,7 +131,7 @@ export function PermitStatusPipeline({
   // Determine terminal stage info
   const terminalInfo = permitStatus && TERMINAL_STAGES[permitStatus]
     ? TERMINAL_STAGES[permitStatus]
-    : { label: "Approved", friendlyLabel: "Permit Approved", icon: ShieldCheck, color: "emerald" };
+    : { label: "Approved", friendlyLabel: "Permit Approved", icon: ShieldCheck, color: "forest" };
 
   // Build full stages list including terminal
   const allStages = [
@@ -148,7 +148,7 @@ export function PermitStatusPipeline({
     <Card className="mb-4">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <Send className="h-4 w-4 text-emerald-600" />
+          <Send className="h-4 w-4 text-forest" />
           {friendlyLabels ? "Permit Status" : "Permit Status"}
         </CardTitle>
       </CardHeader>
@@ -163,14 +163,14 @@ export function PermitStatusPipeline({
             const isTerminalRevision = isTerminal && permitStatus === "revision_requested";
 
             // Colors
-            let circleColor = "bg-gray-200 text-gray-400";
-            let lineColor = "bg-gray-200";
-            let textColor = "text-gray-400";
+            let circleColor = "bg-neutral-300 text-neutral-400";
+            let lineColor = "bg-neutral-300";
+            let textColor = "text-neutral-400";
 
             if (isComplete) {
-              circleColor = "bg-emerald-600 text-white";
-              lineColor = "bg-emerald-600";
-              textColor = "text-emerald-700";
+              circleColor = "bg-forest text-white";
+              lineColor = "bg-forest";
+              textColor = "text-forest";
             } else if (isCurrent) {
               circleColor = "bg-amber-500 text-white";
               textColor = "text-amber-700 font-semibold";
@@ -181,8 +181,8 @@ export function PermitStatusPipeline({
                 circleColor = "bg-amber-500 text-white";
                 textColor = "text-amber-700 font-semibold";
               } else if (isTerminal && permitStatus === "approved") {
-                circleColor = "bg-emerald-600 text-white";
-                textColor = "text-emerald-700 font-semibold";
+                circleColor = "bg-forest text-white";
+                textColor = "text-forest font-semibold";
               }
             }
 
@@ -196,7 +196,7 @@ export function PermitStatusPipeline({
                   <div
                     className={cn(
                       "h-0.5 w-6 sm:w-10 shrink-0",
-                      isComplete || isCurrent ? (isTerminalDenied ? "bg-red-300" : isTerminalRevision ? "bg-amber-300" : "bg-emerald-300") : lineColor
+                      isComplete || isCurrent ? (isTerminalDenied ? "bg-red-300" : isTerminalRevision ? "bg-amber-300" : "bg-forest/30") : lineColor
                     )}
                   />
                 )}
@@ -242,7 +242,7 @@ export function PermitStatusPipeline({
             <p>Permit expires: {formatDate(permitExpiresAt)}</p>
           )}
           {permitStatus === "approved" && conditionsOfApproval && (
-            <div className="mt-2 p-2 rounded bg-emerald-50 border border-emerald-100 text-xs text-emerald-800">
+            <div className="mt-2 p-2 rounded bg-forest/5 border border-forest/10 text-xs text-forest">
               <p className="font-medium mb-1">Conditions of Approval</p>
               <p className="whitespace-pre-wrap">{conditionsOfApproval}</p>
             </div>
@@ -270,7 +270,7 @@ export function PermitStatusPipeline({
                 {expandedAction !== "submit" ? (
                   <Button
                     size="sm"
-                    className="bg-emerald-600 hover:bg-emerald-700"
+                    className="bg-forest hover:bg-forest-light"
                     onClick={() => setExpandedAction("submit")}
                   >
                     <Send className="h-3.5 w-3.5 mr-1.5" />
@@ -293,7 +293,7 @@ export function PermitStatusPipeline({
                     <div className="flex gap-2">
                       <Button
                         size="sm"
-                        className="bg-emerald-600 hover:bg-emerald-700"
+                        className="bg-forest hover:bg-forest-light"
                         disabled={!formSubmittedTo.trim() || saving}
                         onClick={() =>
                           handleUpdate({
@@ -347,7 +347,7 @@ export function PermitStatusPipeline({
                     <div className="flex gap-2">
                       <Button
                         size="sm"
-                        className="bg-emerald-600 hover:bg-emerald-700"
+                        className="bg-forest hover:bg-forest-light"
                         disabled={saving}
                         onClick={() =>
                           handleUpdate({
@@ -378,7 +378,7 @@ export function PermitStatusPipeline({
                   <div className="flex flex-wrap gap-2">
                     <Button
                       size="sm"
-                      className="bg-emerald-600 hover:bg-emerald-700"
+                      className="bg-forest hover:bg-forest-light"
                       onClick={() => setExpandedAction("approved")}
                     >
                       <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
@@ -433,7 +433,7 @@ export function PermitStatusPipeline({
                     <div className="flex gap-2">
                       <Button
                         size="sm"
-                        className="bg-emerald-600 hover:bg-emerald-700"
+                        className="bg-forest hover:bg-forest-light"
                         disabled={saving}
                         onClick={() =>
                           handleUpdate({

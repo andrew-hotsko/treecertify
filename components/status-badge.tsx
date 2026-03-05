@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 const statusConfig: Record<string, { label: string; className: string }> = {
   draft: {
     label: "Draft",
-    className: "bg-gray-100 text-gray-700 border-gray-200",
+    className: "bg-neutral-200 text-neutral-700 border-neutral-300",
   },
   ai_generated: {
     label: "AI Generated",
@@ -20,7 +20,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   },
   certified: {
     label: "Certified",
-    className: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    className: "bg-forest/5 text-forest border-forest/20",
   },
   filed: {
     label: "Filed",
@@ -28,11 +28,11 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   },
   active: {
     label: "Active",
-    className: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    className: "bg-forest/5 text-forest border-forest/20",
   },
   archived: {
     label: "Archived",
-    className: "bg-gray-100 text-gray-500 border-gray-200",
+    className: "bg-neutral-200 text-neutral-500 border-neutral-300",
   },
   assessed: {
     label: "Assessed",

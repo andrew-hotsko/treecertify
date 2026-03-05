@@ -462,10 +462,10 @@ export function TreeSidePanel({
   // ---- Derived ----
   const statusDot =
     tree?.status === "certified"
-      ? "bg-emerald-500"
+      ? "bg-forest-light"
       : tree?.status === "assessed"
         ? "bg-blue-500"
-        : "bg-gray-400";
+        : "bg-neutral-400";
 
   const reportTypeConfig = reportType
     ? getReportTypeConfig(reportType)
@@ -579,7 +579,7 @@ export function TreeSidePanel({
       "md:h-full md:w-96 md:max-h-none md:rounded-none md:shadow-none md:border-l"
     )}>
       {/* Mobile drag handle */}
-      <div className="md:hidden mx-auto mt-2 mb-1 h-1 w-10 rounded-full bg-gray-300" />
+      <div className="md:hidden mx-auto mt-2 mb-1 h-1 w-10 rounded-full bg-neutral-300" />
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="flex items-center gap-2">
@@ -650,7 +650,7 @@ export function TreeSidePanel({
         {isNewTree && lastSavedTree && (
           <button
             onClick={handleCopyFromLast}
-            className="w-full text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 py-1.5 px-3 rounded border border-emerald-200 border-dashed transition-colors flex items-center justify-center gap-1.5"
+            className="w-full text-xs text-forest hover:text-forest hover:bg-forest/5 py-1.5 px-3 rounded border border-forest/20 border-dashed transition-colors flex items-center justify-center gap-1.5"
           >
             <Copy className="h-3 w-3" />
             Copy species &amp; size from Tree #{lastSavedTree.treeNumber}
@@ -682,7 +682,7 @@ export function TreeSidePanel({
             )}
 
             {/* Camera capture button */}
-            <label className="flex items-center justify-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 py-2 px-3 rounded border border-emerald-200 border-dashed cursor-pointer transition-colors">
+            <label className="flex items-center justify-center gap-1.5 text-xs text-forest hover:text-forest hover:bg-forest/5 py-2 px-3 rounded border border-forest/20 border-dashed cursor-pointer transition-colors">
               {uploadingPhoto ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
@@ -737,7 +737,7 @@ export function TreeSidePanel({
                   key={sp.common}
                   type="button"
                   onClick={() => handleSpeciesChange(sp.common, sp.scientific)}
-                  className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 whitespace-nowrap transition-colors flex-shrink-0"
+                  className="text-xs px-2.5 py-1 rounded-full bg-forest/5 text-forest hover:bg-forest/10 border border-forest/20 whitespace-nowrap transition-colors flex-shrink-0"
                 >
                   {sp.common}
                 </button>
@@ -946,21 +946,21 @@ export function TreeSidePanel({
             <div
               className={`rounded-lg border-2 p-3 text-sm ${
                 protectionResult.isProtected
-                  ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30"
-                  : "border-gray-300 bg-gray-50 dark:bg-gray-900/30"
+                  ? "border-forest-light bg-forest/5 dark:bg-emerald-950/30"
+                  : "border-neutral-300 bg-neutral-100 dark:bg-gray-900/30"
               }`}
             >
               <div className="flex items-center gap-2">
                 {protectionResult.isProtected ? (
-                  <ShieldCheck className="h-5 w-5 shrink-0 text-emerald-600" />
+                  <ShieldCheck className="h-5 w-5 shrink-0 text-forest" />
                 ) : (
-                  <ShieldX className="h-5 w-5 shrink-0 text-gray-400" />
+                  <ShieldX className="h-5 w-5 shrink-0 text-neutral-400" />
                 )}
                 <span
                   className={`font-semibold ${
                     protectionResult.isProtected
-                      ? "text-emerald-700 dark:text-emerald-400"
-                      : "text-gray-600 dark:text-gray-400"
+                      ? "text-forest dark:text-emerald-400"
+                      : "text-neutral-600 dark:text-gray-400"
                   }`}
                 >
                   {protectionResult.isProtected ? "Protected" : "Not Protected"}
@@ -974,8 +974,8 @@ export function TreeSidePanel({
               <p
                 className={`mt-1.5 text-xs ${
                   protectionResult.isProtected
-                    ? "text-emerald-600 dark:text-emerald-300"
-                    : "text-gray-500 dark:text-gray-400"
+                    ? "text-forest dark:text-emerald-300"
+                    : "text-neutral-500 dark:text-gray-400"
                 }`}
               >
                 {protectionResult.reason ||
@@ -1205,7 +1205,7 @@ export function TreeSidePanel({
           <button
             type="button"
             onClick={() => setShowDictationModal(true)}
-            className="pointer-events-auto w-12 h-12 rounded-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
+            className="pointer-events-auto w-12 h-12 rounded-full bg-forest hover:bg-forest-light active:bg-forest-light text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
             title="Smart Dictate — fill fields with voice"
           >
             <Mic className="h-5 w-5" />
@@ -1215,10 +1215,10 @@ export function TreeSidePanel({
         {/* Dictation modal overlay */}
         {showDictationModal && (
           <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center bg-black/40">
-            <div className="bg-white rounded-t-2xl md:rounded-2xl shadow-2xl w-full max-w-sm mx-auto p-5 space-y-3 animate-in slide-in-from-bottom-4">
+            <div className="bg-neutral-50 rounded-t-2xl md:rounded-2xl shadow-2xl w-full max-w-sm mx-auto p-5 space-y-3 animate-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold flex items-center gap-1.5">
-                  <Mic className="h-4 w-4 text-emerald-600" />
+                  <Mic className="h-4 w-4 text-forest" />
                   Smart Dictation
                 </h3>
                 <button
@@ -1301,7 +1301,7 @@ export function TreeSidePanel({
         <Button
           onClick={handleSave}
           disabled={saving || !speciesCommon || !dbhInches}
-          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+          className="flex-1 bg-forest hover:bg-forest-light text-white"
         >
           {saving ? (
             <>
