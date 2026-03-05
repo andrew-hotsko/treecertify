@@ -28,6 +28,14 @@ import {
   type ConstructionEncroachmentData,
 } from "@/lib/report-types";
 import {
+  HEALTH_OBSERVATIONS,
+  STRUCTURAL_OBSERVATIONS,
+  parseObservedLine,
+  extractFreeText,
+  buildNotesWithObserved,
+  ACTION_OPTIONS,
+} from "@/lib/observation-helpers";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -51,61 +59,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
-
-// ---------------------------------------------------------------------------
-// ISA Standard Observation Checklists
-// ---------------------------------------------------------------------------
-
-const HEALTH_OBSERVATIONS = [
-  "Chlorosis (yellowing)",
-  "Crown dieback",
-  "Decay / fungal fruiting bodies",
-  "Pest / insect damage",
-  "Girdling roots",
-  "Poor vigor / sparse canopy",
-  "Leaf scorch / burn",
-  "Crown thinning",
-  "Epicormic sprouting",
-  "Root damage / cut roots",
-  "Cankers / lesions",
-  "No significant concerns",
-];
-
-const STRUCTURAL_OBSERVATIONS = [
-  "Codominant stems",
-  "Included bark",
-  "Cavity / hollow",
-  "Lean (note degree if significant)",
-  "Root plate heaving / lifting",
-  "Asymmetric crown",
-  "Deadwood in crown",
-  "Cracks / splits",
-  "Weak branch attachments",
-  "Trunk wound / damage",
-  "Hangers / broken branches",
-  "No significant concerns",
-];
-
-function parseObservedLine(notes: string): string[] {
-  const match = notes.match(/^Observed:\s*(.+?)(\n|$)/);
-  if (!match) return [];
-  return match[1]
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-function extractFreeText(notes: string): string {
-  return notes.replace(/^Observed:\s*.+?(\n\n|\n|$)/, "").trim();
-}
-
-function buildNotesWithObserved(checks: string[], freeText: string): string {
-  const prefix = checks.length > 0 ? `Observed: ${checks.join(", ")}` : "";
-  const trimmed = freeText.trim();
-  if (prefix && trimmed) return `${prefix}\n\n${trimmed}`;
-  if (prefix) return prefix;
-  return trimmed;
-}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -189,12 +142,6 @@ interface TreeSidePanelProps {
   quickAddMode?: boolean;
 }
 
-const ACTION_OPTIONS = [
-  { value: "retain", label: "Retain", color: "green" },
-  { value: "remove", label: "Remove", color: "red" },
-  { value: "prune", label: "Prune", color: "amber" },
-  { value: "monitor", label: "Monitor", color: "blue" },
-];
 
 // ---------------------------------------------------------------------------
 // Quick Photo types

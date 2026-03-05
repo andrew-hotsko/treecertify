@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { TreeSidePanel, type TreeFormData } from "@/components/tree-side-panel";
+import { MobileFieldMode } from "@/components/mobile-field-mode";
 import { TreeSummaryPanel } from "@/components/tree-summary-panel";
 import type { TreePin, CircleOverlay } from "@/components/property-map";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +40,8 @@ import {
   ShieldCheck,
   Zap,
   Trash2,
+  Smartphone,
+  Monitor,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -196,6 +199,17 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   // Quick Add mode — keep panel open after save, auto-create next pending pin
   const [quickAddMode, setQuickAddMode] = useState(false);
   const mapGetCenterRef = useRef<(() => { lat: number; lng: number }) | null>(null);
+
+  // Mobile Field Mode — full-screen assessment flow
+  const [fieldMode, setFieldMode] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    setFieldMode(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setFieldMode(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   // Copy from last tree
   const [lastSavedTree, setLastSavedTree] = useState<TreeData | null>(null);
@@ -719,6 +733,14 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     setPendingPin(null);
   }, []);
 
+  const handleSaveAndNext = useCallback(
+    async (data: TreeFormData) => {
+      if (!quickAddMode) setQuickAddMode(true);
+      await handleSave(data);
+    },
+    [handleSave, quickAddMode]
+  );
+
   const handleMapReady = useCallback(
     (helpers: { getCenter: () => { lat: number; lng: number } }) => {
       mapGetCenterRef.current = helpers.getCenter;
@@ -892,6 +914,28 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Field / Desktop toggle — mobile only */}
+          <div className="flex items-center gap-1.5 md:hidden">
+            <label
+              htmlFor="field-mode-toggle"
+              className={`flex items-center gap-1 text-xs cursor-pointer select-none ${
+                fieldMode ? "text-forest font-medium" : "text-muted-foreground"
+              }`}
+            >
+              {fieldMode ? (
+                <Smartphone className="h-3.5 w-3.5 text-forest" />
+              ) : (
+                <Monitor className="h-3.5 w-3.5" />
+              )}
+              <span>{fieldMode ? "Field" : "Desktop"}</span>
+            </label>
+            <Switch
+              id="field-mode-toggle"
+              checked={fieldMode}
+              onCheckedChange={setFieldMode}
+              className="scale-75"
+            />
+          </div>
           {/* Quick Add toggle */}
           <div className="flex items-center gap-1.5">
             <label
@@ -1551,25 +1595,41 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           />
         </div>
 
-        {/* Side Panel — bottom sheet on mobile, right panel on desktop */}
+        {/* Side Panel — Field Mode on mobile, TreeSidePanel on desktop */}
         {showSidePanel && (
-          <TreeSidePanel
-            tree={sidePanelTree}
-            treeNumber={sidePanelTreeNumber}
-            totalTrees={trees.length}
-            propertyId={property.id}
-            propertyCity={property.city}
-            reportType={reportType}
-            onSave={handleSave}
-            onDelete={
-              selectedTree ? () => handleDeleteRequest() : undefined
-            }
-            onClose={handleClosePanel}
-            saving={saving}
-            lastSavedTree={lastSavedTree}
-            recentSpecies={recentSpecies}
-            quickAddMode={quickAddMode}
-          />
+          fieldMode ? (
+            <MobileFieldMode
+              tree={sidePanelTree}
+              treeNumber={sidePanelTreeNumber}
+              propertyId={property.id}
+              propertyCity={property.city}
+              reportType={reportType}
+              onSave={handleSave}
+              onSaveAndNext={handleSaveAndNext}
+              onClose={handleClosePanel}
+              saving={saving}
+              lastSavedTree={lastSavedTree}
+              recentSpecies={recentSpecies}
+            />
+          ) : (
+            <TreeSidePanel
+              tree={sidePanelTree}
+              treeNumber={sidePanelTreeNumber}
+              totalTrees={trees.length}
+              propertyId={property.id}
+              propertyCity={property.city}
+              reportType={reportType}
+              onSave={handleSave}
+              onDelete={
+                selectedTree ? () => handleDeleteRequest() : undefined
+              }
+              onClose={handleClosePanel}
+              saving={saving}
+              lastSavedTree={lastSavedTree}
+              recentSpecies={recentSpecies}
+              quickAddMode={quickAddMode}
+            />
+          )
         )}
       </div>
 

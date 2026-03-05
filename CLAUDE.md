@@ -98,6 +98,19 @@
 - Voice input has a visible red pulsing recording state with elapsed timer for field usability.
 - "Site Audio Notes" card has been removed from property page. Existing PropertyAudioNote transcriptions are lazily migrated into siteObservations on page load.
 
+## Mobile Field Mode
+- Full-screen mobile assessment flow at `components/mobile-field-mode.tsx`. Opens instead of TreeSidePanel when viewport < 768px.
+- Single vertical scroll with 5 sections: Species, Measurements, Condition, Observations, Action & Photos.
+- Progress dots track viewport section via IntersectionObserver. Tappable for jump navigation.
+- "Save & Next Tree" creates continuous entry flow — saves current tree, auto-creates next pin at map center, resets form.
+- Field/Desktop toggle in top bar lets arborist switch between modes. Mobile defaults to Field Mode.
+- Shared observation utilities extracted to `lib/observation-helpers.ts` (used by both tree-side-panel and mobile-field-mode).
+- Touch targets minimum 44px (Apple HIG). Numeric inputs use inputMode="decimal" for mobile keypad.
+- Haptic feedback (navigator.vibrate) on condition select, save success, photo capture.
+- Ordinance protection banner auto-shows when species + DBH entered.
+- Camera button uses capture="environment" for back-facing camera on mobile.
+- Desktop TreeSidePanel unchanged.
+
 ## Map Snapshot
 - PDF site map uses Mapbox Static Images API with colored pin overlays matching the interactive map's condition-based color scheme.
 - Configurable via `includeSiteMap` in report options (default: true). Graceful degradation if Mapbox fetch fails.

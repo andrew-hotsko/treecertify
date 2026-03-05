@@ -44,13 +44,13 @@ export function MultiCheckbox({
       {options.map((option) => (
         <label
           key={option}
-          className="flex items-center gap-2 text-xs cursor-pointer min-h-[40px] md:min-h-0"
+          className="flex items-center gap-2 text-xs cursor-pointer min-h-[44px] md:min-h-0"
         >
           <input
             type="checkbox"
             checked={selected.includes(option)}
             onChange={() => toggle(option)}
-            className="rounded border-input h-3.5 w-3.5 shrink-0"
+            className="rounded border-input h-5 w-5 md:h-3.5 md:w-3.5 shrink-0"
           />
           <span className="leading-tight">{option}</span>
         </label>
