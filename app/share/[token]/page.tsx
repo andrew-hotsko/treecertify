@@ -20,7 +20,7 @@ const CONDITION_LABELS: Record<number, string> = {
 };
 
 const CONDITION_COLORS: Record<number, string> = {
-  0: "text-gray-700",
+  0: "text-neutral-700",
   1: "text-red-600",
   2: "text-orange-500",
   3: "text-amber-500",
@@ -68,13 +68,13 @@ export default async function SharedPropertyPage({
 
   if (!property) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
         <div className="text-center max-w-md px-6">
           <div className="text-5xl mb-4">🔗</div>
-          <h1 className="text-xl font-semibold text-gray-800 mb-2">
+          <h1 className="text-xl font-semibold text-neutral-800 mb-2">
             This link is no longer active
           </h1>
-          <p className="text-gray-500 text-sm">
+          <p className="text-neutral-500 text-sm">
             The property owner may have revoked sharing access, or this link may
             have expired.
           </p>
@@ -107,7 +107,7 @@ export default async function SharedPropertyPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-neutral-50">
       {/* ---- Header ---- */}
       <header className="bg-white border-b">
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -122,15 +122,15 @@ export default async function SharedPropertyPage({
                 />
               )}
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">
+                <h1 className="text-lg font-semibold text-neutral-900 font-display">
                   {property.address}
                 </h1>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-neutral-500">
                   {arborist?.companyName ?? "Tree Assessment Report"} &middot; {property.city}
                 </p>
               </div>
             </div>
-            <span className="text-xs text-gray-400 font-medium tracking-wider uppercase hidden sm:inline">
+            <span className="text-xs text-neutral-400 font-medium tracking-wider uppercase hidden sm:inline">
               TreeCertify
             </span>
           </div>
@@ -205,7 +205,7 @@ export default async function SharedPropertyPage({
               style={{ maxHeight: 400, objectFit: "cover" }}
             />
           ) : (
-            <div className="w-full h-48 bg-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-sm border">
+            <div className="w-full h-48 bg-neutral-200 rounded-lg flex items-center justify-center text-neutral-400 text-sm border">
               No map available
             </div>
           )}
@@ -214,7 +214,7 @@ export default async function SharedPropertyPage({
         {/* ---- Tree Summary (certified: full details; otherwise: basic count) ---- */}
         {isCertified && property.trees.length > 0 && (
           <section>
-            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-neutral-700 uppercase tracking-wider mb-3 flex items-center gap-2">
               <TreePine className="h-4 w-4" />
               Trees on This Property ({property.trees.length})
             </h2>
@@ -227,19 +227,19 @@ export default async function SharedPropertyPage({
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-mono text-gray-500">
+                        <span className="text-xs font-mono text-neutral-500">
                           #{tree.treeNumber}
                         </span>
-                        <h3 className="font-medium text-gray-900">
+                        <h3 className="font-medium text-neutral-900">
                           {tree.speciesCommon || "Unidentified Species"}
                         </h3>
                       </div>
                       {tree.speciesScientific && (
-                        <p className="text-xs text-gray-400 italic mb-2">
+                        <p className="text-xs text-neutral-400 italic mb-2">
                           {tree.speciesScientific}
                         </p>
                       )}
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-neutral-600">
                         {ACTION_FRIENDLY[tree.recommendedAction] ??
                           tree.recommendedAction ??
                           "No recommendation yet"}
@@ -247,7 +247,7 @@ export default async function SharedPropertyPage({
                     </div>
                     <span
                       className={`text-sm font-medium whitespace-nowrap ${
-                        CONDITION_COLORS[tree.conditionRating] ?? "text-gray-400"
+                        CONDITION_COLORS[tree.conditionRating] ?? "text-neutral-400"
                       }`}
                     >
                       {CONDITION_LABELS[tree.conditionRating] ?? "—"}
@@ -262,8 +262,8 @@ export default async function SharedPropertyPage({
         {/* Not certified — just show tree count */}
         {!isCertified && property.trees.length > 0 && (
           <section>
-            <div className="bg-white rounded-lg border p-6 text-center text-gray-500 text-sm">
-              <TreePine className="h-6 w-6 mx-auto mb-2 text-gray-400" />
+            <div className="bg-white rounded-lg border p-6 text-center text-neutral-500 text-sm">
+              <TreePine className="h-6 w-6 mx-auto mb-2 text-neutral-400" />
               {property.trees.length} tree{property.trees.length !== 1 ? "s" : ""} assessed on this property.
               Full details will be available once the report is complete.
             </div>
@@ -274,7 +274,7 @@ export default async function SharedPropertyPage({
         {arborist && (
           <section>
             <div className="bg-white rounded-lg border p-6 shadow-sm">
-              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
+              <h2 className="text-sm font-semibold text-neutral-700 uppercase tracking-wider mb-3">
                 Your Arborist
               </h2>
               <div className="flex items-start gap-4">
@@ -287,15 +287,15 @@ export default async function SharedPropertyPage({
                   />
                 )}
                 <div className="space-y-1 text-sm min-w-0">
-                  <p className="font-medium text-gray-900">{arborist.name}</p>
+                  <p className="font-medium text-neutral-900">{arborist.name}</p>
                   {arborist.companyName && (
-                    <p className="text-gray-600">{arborist.companyName}</p>
+                    <p className="text-neutral-600">{arborist.companyName}</p>
                   )}
-                  <p className="text-gray-500">
-                    ISA Certified Arborist #{arborist.isaCertificationNum}
+                  <p className="text-neutral-500">
+                    ISA Certified Arborist #<span className="font-mono">{arborist.isaCertificationNum}</span>
                   </p>
                   {arborist.companyPhone && (
-                    <p className="flex items-center gap-1.5 text-gray-600">
+                    <p className="flex items-center gap-1.5 text-neutral-600">
                       <Phone className="h-3.5 w-3.5 shrink-0" />
                       <a
                         href={`tel:${arborist.companyPhone}`}
@@ -306,7 +306,7 @@ export default async function SharedPropertyPage({
                     </p>
                   )}
                   {arborist.companyEmail && (
-                    <p className="flex items-center gap-1.5 text-gray-600">
+                    <p className="flex items-center gap-1.5 text-neutral-600">
                       <Mail className="h-3.5 w-3.5 shrink-0" />
                       <a
                         href={`mailto:${arborist.companyEmail}`}
@@ -318,7 +318,7 @@ export default async function SharedPropertyPage({
                   )}
                   {arborist.companyWebsite && (
                     <p className="flex items-center gap-1.5">
-                      <Globe className="h-3.5 w-3.5 text-gray-600 shrink-0" />
+                      <Globe className="h-3.5 w-3.5 text-neutral-600 shrink-0" />
                       <a
                         href={arborist.companyWebsite}
                         target="_blank"
@@ -338,7 +338,7 @@ export default async function SharedPropertyPage({
 
       {/* ---- Footer ---- */}
       <footer className="border-t mt-12">
-        <div className="max-w-4xl mx-auto px-4 py-4 text-center text-xs text-gray-400">
+        <div className="max-w-4xl mx-auto px-4 py-4 text-center text-xs text-neutral-400">
           Shared via TreeCertify
           {arborist?.companyName ? ` · ${arborist.companyName}` : ""}
         </div>
