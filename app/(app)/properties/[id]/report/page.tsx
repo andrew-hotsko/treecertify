@@ -48,7 +48,11 @@ import {
   History,
   RotateCcw,
   Trash2,
-  Receipt,
+  DollarSign,
+  Plus,
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   Sheet,
@@ -74,7 +78,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { PermitStatusPipeline } from "@/components/permit-status-pipeline";
-import { InvoiceDialog } from "@/components/invoice-dialog";
 import { useToast } from "@/hooks/use-toast";
 
 // ---------------------------------------------------------------------------
@@ -151,12 +154,10 @@ interface ArboristInfo {
   companyEmail?: string | null;
   companyWebsite?: string | null;
   signatureName?: string | null;
-  // Invoice defaults
-  invoiceDefaultFee?: number | null;
-  invoiceHourlyRate?: number | null;
-  invoicePaymentInstructions?: string | null;
-  invoicePrefix?: string;
-  invoiceNetTerms?: string;
+  // Billing defaults
+  showBillingOnShare?: boolean;
+  defaultReportFee?: number | null;
+  billingPaymentInstructions?: string | null;
 }
 
 interface Section {
@@ -278,10 +279,14 @@ export default function PropertyReportPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingReport, setDeletingReport] = useState(false);
 
-  // Invoice state
-  const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [existingInvoice, setExistingInvoice] = useState<any>(null);
+  // Billing state
+  const [billingExpanded, setBillingExpanded] = useState(false);
+  const [billingAmount, setBillingAmount] = useState("");
+  const [billingLineItems, setBillingLineItems] = useState<{ description: string; amount: string }[]>([]);
+  const [billingPaymentInstructions, setBillingPaymentInstructions] = useState("");
+  const [billingIncluded, setBillingIncluded] = useState(false);
+  const [billingPaidAt, setBillingPaidAt] = useState<string | null>(null);
+  const [savingBilling, setSavingBilling] = useState(false);
 
   // Report delivery state
   const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
@@ -352,6 +357,15 @@ export default function PropertyReportPage() {
             setReportOptions(JSON.parse(r.reportOptions || "{}"));
           } catch { /* default empty */ }
           setClientNote(r.clientNote ?? "");
+          // Initialize billing state
+          setBillingAmount(r.billingAmount != null ? String(r.billingAmount) : "");
+          try {
+            const items = JSON.parse(r.billingLineItems || "[]");
+            setBillingLineItems(items.length > 0 ? items : []);
+          } catch { setBillingLineItems([]); }
+          setBillingPaymentInstructions(r.billingPaymentInstructions ?? "");
+          setBillingIncluded(r.billingIncluded ?? false);
+          setBillingPaidAt(r.billingPaidAt ?? null);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load");
@@ -1356,29 +1370,6 @@ export default function PropertyReportPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={async () => {
-                    // Fetch existing invoice for this report
-                    try {
-                      const res = await fetch(`/api/invoices?reportId=${report.id}`);
-                      if (res.ok) {
-                        const invoices = await res.json();
-                        setExistingInvoice(invoices.length > 0 ? invoices[0] : null);
-                      } else {
-                        setExistingInvoice(null);
-                      }
-                    } catch {
-                      setExistingInvoice(null);
-                    }
-                    setShowInvoiceDialog(true);
-                  }}
-                >
-                  <Receipt className="h-3.5 w-3.5 mr-1.5" />
-                  Invoice
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
                   onClick={unlockReport}
                   disabled={unlocking}
                 >
@@ -1742,6 +1733,217 @@ export default function PropertyReportPage() {
                         {savingNote ? "Saving…" : "Save Note"}
                       </Button>
                     </div>
+                  </div>
+                )}
+
+                {/* ---- Client Billing ---- */}
+                {isCertified && arborist?.showBillingOnShare !== false && (
+                  <div className="border border-forest/20 rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => setBillingExpanded(!billingExpanded)}
+                      className="w-full flex items-center justify-between px-4 py-3 bg-forest/5 hover:bg-forest/10 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4 text-forest" />
+                        <span className="text-sm font-semibold text-forest">Client Billing</span>
+                        {billingPaidAt && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
+                            <CheckCircle className="h-3 w-3" />
+                            Paid
+                          </span>
+                        )}
+                        {!billingPaidAt && billingAmount && parseFloat(billingAmount) > 0 && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
+                            ${parseFloat(billingAmount).toFixed(2)} due
+                          </span>
+                        )}
+                      </div>
+                      {billingExpanded ? (
+                        <ChevronUp className="h-4 w-4 text-neutral-500" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-neutral-500" />
+                      )}
+                    </button>
+                    {billingExpanded && (
+                      <div className="p-4 space-y-4">
+                        {/* Total Amount */}
+                        <div>
+                          <Label className="text-xs font-medium text-neutral-700">Total Amount ($)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder={arborist?.defaultReportFee ? String(arborist.defaultReportFee) : "0.00"}
+                            value={billingAmount}
+                            onChange={(e) => setBillingAmount(e.target.value)}
+                            className="mt-1 font-mono"
+                          />
+                        </div>
+
+                        {/* Line Items */}
+                        <div>
+                          <Label className="text-xs font-medium text-neutral-700">Line Items (optional)</Label>
+                          <div className="mt-1 space-y-2">
+                            {billingLineItems.map((item, idx) => (
+                              <div key={idx} className="flex gap-2">
+                                <Input
+                                  placeholder="Description"
+                                  value={item.description}
+                                  onChange={(e) => {
+                                    const updated = [...billingLineItems];
+                                    updated[idx] = { ...updated[idx], description: e.target.value };
+                                    setBillingLineItems(updated);
+                                  }}
+                                  className="flex-1"
+                                />
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  placeholder="$"
+                                  value={item.amount}
+                                  onChange={(e) => {
+                                    const updated = [...billingLineItems];
+                                    updated[idx] = { ...updated[idx], amount: e.target.value };
+                                    setBillingLineItems(updated);
+                                  }}
+                                  className="w-28 font-mono"
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setBillingLineItems(billingLineItems.filter((_, i) => i !== idx));
+                                  }}
+                                  className="px-2 text-neutral-400 hover:text-red-500"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setBillingLineItems([...billingLineItems, { description: "", amount: "" }])}
+                              className="text-xs"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add line item
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Payment Instructions */}
+                        <div>
+                          <Label className="text-xs font-medium text-neutral-700">Payment Instructions</Label>
+                          <Textarea
+                            value={billingPaymentInstructions || (arborist?.billingPaymentInstructions ?? "")}
+                            onChange={(e) => setBillingPaymentInstructions(e.target.value)}
+                            placeholder="e.g., Make checks payable to... / Venmo: @handle"
+                            rows={2}
+                            className="mt-1 resize-none"
+                          />
+                        </div>
+
+                        {/* Include on share page */}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label className="text-xs font-medium text-neutral-700">Include on share page</Label>
+                            <p className="text-xs text-neutral-500">Client sees billing when viewing the shared report</p>
+                          </div>
+                          <Switch
+                            checked={billingIncluded}
+                            onCheckedChange={(checked: boolean) => setBillingIncluded(checked)}
+                          />
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 pt-2 border-t">
+                          <Button
+                            size="sm"
+                            className="bg-forest hover:bg-forest-light"
+                            disabled={savingBilling}
+                            onClick={async () => {
+                              if (!report) return;
+                              setSavingBilling(true);
+                              try {
+                                const amt = billingAmount ? parseFloat(billingAmount) : null;
+                                const lineItemsJson = billingLineItems.length > 0
+                                  ? JSON.stringify(billingLineItems.filter(li => li.description || li.amount))
+                                  : null;
+                                const res = await fetch(`/api/reports/${report.id}`, {
+                                  method: "PUT",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    billingAmount: amt,
+                                    billingLineItems: lineItemsJson,
+                                    billingPaymentInstructions: billingPaymentInstructions || null,
+                                    billingIncluded,
+                                  }),
+                                });
+                                if (!res.ok) throw new Error("Failed to save billing");
+                                toast({ title: "Billing saved" });
+                              } catch {
+                                toast({ title: "Failed to save billing", variant: "destructive" });
+                              } finally {
+                                setSavingBilling(false);
+                              }
+                            }}
+                          >
+                            {savingBilling ? "Saving..." : "Save Billing"}
+                          </Button>
+                          {!billingPaidAt && billingAmount && parseFloat(billingAmount) > 0 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                if (!report) return;
+                                const now = new Date().toISOString();
+                                try {
+                                  const res = await fetch(`/api/reports/${report.id}`, {
+                                    method: "PUT",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ billingPaidAt: now }),
+                                  });
+                                  if (!res.ok) throw new Error("Failed");
+                                  setBillingPaidAt(now);
+                                  toast({ title: "Marked as paid" });
+                                } catch {
+                                  toast({ title: "Failed to mark as paid", variant: "destructive" });
+                                }
+                              }}
+                            >
+                              <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
+                              Mark as Paid
+                            </Button>
+                          )}
+                          {billingPaidAt && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                if (!report) return;
+                                try {
+                                  const res = await fetch(`/api/reports/${report.id}`, {
+                                    method: "PUT",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ billingPaidAt: null }),
+                                  });
+                                  if (!res.ok) throw new Error("Failed");
+                                  setBillingPaidAt(null);
+                                  toast({ title: "Payment status cleared" });
+                                } catch {
+                                  toast({ title: "Failed to update", variant: "destructive" });
+                                }
+                              }}
+                              className="text-xs text-neutral-500"
+                            >
+                              Undo paid
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -2245,31 +2447,6 @@ export default function PropertyReportPage() {
             </CardContent>
           </Card>
         </div>
-      )}
-      {/* ---- Invoice Dialog ---- */}
-      {report && property && arborist && (
-        <InvoiceDialog
-          open={showInvoiceDialog}
-          onOpenChange={setShowInvoiceDialog}
-          reportId={report.id}
-          propertyId={propertyId}
-          property={{
-            address: property.address,
-            city: property.city,
-            state: property.state,
-            zip: property.zip,
-            homeownerName: property.homeownerName,
-          }}
-          reportType={report.reportType}
-          existingInvoice={existingInvoice}
-          arboristDefaults={{
-            invoiceDefaultFee: arborist.invoiceDefaultFee ?? null,
-            invoiceHourlyRate: arborist.invoiceHourlyRate ?? null,
-            invoicePaymentInstructions: arborist.invoicePaymentInstructions ?? null,
-            invoicePrefix: arborist.invoicePrefix ?? "INV-",
-            invoiceNetTerms: arborist.invoiceNetTerms ?? "Due on Receipt",
-          }}
-        />
       )}
 
       {/* ---- Version History Sheet ---- */}

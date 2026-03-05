@@ -11,10 +11,11 @@ import {
   FileText,
   ExternalLink,
   MessageSquare,
-  Receipt,
+  MapPin,
+  DollarSign,
 } from "lucide-react";
 import { PermitStatusPipeline } from "@/components/permit-status-pipeline";
-import { getCityGuide, getNextStepsText } from "@/lib/city-submission-guides";
+import { getCityContact, getNextStepsText } from "@/lib/city-contacts";
 
 export const metadata = {
   title: "Tree Assessment Report | TreeCertify",
@@ -212,10 +213,6 @@ export default async function SharedPropertyPage({
         take: 1,
         include: {
           arborist: true,
-          invoices: {
-            where: { showOnSharePage: true },
-            take: 1,
-          },
         },
       },
     },
@@ -267,20 +264,31 @@ export default async function SharedPropertyPage({
       ? buildSummaryStats(property.trees, report.reportType)
       : null;
 
-  // City guide for removal permits
-  const cityGuide =
-    isCertified && report?.reportType === "removal_permit"
-      ? getCityGuide(property.city)
+  // City contact for removal permits
+  const cityContact =
+    isCertified && report
+      ? getCityContact(property.city, report.reportType)
       : null;
 
   // Next steps text for non-removal types
   const nextSteps =
     isCertified && report && report.reportType !== "removal_permit"
-      ? getNextStepsText(report.reportType, property.city)
+      ? getNextStepsText(report.reportType)
       : null;
 
-  // Invoice for share page
-  const invoice = report?.invoices?.[0] ?? null;
+  // Billing data from report
+  const hasBilling =
+    isCertified &&
+    report?.billingIncluded &&
+    report?.billingAmount != null &&
+    report.billingAmount > 0;
+  const billingLineItems = (() => {
+    try {
+      return report?.billingLineItems ? JSON.parse(report.billingLineItems) : [];
+    } catch {
+      return [];
+    }
+  })();
 
   const reportTypeLabel =
     REPORT_TYPE_LABELS[report?.reportType ?? ""] ?? "Arborist Report";
@@ -504,7 +512,7 @@ export default async function SharedPropertyPage({
         )}
 
         {/* ==== F. What Happens Next — City-Specific (removal_permit) ==== */}
-        {isCertified && report && cityGuide && (
+        {isCertified && report && cityContact && (
           <section>
             <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-4">
               What Happens Next
@@ -523,15 +531,26 @@ export default async function SharedPropertyPage({
                   </h3>
                   <p className="text-sm text-neutral-600 mt-1">
                     File your application with the{" "}
-                    <span className="font-medium">{cityGuide.department}</span>{" "}
+                    <span className="font-medium">{cityContact.department}</span>{" "}
                     in {property.city}.
                   </p>
                   <p className="text-sm text-neutral-500 mt-1">
-                    {cityGuide.submissionMethod}
+                    {cityContact.submissionMethod}
                   </p>
-                  {cityGuide.url && (
+                  {cityContact.portalUrl && (
                     <a
-                      href={cityGuide.url}
+                      href={cityContact.portalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 mt-2 px-4 py-2 bg-forest hover:bg-forest-light text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                      Open City Portal
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  )}
+                  {!cityContact.portalUrl && cityContact.websiteUrl && (
+                    <a
+                      href={cityContact.websiteUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-sm text-forest hover:text-forest-light mt-1.5 font-medium"
@@ -555,7 +574,7 @@ export default async function SharedPropertyPage({
                     Required Documents
                   </h3>
                   <ul className="mt-1.5 space-y-1">
-                    {cityGuide.requiredDocuments.map((doc) => (
+                    {cityContact.requiredDocuments.map((doc) => (
                       <li
                         key={doc}
                         className="flex items-center gap-2 text-sm text-neutral-600"
@@ -565,6 +584,11 @@ export default async function SharedPropertyPage({
                       </li>
                     ))}
                   </ul>
+                  {cityContact.applicationFee && (
+                    <p className="text-xs text-neutral-500 mt-2">
+                      {cityContact.applicationFee}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -580,13 +604,8 @@ export default async function SharedPropertyPage({
                     City Review
                   </h3>
                   <p className="text-sm text-neutral-600 mt-1">
-                    {cityGuide.typicalTimeline}
+                    {cityContact.typicalTimeline}
                   </p>
-                  {cityGuide.fees && (
-                    <p className="text-xs text-neutral-500 mt-1">
-                      {cityGuide.fees}
-                    </p>
-                  )}
                 </div>
               </div>
 
@@ -602,17 +621,60 @@ export default async function SharedPropertyPage({
                     After Approval
                   </h3>
                   <p className="text-sm text-neutral-600 mt-1">
-                    {cityGuide.conditions}
+                    {cityContact.mitigationSummary}
                   </p>
                 </div>
               </div>
 
-              {/* Tips */}
-              {cityGuide.tips && (
-                <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 mt-2">
-                  <p className="text-sm text-amber-800">
-                    <span className="font-medium">Tip:</span> {cityGuide.tips}
+              {/* City Contact Info Card */}
+              <div className="bg-white rounded-lg border p-4 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">
+                  {property.city} {cityContact.department}
+                </p>
+                {cityContact.phone && (
+                  <a
+                    href={`tel:${cityContact.phone.replace(/[^\d+]/g, "")}`}
+                    className="flex items-center gap-2 text-sm text-forest hover:text-forest-light font-medium"
+                  >
+                    <Phone className="h-3.5 w-3.5" />
+                    {cityContact.phone}
+                  </a>
+                )}
+                {cityContact.email && (
+                  <a
+                    href={`mailto:${cityContact.email}`}
+                    className="flex items-center gap-2 text-sm text-forest hover:text-forest-light font-medium"
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                    {cityContact.email}
+                  </a>
+                )}
+                {cityContact.address && (
+                  <p className="flex items-center gap-2 text-sm text-neutral-600">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                    {cityContact.address}
                   </p>
+                )}
+                {cityContact.hours && (
+                  <p className="flex items-center gap-2 text-sm text-neutral-500">
+                    <Clock className="h-3.5 w-3.5 shrink-0" />
+                    {cityContact.hours}
+                  </p>
+                )}
+              </div>
+
+              {/* Tips */}
+              {cityContact.tips.length > 0 && (
+                <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 mt-2">
+                  <p className="text-xs font-semibold text-amber-800 mb-2">Tips</p>
+                  <ul className="space-y-1.5">
+                    {cityContact.tips.map((tip, i) => (
+                      <li key={i} className="text-sm text-amber-800 flex items-start gap-2">
+                        <span className="text-amber-400 mt-1 shrink-0">&#8226;</span>
+                        {tip}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
 
@@ -633,7 +695,7 @@ export default async function SharedPropertyPage({
         {/* Removal permit with unsupported city */}
         {isCertified &&
           report?.reportType === "removal_permit" &&
-          !cityGuide && (
+          !cityContact && (
             <section>
               <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3">
                 What Happens Next
@@ -696,10 +758,10 @@ export default async function SharedPropertyPage({
           <section>
             <div className="bg-white rounded-lg border p-6 shadow-sm text-center">
               <FileText className="h-8 w-8 text-forest mx-auto mb-3" />
-              {report.reportType === "removal_permit" && cityGuide ? (
+              {report.reportType === "removal_permit" && cityContact ? (
                 <p className="text-sm text-neutral-600 mb-4 max-w-md mx-auto">
                   Submit this PDF with your permit application to the{" "}
-                  {property.city} {cityGuide.department}.
+                  {property.city} {cityContact.department}.
                 </p>
               ) : report.reportType === "removal_permit" ? (
                 <p className="text-sm text-neutral-600 mb-4 max-w-md mx-auto">
@@ -723,61 +785,62 @@ export default async function SharedPropertyPage({
           </section>
         )}
 
-        {/* ==== H2. Invoice Section ==== */}
-        {isCertified && invoice && (
+        {/* ==== H2. Billing Section ==== */}
+        {hasBilling && report && (
           <section>
             <div className="bg-white rounded-lg border p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-4">
-                <Receipt className="h-5 w-5 text-forest" />
+                <DollarSign className="h-5 w-5 text-forest" />
                 <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                  Invoice
+                  Amount Due
                 </p>
               </div>
 
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="font-mono font-medium text-neutral-900">
-                    {invoice.invoiceNumber}
-                  </p>
-                  <p className="text-sm text-neutral-500 mt-0.5">
-                    {invoice.status === "paid" ? (
-                      <span className="text-green-700 font-medium">Paid</span>
-                    ) : (
-                      <>
-                        Due{" "}
-                        {new Date(invoice.dueDate).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </>
-                    )}
-                  </p>
+                  {report.billingPaidAt ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-sm font-medium">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Paid
+                    </span>
+                  ) : (
+                    <p className="text-sm text-neutral-500">Payment requested</p>
+                  )}
                 </div>
                 <p className="text-2xl font-bold font-mono text-neutral-900">
-                  ${invoice.total.toFixed(2)}
+                  ${report.billingAmount!.toFixed(2)}
                 </p>
               </div>
 
-              {invoice.paymentInstructions && (
-                <div className="bg-neutral-50 rounded-lg p-3 mb-4">
+              {/* Line Items */}
+              {billingLineItems.length > 0 && (
+                <div className="border-t pt-3 mb-4 space-y-1">
+                  {billingLineItems.map(
+                    (item: { description: string; amount: string }, i: number) =>
+                      item.description && (
+                        <div key={i} className="flex justify-between text-sm">
+                          <span className="text-neutral-600">{item.description}</span>
+                          {item.amount && (
+                            <span className="font-mono text-neutral-700">
+                              ${parseFloat(item.amount).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      )
+                  )}
+                </div>
+              )}
+
+              {report.billingPaymentInstructions && (
+                <div className="bg-neutral-50 rounded-lg p-3">
                   <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-1">
                     Payment Instructions
                   </p>
                   <p className="text-sm text-neutral-700 whitespace-pre-wrap">
-                    {invoice.paymentInstructions}
+                    {report.billingPaymentInstructions}
                   </p>
                 </div>
               )}
-
-              <a
-                href={`/api/invoices/${invoice.id}/pdf?token=${token}`}
-                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 border border-forest/30 text-forest hover:bg-forest/5 rounded-lg font-medium text-sm transition-colors w-full"
-                download
-              >
-                <Download className="h-4 w-4" />
-                Download Invoice (PDF)
-              </a>
             </div>
           </section>
         )}

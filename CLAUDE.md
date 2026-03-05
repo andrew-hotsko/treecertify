@@ -165,19 +165,32 @@
 - **Arborist contact card**: tap-to-call and tap-to-email buttons in forest-tinted style, website link.
 - Not-certified state: shows only branded header (DRAFT badge), amber in-progress banner, tree count, arborist contact. Hides summary, tree details, next steps, PDF.
 
-## Invoice Generation
-- `Invoice` model in `prisma/schema.prisma` — linked to Arborist, Report, and Property. Line items stored as JSON string. Status: unpaid/paid. `showOnSharePage` boolean controls share page visibility.
-- Arborist model has 5 invoice settings fields: `invoiceHourlyRate`, `invoiceDefaultFee`, `invoicePaymentInstructions`, `invoicePrefix` (default "INV-"), `invoiceNetTerms` (default "Due on Receipt").
-- Invoice number auto-generated per arborist: `${prefix}${String(count + 1).padStart(4, "0")}`.
-- CRUD routes: `app/api/invoices/route.ts` (POST + GET), `app/api/invoices/[id]/route.ts` (GET + PUT + DELETE). PUT auto-sets `paidAt` when status="paid".
-- Invoice PDF route: `app/api/invoices/[id]/pdf/route.ts` — Puppeteer, same auth pattern as report PDF (share token + showOnSharePage, OR Clerk session). Brand fonts (Instrument Sans, Roboto, IBM Plex Mono), forest green accents, company logo via `photoToBase64()`.
-- `InvoiceDialog` component (`components/invoice-dialog.tsx`): pre-fills from report type + arborist defaults, dynamic line items table, auto-calculate totals, "Show on client share page" toggle, "Mark as Paid" button for existing invoices.
-- Report page toolbar: "Invoice" button in certified actions block (between Send Report and Unlock & Revise). Fetches existing invoice before opening dialog.
-- Share page: invoice section after PDF download (when `showOnSharePage: true`). Shows invoice number, total, due date or "Paid" status, payment instructions, download button.
-- Dashboard: "Invoice Summary" card (Total Invoiced, Unpaid count + $, Paid count). Only shows when invoices exist.
-- Settings page: "Invoice Settings" card with Default Flat Fee, Hourly Rate, Invoice Prefix, Payment Terms (select), Payment Instructions (textarea).
-- Middleware: `/api/invoices/(.*)/pdf` added to public routes.
-- Property cascade delete includes `prisma.invoice.deleteMany` in the `$transaction`.
+## Invoice Infrastructure (Dormant)
+- `Invoice` model in `prisma/schema.prisma` — linked to Arborist, Report, and Property. Line items stored as JSON string. Status: unpaid/paid.
+- CRUD routes: `app/api/invoices/route.ts` (POST + GET), `app/api/invoices/[id]/route.ts` (GET + PUT + DELETE).
+- Invoice PDF route: `app/api/invoices/[id]/pdf/route.ts` — Puppeteer, same auth pattern as report PDF (share token + showOnSharePage, OR Clerk session).
+- Arborist model retains 5 invoice settings fields (`invoiceHourlyRate`, `invoiceDefaultFee`, `invoicePaymentInstructions`, `invoicePrefix`, `invoiceNetTerms`).
+- Middleware: `/api/invoices/(.*)/pdf` in public routes. Property cascade delete includes `prisma.invoice.deleteMany`.
+- **No UI surfaces** — `InvoiceDialog` removed. Invoice routes available as API infrastructure for future formal invoicing if needed.
+
+## Client Billing (Simple)
+- Report model has 5 billing fields: `billingAmount` (Float?), `billingLineItems` (JSON string: `[{description, amount}]`), `billingPaymentInstructions` (String?), `billingIncluded` (Boolean, default false), `billingPaidAt` (DateTime?).
+- Arborist model has 3 billing settings: `showBillingOnShare` (Boolean, default true), `defaultReportFee` (Float?), `billingPaymentInstructions` (String?).
+- NOT an invoicing product — just a "here's what you owe" section. No invoice numbers, no invoice PDFs, no payment processing.
+- Two-gate visibility: arborist-level `showBillingOnShare` controls whether billing card appears on report page; per-report `billingIncluded` controls whether billing shows on public share page.
+- Report page (certified view): collapsible billing card below client note. Amount, optional line items, payment instructions, "Include on share page" switch, "Mark as Paid" button.
+- Share page: billing section after PDF download (when `billingIncluded && billingAmount > 0`). Receipt-style card with amount, line items, paid status, payment instructions.
+- Dashboard: "Outstanding Payments" counter (count + $ total of unpaid billing). Only shows when unpaid billing exists.
+- Settings page: "Client Billing" card with Default Report Fee, Payment Instructions, "Show billing on share page" toggle.
+- Billing fields saved via report PUT route (`/api/reports/[id]`), not separate API.
+
+## City Submission Contacts
+- `lib/city-contacts.ts` — expanded from `lib/city-submission-guides.ts` with detailed department contact info for 5 Peninsula cities.
+- `CityContact` interface: department, phone, email, address, hours, portalUrl, websiteUrl, submissionMethod, requiredDocuments[], typicalTimeline, applicationFee, mitigationSummary, tips[] (array, not string).
+- `getCityContact(city, reportType?)` — returns contact for removal_permit type only. Returns null for other report types.
+- `getNextStepsText(reportType)` — generic guidance for non-removal report types (health_assessment, tree_valuation, construction_encroachment).
+- Share page "What Happens Next" section: tap-to-call phone links, tap-to-email links, office address with MapPin icon, office hours, portal URL as CTA button, tips as bulleted list, required documents checklist.
+- `lib/city-submission-guides.ts` still exists (legacy, not imported anywhere). Can be removed in future cleanup.
 
 ## Session Completion
 - When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.

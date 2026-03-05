@@ -39,6 +39,11 @@ model Arborist {
   invoicePrefix              String   @default("INV-")
   invoiceNetTerms            String   @default("Due on Receipt")
 
+  // Client billing settings (simple billing on share page)
+  showBillingOnShare         Boolean  @default(true)
+  defaultReportFee           Float?
+  billingPaymentInstructions String?
+
   createdAt DateTime @default(now())
 
   properties   Property[]
@@ -218,6 +223,13 @@ model Report {
 
   // Client-facing note from arborist (shown on share page)
   clientNote           String?
+
+  // Simple billing (shown on share page)
+  billingAmount              Float?
+  billingLineItems           String?   // JSON: [{description, amount}]
+  billingPaymentInstructions String?
+  billingIncluded            Boolean   @default(false)
+  billingPaidAt              DateTime?
 
   // Permit lifecycle tracking
   permitStatus         String?    // submitted, under_review, approved, denied, revision_requested

@@ -21,9 +21,6 @@ import {
   ClipboardList,
   FileText,
   Award,
-  Receipt,
-  CircleDollarSign,
-  CheckCircle2,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -80,11 +77,9 @@ interface NextActions {
 
 type WelcomeState = "no_properties" | "no_trees" | "no_reports" | "normal";
 
-interface InvoiceStats {
-  totalInvoiced: number;
-  unpaidCount: number;
-  unpaidTotal: number;
-  paidCount: number;
+interface BillingStats {
+  count: number;
+  total: number;
 }
 
 interface DashboardContentProps {
@@ -96,7 +91,7 @@ interface DashboardContentProps {
   treesThisWeek?: number;
   treesLastWeek?: number;
   welcomeState?: WelcomeState;
-  invoiceStats?: InvoiceStats | null;
+  billingStats?: BillingStats | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -230,7 +225,7 @@ export function DashboardContent({
   treesThisWeek,
   treesLastWeek,
   welcomeState = "normal",
-  invoiceStats,
+  billingStats,
 }: DashboardContentProps) {
   const [filter, setFilter] = useState<FilterStatus>("all");
 
@@ -454,46 +449,21 @@ export function DashboardContent({
         </Card>
       )}
 
-      {/* Invoice Summary Card */}
-      {invoiceStats && (
+      {/* Outstanding Payments */}
+      {billingStats && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold font-display text-neutral-900 flex items-center gap-2">
-              <Receipt className="h-5 w-5 text-forest" />
-              Invoice Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-forest/5">
-                <CircleDollarSign className="h-4 w-4 text-forest" />
-                <div>
-                  <p className="text-2xl font-bold font-mono text-neutral-900">
-                    ${invoiceStats.totalInvoiced.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                  </p>
-                  <p className="text-xs text-neutral-500">Total Invoiced</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50">
-                <Clock className="h-4 w-4 text-amber-600" />
-                <div>
-                  <p className="text-2xl font-bold font-mono text-neutral-900">
-                    {invoiceStats.unpaidCount}
-                  </p>
-                  <p className="text-xs text-neutral-500">
-                    Unpaid · ${invoiceStats.unpaidTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <div>
-                  <p className="text-2xl font-bold font-mono text-neutral-900">
-                    {invoiceStats.paidCount}
-                  </p>
-                  <p className="text-xs text-neutral-500">Paid</p>
-                </div>
-              </div>
+          <CardContent className="flex items-center gap-3 py-4">
+            <div className="h-10 w-10 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+              <Clock className="h-5 w-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-neutral-900">
+                {billingStats.count} outstanding{" "}
+                {billingStats.count === 1 ? "payment" : "payments"}
+              </p>
+              <p className="text-xs text-neutral-500">
+                ${billingStats.total.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} unpaid
+              </p>
             </div>
           </CardContent>
         </Card>

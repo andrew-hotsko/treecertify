@@ -67,6 +67,7 @@ export async function PUT(request: NextRequest) {
       "invoicePaymentInstructions",
       "invoicePrefix",
       "invoiceNetTerms",
+      "billingPaymentInstructions",
     ];
 
     const updateData: Record<string, string | boolean | number | null> = {};
@@ -79,12 +80,18 @@ export async function PUT(request: NextRequest) {
     if ("traqCertified" in body) {
       updateData.traqCertified = !!body.traqCertified;
     }
+    if ("showBillingOnShare" in body) {
+      updateData.showBillingOnShare = !!body.showBillingOnShare;
+    }
     // Float fields
     if ("invoiceHourlyRate" in body) {
       updateData.invoiceHourlyRate = body.invoiceHourlyRate != null ? parseFloat(body.invoiceHourlyRate) : null;
     }
     if ("invoiceDefaultFee" in body) {
       updateData.invoiceDefaultFee = body.invoiceDefaultFee != null ? parseFloat(body.invoiceDefaultFee) : null;
+    }
+    if ("defaultReportFee" in body) {
+      updateData.defaultReportFee = body.defaultReportFee != null ? parseFloat(body.defaultReportFee) : null;
     }
 
     const updated = await prisma.arborist.update({
