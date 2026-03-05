@@ -26,8 +26,12 @@
 - Test script at `scripts/test-ordinances.ts` validates 5 representative scenarios.
 
 ## AI Report Generation
-- Report prompts are in `lib/report-templates.ts` (prompt v2.0). Each report type has versioned `systemInstructions` with section-by-section writing guidance.
-- The generation route is `app/api/ai/generate-report/route.ts` (prompt v2.0). It sends STRUCTURED DATA + DETAILED SYSTEM PROMPT — Claude generates the narrative from data, not from pre-written text.
+- Report prompts are in `lib/report-templates.ts` (prompt v2.1). Each report type has versioned `systemInstructions` with section-by-section writing guidance.
+- The generation route is `app/api/ai/generate-report/route.ts` (prompt v2.1). It sends STRUCTURED DATA + DETAILED SYSTEM PROMPT — Claude generates the narrative from data, not from pre-written text.
+- `MASTER_VOICE_INSTRUCTIONS` constant in `lib/report-templates.ts` — injected into ALL report prompts to transform raw voice dictation into professional ISA arborist language. Covers tone, banned casual words, observation checkbox weaving, report depth scaling, and site observations transformation.
+- Raw health/structural notes and site observations are labeled as "(raw field dictation — transform to professional language)" in the data block sent to Claude.
+- Report depth scales to assessment complexity: removal/critical trees get 2-3 detailed paragraphs; healthy retained trees get 2-4 concise sentences.
+- Scope of Assignment auto-generates per report type on property creation (server-side) and on page load (client-side). AI uses scope as foundation for Section 1.
 - Standards referenced: ISA BMP, ISA TRAQ, ANSI A300, CTLA Trunk Formula Method (10th Edition), ANSI A300 Part 5 (construction).
 - Mock fallback (no ANTHROPIC_API_KEY) does not fabricate observations — uses "No concerns noted" language when arborist left fields blank.
 - Streaming via SSE to the report editor UI. Excluded sections: "Tree Inventory" and "Arborist Certification Statement" (handled by PDF template).
@@ -84,12 +88,15 @@
 - "No significant concerns" is an exclusive toggle — selecting it unchecks all others and vice versa.
 - Stored in existing `healthNotes`/`structuralNotes` fields using `"Observed: X, Y\n\n{free text}"` prefix format. No schema changes needed.
 - Helper functions: `parseObservedLine()`, `extractFreeText()`, `buildNotesWithObserved()` in `components/tree-side-panel.tsx`.
+- PDF TRAQ appendix formats these cleanly via `formatNotesForTRAQ()` in the PDF route — strips "Observed:" prefix, formats as "Observed conditions: X, Y." sentence, shows free text below.
 - These are standard ISA terminology — not customizable per arborist.
 
 ## Dictation
 - Inline mic button on each notes field = raw OpenAI Whisper transcription (no Claude parsing). Component: `components/voice-input.tsx`.
+- Inline VoiceInput also on Site Information fields (Scope of Assignment, Site Observations) in property-map-view.
 - Smart Dictation (separate modal) = full Claude field extraction with ISA terminology matching.
 - Voice input has a visible red pulsing recording state with elapsed timer for field usability.
+- "Site Audio Notes" card has been removed from property page. Existing PropertyAudioNote transcriptions are lazily migrated into siteObservations on page load.
 
 ## Map Snapshot
 - PDF site map uses Mapbox Static Images API with colored pin overlays matching the interactive map's condition-based color scheme.

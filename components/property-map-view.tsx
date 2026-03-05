@@ -17,7 +17,7 @@ import { TreeSidePanel, type TreeFormData } from "@/components/tree-side-panel";
 import { TreeSummaryPanel } from "@/components/tree-summary-panel";
 import type { TreePin, CircleOverlay } from "@/components/property-map";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PropertyAudioNotes } from "@/components/property-audio-notes";
+import { VoiceInput } from "@/components/voice-input";
 import { getReportTypeConfig, calcTpzRadius, calcSrzRadius } from "@/lib/report-types";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/status-badge";
@@ -25,7 +25,6 @@ import {
   ChevronLeft,
   FileText,
   TreePine,
-  Mic,
   ChevronDown,
   HardHat,
   Loader2,
@@ -149,6 +148,32 @@ const CONDITION_DOT_COLOR: Record<number, string> = {
 
 type FilterKey = "all" | "incomplete" | "protected" | "remove" | "retain";
 
+function generateScopeTemplate(
+  reportType: string,
+  address: string,
+  city: string,
+  treeCount: number
+): string {
+  const subject =
+    treeCount > 0
+      ? `${treeCount} tree${treeCount !== 1 ? "s" : ""}`
+      : "the subject tree(s)";
+  const location = `${address}, ${city}`;
+
+  switch (reportType) {
+    case "removal_permit":
+      return `Perform a Level 2 basic assessment per ISA Best Management Practices of ${subject} at ${location} to evaluate health, structural condition, and risk, and to provide professional recommendations regarding tree removal permit application per the ${city} municipal tree ordinance.`;
+    case "health_assessment":
+      return `Perform a Level 2 basic assessment per ISA Best Management Practices of ${subject} at ${location} to evaluate overall health, structural integrity, and vitality, and to provide maintenance recommendations.`;
+    case "construction_encroachment":
+      return `Perform a Level 2 basic assessment per ISA Best Management Practices of ${subject} at ${location} to evaluate potential impacts from proposed construction activity, assess tree protection zone encroachment, and provide tree preservation recommendations per ANSI A300 Part 5 standards.`;
+    case "tree_valuation":
+      return `Perform a Level 2 basic assessment per ISA Best Management Practices and appraise ${subject} at ${location} using the CTLA Trunk Formula Method (10th Edition) to determine replacement value for insurance, litigation, or municipal purposes.`;
+    default:
+      return `Perform a Level 2 basic assessment per ISA Best Management Practices of ${subject} at ${location} to evaluate health, structural condition, and provide professional arborist recommendations.`;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -164,8 +189,6 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   const [showSidePanel, setShowSidePanel] = useState(false);
   const [saving, setSaving] = useState(false);
   const [flyToId, setFlyToId] = useState<string | null>(null);
-  const [audioOpen, setAudioOpen] = useState(false);
-
   // Quick-entry mode: auto-advance after save
   const [showPlacementPrompt, setShowPlacementPrompt] = useState(false);
   const [lastSavedNumber, setLastSavedNumber] = useState(0);
@@ -264,6 +287,53 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     }
     prevOnlineRef.current = isOnline;
   }, [isOnline, setPendingCount, toast, router]);
+
+  // Auto-generate scope of assignment when empty on report type change
+  useEffect(() => {
+    if (!scopeOfAssignment.trim()) {
+      setScopeOfAssignment(
+        generateScopeTemplate(
+          reportType,
+          property.address,
+          property.city,
+          trees.length
+        )
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportType]);
+
+  // Lazy migration: pull PropertyAudioNote transcriptions into siteObservations
+  useEffect(() => {
+    if (siteObservations.trim()) return; // already has content
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/properties/${property.id}/audio`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        const notes: { cleanedTranscription?: string; status?: string }[] =
+          data.notes ?? [];
+        const transcriptions = notes
+          .filter(
+            (n) => n.status === "ready" && n.cleanedTranscription?.trim()
+          )
+          .map((n) => n.cleanedTranscription!.trim());
+        if (transcriptions.length > 0 && !cancelled) {
+          const combined = transcriptions.join(" ");
+          setSiteObservations((prev) =>
+            prev && prev.includes(combined) ? prev : combined
+          );
+        }
+      } catch {
+        // Audio notes migration is best-effort
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [property.id]);
 
   // ---- Derived ----
   const selectedTree = trees.find((t) => t.id === selectedTreeId) ?? null;
@@ -1162,9 +1232,18 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               />
             </div>
             <div>
-              <Label htmlFor="mv-scope" className="text-xs">
-                Scope of Assignment
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="mv-scope" className="text-xs">
+                  Scope of Assignment
+                </Label>
+                <VoiceInput
+                  onTranscript={(text) =>
+                    setScopeOfAssignment((prev) =>
+                      prev ? prev + " " + text : text
+                    )
+                  }
+                />
+              </div>
               <Textarea
                 id="mv-scope"
                 placeholder="Describe the scope and purpose of this assessment..."
@@ -1175,12 +1254,21 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               />
             </div>
             <div>
-              <Label htmlFor="mv-site-obs" className="text-xs">
-                Site Observations
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="mv-site-obs" className="text-xs">
+                  Site Observations
+                </Label>
+                <VoiceInput
+                  onTranscript={(text) =>
+                    setSiteObservations((prev) =>
+                      prev ? prev + " " + text : text
+                    )
+                  }
+                />
+              </div>
               <Textarea
                 id="mv-site-obs"
-                placeholder="Describe site conditions, terrain, surrounding land use..."
+                placeholder="Describe the property setting, topography, soil conditions, surrounding land use, proximity to structures/infrastructure, and any relevant environmental factors..."
                 value={siteObservations}
                 onChange={(e) => setSiteObservations(e.target.value)}
                 rows={3}
@@ -1205,30 +1293,6 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         )}
       </Card>
 
-      {/* Site Audio Notes */}
-      <Card>
-        <CardHeader
-          className="pb-2 cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => setAudioOpen((v) => !v)}
-        >
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-            <Mic className="h-4 w-4 text-forest" />
-            Site Audio Notes
-            <span className="ml-auto flex items-center justify-center h-11 w-11 -mr-3">
-              <ChevronDown
-                className={`h-4 w-4 text-muted-foreground transition-transform ${
-                  audioOpen ? "rotate-180" : ""
-                }`}
-              />
-            </span>
-          </CardTitle>
-        </CardHeader>
-        {audioOpen && (
-          <CardContent className="pt-0 px-3 md:px-6">
-            <PropertyAudioNotes propertyId={property.id} />
-          </CardContent>
-        )}
-      </Card>
 
       {/* Protected Trees Permit Warning Banner */}
       {trees.some((t) => t.isProtected) && (

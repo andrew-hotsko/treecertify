@@ -1,17 +1,22 @@
 /**
- * AI Report Generation — Prompt v2.0 (2026-03-03)
+ * AI Report Generation — Prompt v2.1 (2026-03-04)
  *
  * Data-driven generation: structured tree/property/ordinance data is sent
  * alongside detailed system prompt instructions. Claude generates the
  * narrative from data rather than polishing pre-written text.
  *
- * Prompt version: 2.0
+ * Prompt version: 2.1
+ * Changes from v2.0:
+ *   - Added MASTER_VOICE_INSTRUCTIONS for raw dictation → professional language
+ *   - Labels health/structural notes as raw field dictation in data block
+ *   - Scope of Assignment instruction for Section 1 foundation
+ *   - Report depth scaling based on tree condition/action
  */
 import { prisma } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getOrdinanceByCity } from "@/lib/ordinances";
-import { getReportTemplate } from "@/lib/report-templates";
+import { getReportTemplate, MASTER_VOICE_INSTRUCTIONS } from "@/lib/report-templates";
 import Anthropic from "@anthropic-ai/sdk";
 import { logApiUsage } from "@/lib/api-usage";
 
@@ -456,8 +461,8 @@ export async function POST(request: NextRequest) {
     - Height: ${t.heightFt ? `${t.heightFt} feet` : "Not measured"}
     - Canopy Spread: ${t.canopySpreadFt ? `${t.canopySpreadFt} feet` : "Not measured"}
     - Condition Rating: ${t.conditionRating}/5
-    - Health Notes: ${t.healthNotes || "None provided by arborist"}
-    - Structural Notes: ${t.structuralNotes || "None provided by arborist"}
+    - Health Notes (raw field dictation — transform to professional language): ${t.healthNotes || "None provided by arborist"}
+    - Structural Notes (raw field dictation — transform to professional language): ${t.structuralNotes || "None provided by arborist"}
     - Protected Status: ${t.isProtected ? "Yes" : "No"}
     - Protection Reason: ${t.protectionReason || "N/A"}
     - Recommended Action: ${t.recommendedAction}
@@ -503,12 +508,14 @@ ${property.propertyAudioNotes
         .map((s, i) => `${i + 1}. **${s}**`)
         .join("\n");
 
-      // Build the data-driven system prompt (v2.0)
+      // Build the data-driven system prompt (v2.1)
       const systemPrompt = `You are an expert ISA Certified Arborist generating a professional ${reportTypeLabel} report from structured field data. Your task is to GENERATE a complete, submission-ready narrative from the data below — not to polish or refine pre-written text.
 
-PROMPT VERSION: ${template?.promptVersion || "2.0"}
+PROMPT VERSION: 2.1
 
 ${template?.systemInstructions || `Write a professional arborist report following ISA standards and best practices.`}
+
+${MASTER_VOICE_INSTRUCTIONS}
 
 ═══════════════════════════════════════════════════════════
 STRUCTURED DATA — Generate the report narrative from this data
@@ -538,7 +545,7 @@ PROPERTY DATA:
 - Report Type: ${reportTypeLabel}
 - Total Trees: ${treeCount}
 - Scope of Assignment: ${property.scopeOfAssignment || "Not specified"}
-- Site Observations: ${property.siteObservations || "Not specified"}${
+- Site Observations (raw field dictation — transform to professional language): ${property.siteObservations || "Not specified"}${
   body.reportType === "construction_encroachment"
     ? `\n- Project Description: ${(property as Record<string, unknown>).projectDescription || "N/A"}\n- Permit Number: ${(property as Record<string, unknown>).permitNumber || "N/A"}\n- Developer/Contractor: ${(property as Record<string, unknown>).developerName || "N/A"}\n- Architect: ${(property as Record<string, unknown>).architectName || "N/A"}`
     : ""
@@ -571,6 +578,12 @@ DATA INTEGRITY RULES:
 - When property-level field notes are provided, weave them into Site Observations as "Site conditions noted during the field inspection include..."
 - When photos are on file, reference them: "See Photo 1."
 
+SCOPE OF ASSIGNMENT HANDLING:
+- Use the arborist's Scope of Assignment as the foundation for Section 1 (Assignment and Purpose / Introduction)
+- Expand into a formal scope paragraph including the date of the field inspection, assessment methodology (Level 2 basic assessment per ISA Best Management Practices), applicable municipal ordinance, and assessment objectives
+- Do NOT contradict the arborist's stated scope — enhance and formalize it
+- If scope is "Not specified," compose Section 1 from the property data, tree count, and report type context
+
 CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF template generates that separately. Do NOT include an "Arborist Certification Statement" — the certification is handled by the PDF template with the arborist's e-signature. End the report after the final content section.`;
 
       // Stream the response for real-time progress
@@ -580,7 +593,7 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
         messages: [
           {
             role: "user",
-            content: `Generate the complete ${reportTypeLabel} report for the ${treeCount}-tree property at ${property.address}, ${property.city} based on the structured assessment data provided.`,
+            content: `Generate the complete ${reportTypeLabel} report for the ${treeCount}-tree property at ${property.address}, ${property.city} based on the structured assessment data provided.\n\nIMPORTANT: Transform ALL raw field dictation into formal professional arborist report language. Never reproduce dictation verbatim. Every sentence must be suitable for municipal submission and legal review.`,
           },
         ],
         system: systemPrompt,

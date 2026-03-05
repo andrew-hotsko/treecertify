@@ -2,6 +2,22 @@ import { prisma } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
+function defaultScope(reportType: string, address: string, city: string): string {
+  const location = `${address}, ${city}`;
+  switch (reportType) {
+    case "removal_permit":
+      return `Perform a Level 2 basic assessment per ISA Best Management Practices of the subject tree(s) at ${location} to evaluate health, structural condition, and risk, and to provide professional recommendations regarding tree removal permit application per the ${city} municipal tree ordinance.`;
+    case "health_assessment":
+      return `Perform a Level 2 basic assessment per ISA Best Management Practices of the subject tree(s) at ${location} to evaluate overall health, structural integrity, and vitality, and to provide maintenance recommendations.`;
+    case "construction_encroachment":
+      return `Perform a Level 2 basic assessment per ISA Best Management Practices of the subject tree(s) at ${location} to evaluate potential impacts from proposed construction activity, assess tree protection zone encroachment, and provide tree preservation recommendations per ANSI A300 Part 5 standards.`;
+    case "tree_valuation":
+      return `Perform a Level 2 basic assessment per ISA Best Management Practices and appraise the subject tree(s) at ${location} using the CTLA Trunk Formula Method (10th Edition) to determine replacement value for insurance, litigation, or municipal purposes.`;
+    default:
+      return `Perform a Level 2 basic assessment per ISA Best Management Practices of the subject tree(s) at ${location} to evaluate health, structural condition, and provide professional arborist recommendations.`;
+  }
+}
+
 export async function GET() {
   try {
     const { userId } = await auth();
@@ -86,6 +102,13 @@ export async function POST(request: NextRequest) {
         homeownerEmail: body.homeownerEmail ?? null,
         homeownerPhone: body.homeownerPhone ?? null,
         reportType: body.reportType ?? "health_assessment",
+        scopeOfAssignment:
+          body.scopeOfAssignment ??
+          defaultScope(
+            body.reportType ?? "health_assessment",
+            body.address,
+            (body.city || "").trim().replace(/\b\w/g, (c: string) => c.toUpperCase())
+          ),
         projectDescription: body.projectDescription ?? null,
         permitNumber: body.permitNumber ?? null,
         developerName: body.developerName ?? null,

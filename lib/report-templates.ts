@@ -329,3 +329,46 @@ export function getReportTemplate(
 ): ReportTemplate | undefined {
   return REPORT_TEMPLATES.find((t) => t.reportType === reportType);
 }
+
+/**
+ * Master voice transformation instructions — injected into ALL report prompts.
+ *
+ * These instructions ensure raw voice dictation and casual field notes are
+ * transformed into professional ISA arborist report language suitable for
+ * municipal submission, legal review, and permanent filing.
+ */
+export const MASTER_VOICE_INSTRUCTIONS = `
+PROFESSIONAL LANGUAGE TRANSFORMATION (MANDATORY):
+
+This report will be submitted to city planners, reviewed by attorneys, and filed as permanent public record. Every word must reflect the highest standard of professional arborist communication.
+
+TONE AND VOICE:
+- Write exclusively in formal third person. Use "the consulting arborist," "this arborist," or passive constructions. NEVER use "I," "we," "my," or any first-person language.
+- Maintain an objective, clinical tone throughout — factual observations supported by professional judgment.
+- Use ISA-standard terminology at all times: "codominant stems" not "split trunks," "included bark" not "bark growing in," "chlorosis" not "yellowing leaves," "crown dieback" not "dying branches," "adventitious sprouting" not "water sprouts," "mechanical damage" not "damage from equipment."
+
+RAW DICTATION TRANSFORMATION:
+The health notes, structural notes, and site observations fields contain RAW FIELD DICTATION captured via voice recording during on-site assessment. This dictation is informal shorthand — it must NEVER appear verbatim in the report. Transform every instance into polished professional prose.
+
+Examples of required transformation:
+- Raw: "big crack in the main trunk, looks like it could split" → Report: "A significant longitudinal crack was observed in the primary trunk, indicating a potential failure point that warrants further evaluation."
+- Raw: "tree is leaning pretty bad toward the house" → Report: "The specimen exhibits a pronounced lean toward the adjacent residential structure, with an estimated departure from vertical of approximately 15 degrees."
+- Raw: "lots of dead branches up top, maybe 30 percent" → Report: "Approximately 30% crown dieback was observed in the upper canopy, with dead scaffold branches distributed throughout the crown periphery."
+- Raw: "roots are all messed up from the construction" → Report: "Significant root zone disturbance was observed, consistent with recent construction activity. Exposed and severed lateral roots were noted within the critical root zone."
+- Raw: "this one looks fine, healthy tree" → Report: "The specimen presented in good overall condition with a full, well-distributed crown and no significant health or structural defects noted during the Level 2 visual assessment."
+
+BANNED CASUAL WORDS — never use these in the report:
+"pretty," "lots of," "bunch of," "messed up," "looks like," "seems like," "kind of," "sort of," "big," "bad," "good shape," "not great," "okay," "fine," "nice," "stuff," "thing," "a bit," "really," "basically," "actually"
+
+OBSERVATION CHECKBOX FORMAT:
+When notes contain "Observed: X, Y, Z" format (from ISA observation checkboxes), weave these observations into flowing narrative prose. Do NOT reproduce the "Observed:" prefix or present as a list. Instead:
+- Raw: "Observed: crown dieback, codominant stems, included bark" → Report: "The assessment revealed crown dieback affecting the upper canopy, with codominant stems exhibiting included bark at the primary union — a structural configuration that increases the likelihood of stem failure."
+
+REPORT DEPTH SCALING:
+- Trees recommended for removal, or with condition ratings ≤ 2: Write 2-3 detailed paragraphs with thorough justification, specific observations, risk implications, and clear professional rationale.
+- Trees rated 3 (Fair): Write 1-2 paragraphs noting specific concerns and maintenance recommendations.
+- Healthy trees rated 4-5 with no defects and retention recommended: Write 2-4 concise sentences confirming good condition and any routine maintenance needs. Do not pad with unnecessary prose.
+
+SITE OBSERVATIONS TRANSFORMATION:
+Site observations may also contain raw dictation fragments. Transform into proper descriptive paragraphs describing the property setting, topography, soil conditions, surrounding land use, and proximity to structures. Even rough notes like "flat lot, clay soil, house is close to the oak" should become: "The subject property is situated on level terrain with clay-dominant soils. The primary residence is located in close proximity to the mature Coast Live Oak, with the structure approximately within the tree's drip line."
+`;

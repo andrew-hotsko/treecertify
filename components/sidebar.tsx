@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  TreePine,
   LayoutDashboard,
   MapPin,
   BookOpen,
@@ -50,8 +49,7 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl }: SidebarPr
   return (
     <aside className="hidden md:flex fixed inset-y-0 left-0 z-50 w-64 flex-col bg-neutral-800 text-neutral-100">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-2 border-b border-neutral-700 px-6">
-        <TreePine className="h-7 w-7 text-forest-muted" />
+      <div className="flex h-16 items-center border-b border-neutral-700 px-6">
         <div>
           <h1 className="text-lg font-display font-bold tracking-tight">
             <span className="text-forest-muted">Tree</span>

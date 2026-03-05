@@ -61,8 +61,10 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
             let errorMsg = "Transcription failed";
             try {
               const errData = await res.json();
-              if (errData?.error?.includes("OPENAI_API_KEY") || errData?.error?.includes("API key")) {
+              if (errData?.error?.includes("No OPENAI_API_KEY")) {
                 errorMsg = "Voice transcription requires an OpenAI API key. Add OPENAI_API_KEY to your .env file.";
+              } else if (errData?.error?.includes("Incorrect API key") || errData?.error?.includes("invalid_api_key")) {
+                errorMsg = "Your OpenAI API key is invalid. Check your key at platform.openai.com/api-keys and update .env.";
               } else if (errData?.error) {
                 errorMsg = errData.error;
               }

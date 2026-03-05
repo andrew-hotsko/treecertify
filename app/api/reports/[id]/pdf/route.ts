@@ -541,11 +541,11 @@ export async function GET(
         </tr>
         <tr>
           <td class="traq-label">Health Notes</td>
-          <td>${esc(tree.healthNotes || "No health defects noted.")}</td>
+          <td>${formatNotesForTRAQ(tree.healthNotes, "No health defects noted.")}</td>
         </tr>
         <tr>
           <td class="traq-label">Structural Notes</td>
-          <td>${esc(tree.structuralNotes || "No structural defects noted.")}</td>
+          <td>${formatNotesForTRAQ(tree.structuralNotes, "No structural defects noted.")}</td>
         </tr>
       </table>
 
@@ -2010,6 +2010,39 @@ export async function GET(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Parse "Observed: X, Y, Z" prefix from a notes string.
+ */
+function parseObservedItems(notes: string): string[] {
+  const match = notes.match(/^Observed:\s*(.+?)(\n|$)/);
+  if (!match) return [];
+  return match[1].split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+/**
+ * Extract free-text portion after "Observed: ..." line.
+ */
+function extractNoteFreeText(notes: string): string {
+  return notes.replace(/^Observed:\s*.+?(\n\n|\n|$)/, "").trim();
+}
+
+/**
+ * Format notes for TRAQ display:
+ * - Strip "Observed:" prefix, show items as "Observed conditions: X, Y, Z."
+ * - Show free text below
+ * - If no "Observed:" prefix, return notes as-is
+ */
+function formatNotesForTRAQ(notes: string | null, fallback: string): string {
+  if (!notes || !notes.trim()) return fallback;
+  const items = parseObservedItems(notes);
+  const freeText = extractNoteFreeText(notes);
+  if (items.length > 0) {
+    const itemLine = `Observed conditions: ${items.join(", ")}.`;
+    return freeText ? `${esc(itemLine)}<br/>${esc(freeText)}` : esc(itemLine);
+  }
+  return esc(notes);
+}
 
 function esc(text: string): string {
   return text
