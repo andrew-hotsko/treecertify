@@ -84,7 +84,7 @@ export function ReportPreview({
   const protectedCount = trees.filter((t) => t.isProtected).length;
 
   return (
-    <div className="report-preview-container bg-neutral-50 dark:bg-zinc-950 rounded-lg shadow-md border border-neutral-300 dark:border-zinc-800 overflow-hidden">
+    <div className="report-preview-container bg-neutral-50 rounded-lg shadow-md border border-neutral-300 overflow-hidden">
       {/* ---- Styles scoped to .report-preview ---- */}
       <style>{`
         .report-preview {
@@ -179,7 +179,7 @@ export function ReportPreview({
       <div className="report-preview">
         {/* ---- Company Branding Header ---- */}
         {arborist?.companyLogoUrl && (
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-neutral-300 dark:border-zinc-700">
+          <div className="flex items-center justify-between mb-6 pb-4 border-b border-neutral-300">
             <div className="flex items-center gap-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -194,13 +194,13 @@ export function ReportPreview({
                   </p>
                 )}
                 {arborist.companyAddress && (
-                  <p className="text-[9pt] text-neutral-500 dark:text-zinc-400">
+                  <p className="text-[9pt] text-neutral-500">
                     {arborist.companyAddress}
                   </p>
                 )}
               </div>
             </div>
-            <div className="text-right text-[9pt] text-neutral-500 dark:text-zinc-400">
+            <div className="text-right text-[9pt] text-neutral-500">
               {arborist.companyPhone && <p>{arborist.companyPhone}</p>}
               {arborist.companyEmail && <p>{arborist.companyEmail}</p>}
               {arborist.companyWebsite && <p>{arborist.companyWebsite}</p>}
@@ -209,14 +209,14 @@ export function ReportPreview({
         )}
 
         {/* ---- Header ---- */}
-        <div className="text-center border-b-[3px] border-double border-[#2d5016] dark:border-[#6fcf3b] pb-5 mb-8">
+        <div className="text-center border-b-[3px] border-double border-[#2d5016] pb-5 mb-8">
           <h1 className="text-[18pt] tracking-[2px] uppercase !mt-0 !mb-1">
             Arborist Report
           </h1>
-          <h2 className="!text-neutral-700 dark:!text-zinc-300 font-normal !mt-0 !mb-2">
+          <h2 className="!text-neutral-700 font-normal !mt-0 !mb-2">
             {property.address}
           </h2>
-          <p className="text-[10pt] text-neutral-500 dark:text-zinc-400">
+          <p className="text-[10pt] text-neutral-500">
             {property.city}
             {property.state ? `, ${property.state}` : ", CA"}
             {property.county ? ` \u2014 ${property.county} County` : ""}
@@ -227,7 +227,7 @@ export function ReportPreview({
         <div className="text-center mb-6">
           <Badge
             variant="outline"
-            className="text-[10pt] px-4 py-1.5 border-[#2d5016] text-[#2d5016] dark:border-[#6fcf3b] dark:text-[#6fcf3b]"
+            className="text-[10pt] px-4 py-1.5 border-[#2d5016] text-[#2d5016]"
           >
             {reportLabel}
           </Badge>
@@ -237,11 +237,11 @@ export function ReportPreview({
         <table className="!text-[10pt]" style={{ marginBottom: 24 }}>
           <tbody>
             <tr>
-              <td className="!bg-neutral-200 dark:!bg-zinc-800 !font-bold w-[28%]">
+              <td className="!bg-neutral-200 !font-bold w-[28%]">
                 Report Type
               </td>
               <td>{reportLabel}</td>
-              <td className="!bg-neutral-200 dark:!bg-zinc-800 !font-bold w-[18%]">
+              <td className="!bg-neutral-200 !font-bold w-[18%]">
                 Date
               </td>
               <td>
@@ -254,28 +254,28 @@ export function ReportPreview({
             </tr>
             {arborist && (
               <tr>
-                <td className="!bg-neutral-200 dark:!bg-zinc-800 !font-bold">
+                <td className="!bg-neutral-200 !font-bold">
                   Arborist
                 </td>
                 <td>{arborist.name}</td>
-                <td className="!bg-neutral-200 dark:!bg-zinc-800 !font-bold">
+                <td className="!bg-neutral-200 !font-bold">
                   ISA #
                 </td>
                 <td>{arborist.isaCertificationNum}</td>
               </tr>
             )}
             <tr>
-              <td className="!bg-neutral-200 dark:!bg-zinc-800 !font-bold">
+              <td className="!bg-neutral-200 !font-bold">
                 Property
               </td>
               <td>{property.address}</td>
-              <td className="!bg-neutral-200 dark:!bg-zinc-800 !font-bold">
+              <td className="!bg-neutral-200 !font-bold">
                 APN
               </td>
               <td>{property.parcelNumber || "N/A"}</td>
             </tr>
             <tr>
-              <td className="!bg-neutral-200 dark:!bg-zinc-800 !font-bold">
+              <td className="!bg-neutral-200 !font-bold">
                 City
               </td>
               <td>
@@ -283,7 +283,7 @@ export function ReportPreview({
                 {property.state ? `, ${property.state}` : ", CA"}
                 {property.zip ? ` ${property.zip}` : ""}
               </td>
-              <td className="!bg-neutral-200 dark:!bg-zinc-800 !font-bold">
+              <td className="!bg-neutral-200 !font-bold">
                 Trees
               </td>
               <td>
@@ -316,7 +316,7 @@ export function ReportPreview({
                     <td>
                       {tree.speciesCommon || "Unidentified"}
                       {tree.speciesScientific && (
-                        <em className="text-neutral-500 dark:text-zinc-400 ml-1">
+                        <em className="text-neutral-500 ml-1">
                           ({tree.speciesScientific})
                         </em>
                       )}
@@ -352,8 +352,8 @@ export function ReportPreview({
 
         {/* ---- Certification Box ---- */}
         {certifiedAt && eSignatureText && (
-          <div className="mt-10 border-2 border-[#2d5016] dark:border-[#6fcf3b] rounded-lg p-5 bg-[#f8faf5] dark:bg-forest/10">
-            <div className="flex items-center gap-2 text-[#2d5016] dark:text-[#6fcf3b] mb-3">
+          <div className="mt-10 border-2 border-[#2d5016] rounded-lg p-5 bg-[#f8faf5]">
+            <div className="flex items-center gap-2 text-[#2d5016] mb-3">
               <CheckCircle2 className="h-5 w-5" />
               <h3 className="!mt-0 !mb-0 text-[12pt]">
                 Arborist Certification

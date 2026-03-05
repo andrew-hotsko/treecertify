@@ -1203,9 +1203,9 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
 
       {/* Protected Trees Permit Warning Banner */}
       {trees.some((t) => t.isProtected) && (
-        <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/20 px-4 py-3">
+        <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
           <ShieldCheck className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-          <p className="text-sm text-amber-800 dark:text-amber-300">
+          <p className="text-sm text-amber-800">
             Protected trees on this property may require permits before work
             begins. Check individual tree details for permit requirements.
           </p>

@@ -350,13 +350,13 @@ export function PropertyAudioNotes({ propertyId }: PropertyAudioNotesProps) {
         )}
 
         {recorderError && (
-          <div className="w-full rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-800 p-3 space-y-2">
-            <p className="text-xs font-medium text-red-600 dark:text-red-400">
+          <div className="w-full rounded-lg border border-red-200 bg-red-50 p-3 space-y-2">
+            <p className="text-xs font-medium text-red-600">
               {recorderError.toLowerCase().includes("permission")
                 ? "Microphone access denied"
                 : recorderError}
             </p>
-            <p className="text-[11px] text-red-500/80 dark:text-red-400/70">
+            <p className="text-[11px] text-red-500/80/70">
               {recorderError.toLowerCase().includes("permission")
                 ? "Your browser blocked microphone access. Click the lock/site-settings icon in your address bar, allow microphone access, then try again."
                 : "Make sure your device has a microphone connected and try again."}
@@ -364,7 +364,7 @@ export function PropertyAudioNotes({ propertyId }: PropertyAudioNotesProps) {
             <Button
               variant="outline"
               size="sm"
-              className="mt-1 border-red-300 text-red-600 hover:bg-red-100 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950"
+              className="mt-1 border-red-300 text-red-600 hover:bg-red-100"
               onClick={startRecording}
             >
               <RotateCcw className="h-3 w-3" />
@@ -497,7 +497,7 @@ export function PropertyAudioNotes({ propertyId }: PropertyAudioNotesProps) {
               )}
 
               {note.status === "error" && (
-                <p className="text-xs text-red-500 p-2 rounded bg-red-50 dark:bg-red-950/30">
+                <p className="text-xs text-red-500 p-2 rounded bg-red-50">
                   {note.errorMessage || "Transcription failed"}
                 </p>
               )}

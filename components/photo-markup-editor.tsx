@@ -443,7 +443,7 @@ export function PhotoMarkupEditor({
 
         <div className="flex flex-col">
           {/* Toolbar */}
-          <div className="flex items-center gap-1.5 p-2 border-b bg-neutral-100 dark:bg-zinc-900 flex-wrap">
+          <div className="flex items-center gap-1.5 p-2 border-b bg-neutral-100 flex-wrap">
             {/* Tool buttons */}
             <div className="flex items-center gap-0.5 border-r pr-2 mr-1">
               <ToolButton
@@ -486,7 +486,7 @@ export function PhotoMarkupEditor({
                   className={`h-6 w-6 rounded-full border-2 transition-all ${
                     color === c.value
                       ? "border-blue-500 scale-110"
-                      : "border-neutral-300 dark:border-zinc-600"
+                      : "border-neutral-300"
                   }`}
                   style={{ backgroundColor: c.value }}
                   onClick={() => setColor(c.value)}
@@ -502,8 +502,8 @@ export function PhotoMarkupEditor({
                   key={w}
                   className={`flex items-center justify-center h-7 w-7 rounded transition-colors ${
                     lineWidth === w
-                      ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
-                      : "hover:bg-neutral-200 dark:hover:bg-zinc-800"
+                      ? "bg-blue-100 text-blue-700"
+                      : "hover:bg-neutral-200"
                   }`}
                   onClick={() => setLineWidth(w)}
                   title={`${w}px`}
@@ -594,8 +594,8 @@ function ToolButton({
     <button
       className={`flex items-center justify-center h-8 w-8 rounded transition-colors ${
         active
-          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
-          : "hover:bg-neutral-200 dark:hover:bg-zinc-800 text-neutral-600 dark:text-zinc-400"
+          ? "bg-blue-100 text-blue-700"
+          : "hover:bg-neutral-200 text-neutral-600"
       } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
       onClick={onClick}
       disabled={disabled}

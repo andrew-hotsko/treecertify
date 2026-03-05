@@ -633,7 +633,7 @@ export default function OnboardingPage() {
             <Button
               onClick={handleStep1}
               disabled={loading}
-              className="w-full bg-forest hover:bg-forest-light h-12 text-base"
+              className="w-full bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform h-12 text-base"
             >
               {loading ? (
                 <>
@@ -802,7 +802,7 @@ export default function OnboardingPage() {
               <Button
                 onClick={handleStep2}
                 disabled={loading}
-                className="flex-1 bg-forest hover:bg-forest-light h-12 text-base"
+                className="flex-1 bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform h-12 text-base"
               >
                 {loading ? (
                   <>
@@ -967,7 +967,7 @@ export default function OnboardingPage() {
                   !reportType ||
                   creatingProperty
                 }
-                className="flex-1 bg-forest hover:bg-forest-light h-12 text-base"
+                className="flex-1 bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform h-12 text-base"
               >
                 {creatingProperty ? (
                   <>

@@ -331,7 +331,7 @@ export function PropertiesList({ properties, initialFilter }: PropertiesListProp
                 <Button
                   asChild
                   size="sm"
-                  className="mt-4 bg-forest hover:bg-forest-light"
+                  className="mt-4 bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform"
                 >
                   <Link href="/properties/new">
                     <Plus className="mr-2 h-4 w-4" />
@@ -361,7 +361,7 @@ export function PropertiesList({ properties, initialFilter }: PropertiesListProp
                 href={`/properties/${property.id}`}
                 className="block"
               >
-                <Card className="hover:border-forest/30 transition-colors cursor-pointer">
+                <Card className="hover:border-forest/30 hover:shadow-md transition-all duration-150 cursor-pointer">
                   <CardContent className="p-4 sm:p-5">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">

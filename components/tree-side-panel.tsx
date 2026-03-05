@@ -1094,14 +1094,14 @@ export function TreeSidePanel({
           {!checkingProtection &&
             protectionResult?.isProtected &&
             protectionResult.ordinanceContext?.permitProcessNotes && (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-1.5">
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 space-y-1.5">
                 <div className="flex items-center gap-2">
                   <ClipboardList className="h-4 w-4 text-amber-600 shrink-0" />
-                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                  <span className="text-xs font-semibold text-amber-700">
                     Permit Requirements
                   </span>
                 </div>
-                <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                <p className="text-xs text-amber-800 leading-relaxed">
                   {protectionResult.ordinanceContext.permitProcessNotes}
                 </p>
                 {protectionResult.ordinanceContext.ordinanceUrl && (
@@ -1129,10 +1129,10 @@ export function TreeSidePanel({
           </button>
 
           {overrideProtection && (
-            <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-2">
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 space-y-2">
               <div className="flex items-center gap-2">
                 <ShieldAlert className="h-4 w-4 text-amber-600" />
-                <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                <span className="text-xs font-semibold text-amber-700">
                   Manual Override
                 </span>
               </div>
@@ -1326,7 +1326,7 @@ export function TreeSidePanel({
             variant="outline"
             onClick={onDelete}
             disabled={saving}
-            className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
+            className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
           >
             <Trash2 className="h-4 w-4" />
           </Button>

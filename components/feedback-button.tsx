@@ -252,7 +252,7 @@ export function FeedbackButton() {
               <Button
                 onClick={handleSubmit}
                 disabled={!description.trim() || submitting}
-                className="bg-forest hover:bg-forest-light"
+                className="bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform"
               >
                 {submitting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

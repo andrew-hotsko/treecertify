@@ -20,17 +20,17 @@ function getButtonClasses(rating: number, isSelected: boolean): string {
 
   switch (rating) {
     case 0:
-      return "border-gray-700 bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+      return "border-gray-700 bg-gray-100 text-gray-800";
     case 1:
-      return "border-red-500 bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300";
+      return "border-red-500 bg-red-50 text-red-700";
     case 2:
-      return "border-orange-500 bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300";
+      return "border-orange-500 bg-orange-50 text-orange-700";
     case 3:
-      return "border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300";
+      return "border-amber-500 bg-amber-50 text-amber-700";
     case 4:
-      return "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300";
+      return "border-emerald-500 bg-emerald-50 text-emerald-700";
     case 5:
-      return "border-green-600 bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300";
+      return "border-green-600 bg-green-50 text-green-700";
     default:
       return "border-muted";
   }

@@ -165,7 +165,7 @@ export function TreeSummaryPanel({
     const active = sortKey === sortKeyVal;
     return (
       <th
-        className={`px-3 py-2 text-left text-xs font-medium text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors ${className ?? ""}`}
+        className={`px-3 py-2 text-left text-xs font-mono uppercase tracking-wider text-neutral-500 cursor-pointer select-none hover:text-foreground transition-colors ${className ?? ""}`}
         onClick={() => handleSort(sortKeyVal)}
       >
         <span className="inline-flex items-center gap-1">
@@ -207,21 +207,21 @@ export function TreeSummaryPanel({
         ) : (
           <div className="max-h-72 overflow-auto rounded-lg border">
             <table className="w-full text-sm">
-              <thead className="bg-muted/50 sticky top-0">
+              <thead className="bg-neutral-100 sticky top-0">
                 <tr>
                   <SortHeader label="#" sortKeyVal="treeNumber" className="w-12" />
-                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground w-16">
+                  <th className="px-3 py-2 text-left text-xs font-mono uppercase tracking-wider text-neutral-500 w-16">
                     Tag
                   </th>
                   <SortHeader label="Species" sortKeyVal="species" />
                   <SortHeader label="DBH" sortKeyVal="dbh" className="w-16" />
                   <SortHeader label="Condition" sortKeyVal="condition" className="w-24" />
-                  <th className="px-3 py-2 text-center text-xs font-medium text-muted-foreground w-8">
+                  <th className="px-3 py-2 text-center text-xs font-mono uppercase tracking-wider text-neutral-500 w-8">
                     <ShieldCheck className="h-3.5 w-3.5 mx-auto" />
                   </th>
                   <SortHeader label="Action" sortKeyVal="action" className="w-20" />
                   {showValue && (
-                    <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground w-24">
+                    <th className="px-3 py-2 text-right text-xs font-mono uppercase tracking-wider text-neutral-500 w-24">
                       Value
                     </th>
                   )}

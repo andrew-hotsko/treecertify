@@ -923,7 +923,7 @@ export default function PropertyReportPage() {
               <Button
                 onClick={handleGenerateClick}
                 disabled={generating || property.trees.length === 0}
-                className="w-full bg-blue-600 hover:bg-blue-700"
+                className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] transition-transform"
               >
                 {generating ? (
                   <>
@@ -1012,7 +1012,7 @@ export default function PropertyReportPage() {
                       {streamingText ? (
                         <ScrollArea className="flex-1 min-h-0 rounded-lg border bg-muted/30">
                           <div
-                            className="p-4 prose prose-sm max-w-none dark:prose-invert text-sm"
+                            className="p-4 prose prose-sm max-w-none text-sm"
                             dangerouslySetInnerHTML={{
                               __html: renderMarkdownToHtml(streamingText),
                             }}
@@ -1261,7 +1261,7 @@ export default function PropertyReportPage() {
                 {/* Certify */}
                 <Button
                   size="sm"
-                  className="bg-forest hover:bg-forest-light"
+                  className="bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform"
                   onClick={() => {
                     setCertifyStep(1);
                     setReviewChecked(false);
@@ -1536,7 +1536,7 @@ export default function PropertyReportPage() {
               <ScrollArea className="flex-1">
                 <div
                   ref={previewRef}
-                  className="p-6 prose prose-sm max-w-none dark:prose-invert report-live-preview"
+                  className="p-6 prose prose-sm max-w-none report-live-preview"
                 >
                   <style>{`
                     .report-live-preview h1,
@@ -1822,7 +1822,7 @@ export default function PropertyReportPage() {
                             (validationResult?.hasFailures ?? false) ||
                             (validationResult?.hasWarnings && !warningsAcknowledged)
                           }
-                          className="bg-forest hover:bg-forest-light"
+                          className="bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform"
                         >
                           Next: Attestation
                         </Button>
@@ -1861,7 +1861,7 @@ export default function PropertyReportPage() {
                         <Button
                           onClick={() => setCertifyStep(3)}
                           disabled={!certifyAgreed}
-                          className="bg-forest hover:bg-forest-light"
+                          className="bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform"
                         >
                           Next: Sign
                         </Button>
@@ -1927,7 +1927,7 @@ export default function PropertyReportPage() {
                             certifying ||
                             (arborist?.signatureName ? !signatureNameMatch : false)
                           }
-                          className="bg-forest hover:bg-forest-light"
+                          className="bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform"
                         >
                           {certifying ? (
                             <>
@@ -1995,7 +1995,7 @@ export default function PropertyReportPage() {
               {streamingText ? (
                 <ScrollArea className="flex-1 min-h-0 rounded-lg border bg-muted/30">
                   <div
-                    className="p-4 prose prose-sm max-w-none dark:prose-invert text-sm"
+                    className="p-4 prose prose-sm max-w-none text-sm"
                     dangerouslySetInnerHTML={{
                       __html: renderMarkdownToHtml(streamingText),
                     }}

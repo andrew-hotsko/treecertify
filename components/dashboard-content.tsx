@@ -199,7 +199,7 @@ function WelcomeCard({ state }: { state: Exclude<WelcomeState, "normal"> }) {
       </p>
       <Button
         asChild
-        className="mt-5 bg-forest hover:bg-forest-light"
+        className="mt-5 bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform"
       >
         <Link href={config.href}>
           <Plus className="mr-2 h-4 w-4" />
@@ -299,7 +299,7 @@ export function DashboardContent({
               )}
             >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-neutral-500">
+                <CardTitle className="text-xs font-mono uppercase tracking-wider text-neutral-500">
                   {stat.title}
                 </CardTitle>
                 <div className={`rounded-md p-2 ${stat.bg}`}>
