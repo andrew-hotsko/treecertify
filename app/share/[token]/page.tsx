@@ -185,7 +185,7 @@ export default async function SharedPropertyPage({
           <section className="flex justify-center">
             <a
               href={`/api/reports/${report.id}/pdf?token=${token}`}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium text-sm transition-colors shadow-sm"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-forest hover:bg-forest-light text-white rounded-lg font-medium text-sm transition-colors shadow-sm"
               download
             >
               <Download className="h-4 w-4" />
@@ -299,7 +299,7 @@ export default async function SharedPropertyPage({
                       <Phone className="h-3.5 w-3.5 shrink-0" />
                       <a
                         href={`tel:${arborist.companyPhone}`}
-                        className="hover:text-emerald-600 transition-colors"
+                        className="hover:text-forest transition-colors"
                       >
                         {arborist.companyPhone}
                       </a>
@@ -310,7 +310,7 @@ export default async function SharedPropertyPage({
                       <Mail className="h-3.5 w-3.5 shrink-0" />
                       <a
                         href={`mailto:${arborist.companyEmail}`}
-                        className="hover:text-emerald-600 transition-colors truncate"
+                        className="hover:text-forest transition-colors truncate"
                       >
                         {arborist.companyEmail}
                       </a>
@@ -323,7 +323,7 @@ export default async function SharedPropertyPage({
                         href={arborist.companyWebsite}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-emerald-600 hover:underline truncate"
+                        className="text-forest hover:underline truncate"
                       >
                         {arborist.companyWebsite.replace(/^https?:\/\//, "")}
                       </a>

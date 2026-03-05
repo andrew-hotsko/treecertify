@@ -32,9 +32,16 @@
 - Mock fallback (no ANTHROPIC_API_KEY) does not fabricate observations — uses "No concerns noted" language when arborist left fields blank.
 - Streaming via SSE to the report editor UI. Excluded sections: "Tree Inventory" and "Arborist Certification Statement" (handled by PDF template).
 
+## Brand Guide
+- Colors: Forest #1D4E3E (primary), Forest Light #2A6B55 (hover), Forest Muted #3D7D68 (accents). Warm neutral scale #FEFDFB–#0A0A09. No dark mode.
+- Fonts: Instrument Sans (`font-display`) for headings, Roboto (`font-body`, default) for UI, IBM Plex Mono (`font-mono`) for data/measurements/ISA numbers.
+- Tailwind: `forest.DEFAULT`/`.light`/`.muted` + brand `neutral` scale in `tailwind.config.ts`. CSS variables in `globals.css` use HSL format.
+- Instrument Sans loaded via CSS `@import` in `globals.css`. Roboto + IBM Plex Mono via `next/font/google` in `app/layout.tsx`.
+- Condition dot colors (emerald-500, gray-400/700, etc.) in `CONDITION_DOT_COLOR` maps are data visualization — do NOT change to brand colors.
+
 ## PDF Generation
 - PDF route: `app/api/reports/[id]/pdf/route.ts` — Puppeteer renders HTML template to PDF.
-- Professional layout: Playfair Display headings, Source Sans 3 body, Dancing Script e-signatures.
+- Professional layout: Instrument Sans headings, Roboto body, Dancing Script e-signatures.
 - Cover page: centered company logo (base64), company info, "Prepared For" block, arborist credentials.
 - Running headers (pages 2+): company name left, report title right, hairline rule. "Page X of Y" footer centered.
 - Table of Contents page after cover — lists all report sections.
@@ -97,14 +104,14 @@
 - Supported cities (5): Palo Alto, Menlo Park, Atherton, Woodside, Portola Valley. Unsupported cities show amber warning but still allow property creation.
 
 ## In-App Feedback
-- `FeedbackButton` component: floating emerald FAB (bottom-right) on all `/(app)/` pages. Dialog with type selector (bug/suggestion/question), description textarea, and auto-screenshot via `html2canvas`.
+- `FeedbackButton` component: floating forest FAB (bottom-right) on all `/(app)/` pages. Dialog with type selector (bug/suggestion/question), description textarea, and auto-screenshot via `html2canvas`.
 - Screenshot capture: dynamic import of `html2canvas`, 0.5x scale, uploaded to `POST /api/feedback/screenshot` → stored in `uploads/feedback/`.
 - Feedback API: `POST /api/feedback` creates a `Feedback` record with auto-captured context (pageUrl, metadata JSON with userAgent, propertyId, viewport, timestamp).
 - `Feedback` model: id, arboristId, type, description, screenshotUrl, pageUrl, metadata, status (new/reviewed/resolved), createdAt.
 
 ## Dashboard Welcome State
 - Dashboard computes `welcomeState`: `no_properties` | `no_trees` | `no_reports` | `normal`.
-- `WelcomeCard` component renders above stat cards for non-normal states with contextual CTA (dashed-border emerald card).
+- `WelcomeCard` component renders above stat cards for non-normal states with contextual CTA (dashed-border forest card).
 
 ## Pre-Beta Stability (Session 12)
 - Smoke test script at `scripts/smoke-test.ts` — tests all API routes via `npx tsx scripts/smoke-test.ts`. Checks GET returns 200/401 (not 500), POST with empty body returns 400/401 (not 500).

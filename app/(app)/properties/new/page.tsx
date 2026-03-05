@@ -57,11 +57,11 @@ const ICON_MAP = {
 
 const COLOR_MAP: Record<string, { border: string; bg: string; ring: string; icon: string; check: string }> = {
   green: {
-    border: "border-l-emerald-600",
-    bg: "bg-emerald-50",
-    ring: "ring-emerald-600",
-    icon: "text-emerald-700",
-    check: "bg-emerald-600",
+    border: "border-l-forest",
+    bg: "bg-forest/5",
+    ring: "ring-forest",
+    icon: "text-forest",
+    check: "bg-forest",
   },
   red: {
     border: "border-l-red-600",
@@ -226,7 +226,7 @@ export default function NewPropertyPage() {
                   colors.border,
                   selected
                     ? `${colors.bg} ring-2 ${colors.ring} border-transparent`
-                    : "bg-white hover:bg-gray-50 border-border"
+                    : "bg-neutral-50 hover:bg-neutral-100 border-border"
                 )}
               >
                 {selected && (
@@ -255,7 +255,7 @@ export default function NewPropertyPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <MapPin className="h-4 w-4 text-emerald-600" />
+              <MapPin className="h-4 w-4 text-forest" />
               Property Location
             </CardTitle>
           </CardHeader>
@@ -449,7 +449,7 @@ export default function NewPropertyPage() {
           <Button
             onClick={handleSubmit}
             disabled={!isValid || submitting}
-            className="bg-emerald-700 hover:bg-emerald-600"
+            className="bg-forest hover:bg-forest-light"
           >
             {submitting ? (
               <>

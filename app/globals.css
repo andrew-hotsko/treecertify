@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap');
 @import "mapbox-gl/dist/mapbox-gl.css";
 
 @tailwind base;
@@ -12,35 +13,37 @@
 
 @layer base {
   :root {
-    --background: 40 20% 98%;
-    --foreground: 150 10% 15%;
-    --card: 0 0% 100%;
-    --card-foreground: 150 10% 15%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 150 10% 15%;
-    --primary: 152 45% 28%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 40 20% 94%;
-    --secondary-foreground: 150 10% 15%;
-    --muted: 40 15% 95%;
-    --muted-foreground: 150 5% 45%;
-    --accent: 30 40% 50%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 40 15% 88%;
-    --input: 40 15% 88%;
-    --ring: 152 45% 28%;
-    --chart-1: 152 45% 28%;
+    --font-instrument-sans: 'Instrument Sans', sans-serif;
+
+    --background: 40 33% 99%;
+    --foreground: 60 3% 22%;
+    --card: 40 20% 97%;
+    --card-foreground: 60 3% 22%;
+    --popover: 40 20% 97%;
+    --popover-foreground: 60 3% 22%;
+    --primary: 160 44% 21%;
+    --primary-foreground: 40 33% 99%;
+    --secondary: 50 6% 90%;
+    --secondary-foreground: 60 3% 22%;
+    --muted: 50 6% 90%;
+    --muted-foreground: 60 2% 50%;
+    --accent: 160 33% 36%;
+    --accent-foreground: 40 33% 99%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 50 6% 90%;
+    --input: 50 9% 93%;
+    --ring: 160 44% 28%;
+    --chart-1: 160 44% 21%;
     --chart-2: 30 40% 50%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    --sidebar: 150 20% 18%;
-    --sidebar-foreground: 40 20% 92%;
-    --sidebar-muted: 150 15% 25%;
-    --sidebar-accent: 152 45% 35%;
+    --sidebar: 60 2% 13%;
+    --sidebar-foreground: 40 20% 97%;
+    --sidebar-muted: 60 2% 20%;
+    --sidebar-accent: 160 44% 21%;
   }
 }
 

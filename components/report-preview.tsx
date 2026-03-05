@@ -328,7 +328,7 @@ export function ReportPreview({
                     <td className="text-center">{tree.conditionRating}/5</td>
                     <td className="text-center">
                       {tree.isProtected ? (
-                        <span className="inline-flex items-center gap-0.5 text-forest dark:text-emerald-400">
+                        <span className="inline-flex items-center gap-0.5 text-forest">
                           <ShieldCheck className="h-3.5 w-3.5" />
                           Yes
                         </span>

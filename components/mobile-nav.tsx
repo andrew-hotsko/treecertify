@@ -55,10 +55,13 @@ export function MobileNav({ arboristName, isaCertNum, profilePhotoUrl }: MobileN
   return (
     <>
       {/* Top bar — mobile only */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-14 px-4 bg-[hsl(var(--sidebar))] text-[hsl(var(--sidebar-foreground))]">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-14 px-4 bg-neutral-800 text-neutral-100">
         <div className="flex items-center gap-2">
-          <TreePine className="h-5 w-5 text-emerald-400" />
-          <span className="font-bold text-sm">TreeCertify</span>
+          <TreePine className="h-5 w-5 text-forest-muted" />
+          <span className="font-display font-bold text-sm">
+            <span className="text-forest-muted">Tree</span>
+            <span className="text-neutral-50">Certify</span>
+          </span>
         </div>
         <button
           onClick={() => setOpen((v) => !v)}
@@ -80,16 +83,19 @@ export function MobileNav({ arboristName, isaCertNum, profilePhotoUrl }: MobileN
       {/* Slide-out sidebar overlay */}
       <div
         className={cn(
-          "md:hidden fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-[hsl(var(--sidebar))] text-[hsl(var(--sidebar-foreground))] transition-transform duration-200 ease-in-out",
+          "md:hidden fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-neutral-800 text-neutral-100 transition-transform duration-200 ease-in-out",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Logo */}
-        <div className="flex h-14 items-center gap-2 border-b border-[hsl(var(--sidebar-muted))] px-6">
-          <TreePine className="h-6 w-6 text-emerald-400" />
+        <div className="flex h-14 items-center gap-2 border-b border-neutral-700 px-6">
+          <TreePine className="h-6 w-6 text-forest-muted" />
           <div>
-            <h1 className="text-base font-bold tracking-tight">TreeCertify</h1>
-            <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--sidebar-foreground))]/60">
+            <h1 className="text-base font-display font-bold tracking-tight">
+              <span className="text-forest-muted">Tree</span>
+              <span className="text-neutral-50">Certify</span>
+            </h1>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-500">
               Arborist OS
             </p>
           </div>
@@ -99,7 +105,7 @@ export function MobileNav({ arboristName, isaCertNum, profilePhotoUrl }: MobileN
         <div className="px-4 py-4">
           <Link
             href="/properties/new"
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-emerald-500"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-forest px-4 py-3 text-sm font-medium text-neutral-50 transition-colors hover:bg-forest-light"
           >
             <Plus className="h-4 w-4" />
             New Property
@@ -118,8 +124,8 @@ export function MobileNav({ arboristName, isaCertNum, profilePhotoUrl }: MobileN
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-[hsl(var(--sidebar-accent))] text-white"
-                    : "text-[hsl(var(--sidebar-foreground))]/70 hover:bg-[hsl(var(--sidebar-muted))] hover:text-white"
+                    ? "bg-forest text-neutral-50"
+                    : "text-neutral-400 hover:bg-neutral-700 hover:text-neutral-50"
                 )}
               >
                 <item.icon className="h-5 w-5" />
@@ -130,7 +136,7 @@ export function MobileNav({ arboristName, isaCertNum, profilePhotoUrl }: MobileN
         </nav>
 
         {/* User section */}
-        <div className="border-t border-[hsl(var(--sidebar-muted))] p-4" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}>
+        <div className="border-t border-neutral-700 p-4" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}>
           <div className="flex items-center gap-3">
             <div className="relative">
               {profilePhotoUrl ? (
@@ -141,20 +147,20 @@ export function MobileNav({ arboristName, isaCertNum, profilePhotoUrl }: MobileN
                   className="h-8 w-8 rounded-full object-cover"
                 />
               ) : (
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[hsl(var(--sidebar-muted))]">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-700">
                   <User className="h-5 w-5" />
                 </div>
               )}
               <span
                 className={cn(
-                  "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[hsl(var(--sidebar))]",
-                  isOnline ? "bg-emerald-500" : "bg-red-500 animate-pulse"
+                  "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-neutral-800",
+                  isOnline ? "bg-forest-muted" : "bg-red-500 animate-pulse"
                 )}
               />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{arboristName}</p>
-              <p className="text-xs text-[hsl(var(--sidebar-foreground))]/50 truncate">
+              <p className="text-sm font-medium text-neutral-300 truncate">{arboristName}</p>
+              <p className="font-mono text-xs text-neutral-500 truncate">
                 ISA {isaCertNum}
               </p>
               {pendingCount > 0 && (

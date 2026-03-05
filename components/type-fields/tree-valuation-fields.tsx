@@ -215,19 +215,19 @@ export function TreeValuationFields({
       </div>
 
       {/* Auto-calculated values */}
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
+      <div className="rounded-lg border border-forest/20 bg-forest/5 p-3 space-y-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-forest">
           Auto-Calculated
         </p>
         <div className="flex items-center justify-between">
-          <span className="text-xs text-emerald-700">Trunk Area</span>
-          <span className="font-mono text-sm font-semibold text-emerald-800">
+          <span className="text-xs text-forest">Trunk Area</span>
+          <span className="font-mono text-sm font-semibold text-forest">
             {(data.trunkArea ?? 0).toFixed(1)} sq in
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-xs text-emerald-700">Appraised Value</span>
-          <span className="font-mono text-lg font-bold text-emerald-800">
+          <span className="text-xs text-forest">Appraised Value</span>
+          <span className="font-mono text-lg font-bold text-forest">
             {formatter.format(data.appraisedValue ?? 0)}
           </span>
         </div>

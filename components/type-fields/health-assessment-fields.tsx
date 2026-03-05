@@ -49,7 +49,7 @@ function riskBadgeColor(risk: string): string {
     case "extreme":
       return "bg-red-100 text-red-800 border-red-300";
     default:
-      return "bg-gray-100 text-gray-600 border-gray-300";
+      return "bg-neutral-100 text-neutral-600 border-neutral-300";
   }
 }
 

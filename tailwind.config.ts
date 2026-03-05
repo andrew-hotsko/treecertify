@@ -49,7 +49,29 @@ const config: Config = {
   				'3': 'hsl(var(--chart-3))',
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
-  			}
+  			},
+  			forest: {
+  				DEFAULT: '#1D4E3E',
+  				light: '#2A6B55',
+  				muted: '#3D7D68',
+  			},
+  			neutral: {
+  				50: '#FEFDFB',
+  				100: '#FAF9F6',
+  				200: '#F2F1EC',
+  				300: '#E5E5DE',
+  				400: '#C4C4BB',
+  				500: '#9C9C93',
+  				600: '#6B6B63',
+  				700: '#3A3A36',
+  				800: '#222220',
+  				900: '#0A0A09',
+  			},
+  		},
+  		fontFamily: {
+  			display: ['var(--font-instrument-sans)', 'Instrument Sans', 'sans-serif'],
+  			body: ['var(--font-roboto)', 'Roboto', 'sans-serif'],
+  			mono: ['var(--font-ibm-plex-mono)', 'IBM Plex Mono', 'monospace'],
   		},
   		borderRadius: {
   			lg: 'var(--radius)',

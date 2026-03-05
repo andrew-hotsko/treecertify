@@ -48,13 +48,16 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl }: SidebarPr
   const { isOnline, pendingCount } = useConnectivity();
 
   return (
-    <aside className="hidden md:flex fixed inset-y-0 left-0 z-50 w-64 flex-col bg-[hsl(var(--sidebar))] text-[hsl(var(--sidebar-foreground))]">
+    <aside className="hidden md:flex fixed inset-y-0 left-0 z-50 w-64 flex-col bg-neutral-800 text-neutral-100">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-2 border-b border-[hsl(var(--sidebar-muted))] px-6">
-        <TreePine className="h-7 w-7 text-emerald-400" />
+      <div className="flex h-16 items-center gap-2 border-b border-neutral-700 px-6">
+        <TreePine className="h-7 w-7 text-forest-muted" />
         <div>
-          <h1 className="text-lg font-bold tracking-tight">TreeCertify</h1>
-          <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--sidebar-foreground))]/60">
+          <h1 className="text-lg font-display font-bold tracking-tight">
+            <span className="text-forest-muted">Tree</span>
+            <span className="text-neutral-50">Certify</span>
+          </h1>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-500">
             Arborist OS
           </p>
         </div>
@@ -64,7 +67,7 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl }: SidebarPr
       <div className="px-4 py-4">
         <Link
           href="/properties/new"
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-500"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-forest px-4 py-2.5 text-sm font-medium text-neutral-50 transition-colors hover:bg-forest-light"
         >
           <Plus className="h-4 w-4" />
           New Property
@@ -83,8 +86,8 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl }: SidebarPr
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-[hsl(var(--sidebar-accent))] text-white"
-                  : "text-[hsl(var(--sidebar-foreground))]/70 hover:bg-[hsl(var(--sidebar-muted))] hover:text-white"
+                  ? "bg-forest text-neutral-50"
+                  : "text-neutral-400 hover:bg-neutral-700 hover:text-neutral-50"
               )}
             >
               <item.icon className="h-5 w-5" />
@@ -95,7 +98,7 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl }: SidebarPr
       </nav>
 
       {/* User section */}
-      <div className="border-t border-[hsl(var(--sidebar-muted))] p-4">
+      <div className="border-t border-neutral-700 p-4">
         <div className="flex items-center gap-3">
           <div className="relative">
             {profilePhotoUrl ? (
@@ -106,20 +109,20 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl }: SidebarPr
                 className="h-8 w-8 rounded-full object-cover"
               />
             ) : (
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[hsl(var(--sidebar-muted))]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-700">
                 <User className="h-5 w-5" />
               </div>
             )}
             <span
               className={cn(
-                "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[hsl(var(--sidebar))]",
-                isOnline ? "bg-emerald-500" : "bg-red-500 animate-pulse"
+                "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-neutral-800",
+                isOnline ? "bg-forest-muted" : "bg-red-500 animate-pulse"
               )}
             />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{arboristName}</p>
-            <p className="text-xs text-[hsl(var(--sidebar-foreground))]/50 truncate">
+            <p className="text-sm font-medium text-neutral-300 truncate">{arboristName}</p>
+            <p className="font-mono text-xs text-neutral-500 truncate">
               ISA {isaCertNum}
             </p>
             {pendingCount > 0 && (

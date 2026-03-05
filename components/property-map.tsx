@@ -531,8 +531,8 @@ export function PropertyMap({
             onClick={() => handleStyleChange(s.id)}
             className={`px-2.5 py-1.5 text-[10px] font-medium transition-colors ${
               activeStyle === s.id
-                ? "bg-gray-800 text-white"
-                : "text-gray-600 hover:bg-gray-100"
+                ? "bg-neutral-800 text-white"
+                : "text-neutral-600 hover:bg-neutral-100"
             }`}
           >
             {s.label}
@@ -544,11 +544,11 @@ export function PropertyMap({
         <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 text-xs shadow-md">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-4 h-0.5 border-t-2 border-dashed border-orange-500" />
-            <span className="text-gray-700">TPZ (Tree Protection Zone)</span>
+            <span className="text-neutral-700">TPZ (Tree Protection Zone)</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-0.5 border-t-2 border-red-500" />
-            <span className="text-gray-700">SRZ (Structural Root Zone)</span>
+            <span className="text-neutral-700">SRZ (Structural Root Zone)</span>
           </div>
         </div>
       )}

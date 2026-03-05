@@ -1597,7 +1597,7 @@ export default function PropertyReportPage() {
             <ScrollArea className="h-full">
               <div className="max-w-4xl mx-auto py-6 px-4">
                 {isCertified && (
-                  <div className="flex items-center gap-2 rounded-lg border border-forest/20 bg-forest/5 p-3 text-sm text-emerald-800 mb-4">
+                  <div className="flex items-center gap-2 rounded-lg border border-forest/20 bg-forest/5 p-3 text-sm text-forest mb-4">
                     <Lock className="h-4 w-4 shrink-0" />
                     This report has been certified and is locked. Use
                     &ldquo;Unlock &amp; Revise&rdquo; to make changes.
@@ -1642,10 +1642,10 @@ export default function PropertyReportPage() {
               {/* Success state */}
               {certifySuccess ? (
                 <div className="text-center py-8 space-y-4">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 mb-2">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-forest/10 mb-2">
                     <CheckCircle2 className="h-8 w-8 text-forest" />
                   </div>
-                  <h3 className="text-xl font-bold text-emerald-800">Report Certified</h3>
+                  <h3 className="text-xl font-bold text-forest">Report Certified</h3>
                   <p className="text-sm text-muted-foreground">
                     Your report has been certified and locked. You can now download or share it.
                   </p>
@@ -1730,7 +1730,7 @@ export default function PropertyReportPage() {
                               Quality Checklist
                             </span>
                             {validationResult.allPassed && (
-                              <Badge className="ml-auto bg-emerald-100 text-forest hover:bg-emerald-100 text-[10px]">All passed</Badge>
+                              <Badge className="ml-auto bg-forest/10 text-forest hover:bg-forest/10 text-[10px]">All passed</Badge>
                             )}
                           </div>
                           {/* Failures first */}
@@ -1953,10 +1953,10 @@ export default function PropertyReportPage() {
 
       {/* ---- Certified details bar ---- */}
       {isCertified && report && (
-        <div className="flex-none border-t bg-forest/5 dark:bg-emerald-950/10 px-6 py-3">
+        <div className="flex-none border-t bg-forest/5 px-6 py-3">
           <div className="flex items-center gap-4 text-sm">
             <CheckCircle2 className="h-5 w-5 text-forest" />
-            <span className="font-medium text-emerald-800">
+            <span className="font-medium text-forest">
               Certified
             </span>
             <span className="text-muted-foreground">

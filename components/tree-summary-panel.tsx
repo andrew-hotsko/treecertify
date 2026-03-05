@@ -246,7 +246,7 @@ export function TreeSummaryPanel({
                       onClick={() => onSelectTree(tree.id)}
                       className={`cursor-pointer transition-colors hover:bg-accent ${
                         isSelected
-                          ? "bg-forest/5 dark:bg-emerald-950/20"
+                          ? "bg-forest/5"
                           : ""
                       }`}
                     >

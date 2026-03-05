@@ -16,19 +16,19 @@ interface ButtonSelectorProps {
 function getSelectedClasses(color?: string): string {
   switch (color) {
     case "red":
-      return "border-red-500 bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300";
+      return "border-red-500 bg-red-50 text-red-700";
     case "orange":
-      return "border-orange-500 bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300";
+      return "border-orange-500 bg-orange-50 text-orange-700";
     case "amber":
-      return "border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300";
+      return "border-amber-500 bg-amber-50 text-amber-700";
     case "green":
-      return "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300";
+      return "border-forest bg-forest/10 text-forest";
     case "blue":
-      return "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300";
+      return "border-blue-500 bg-blue-50 text-blue-700";
     case "gray":
-      return "border-gray-500 bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300";
+      return "border-neutral-400 bg-neutral-100 text-neutral-700";
     default:
-      return "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300";
+      return "border-forest bg-forest/10 text-forest";
   }
 }
 

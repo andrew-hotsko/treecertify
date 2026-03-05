@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import dynamic from "next/dynamic";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 const PropertyMapView = dynamic(
   () => import("@/components/property-map-view").then((mod) => mod.PropertyMapView),
@@ -29,7 +30,9 @@ export default async function PropertyDetailPage({
 
   return (
     <div className="-mx-6 -my-8">
-      <PropertyMapView property={JSON.parse(JSON.stringify(property))} />
+      <ErrorBoundary sectionName="Map View">
+        <PropertyMapView property={JSON.parse(JSON.stringify(property))} />
+      </ErrorBoundary>
     </div>
   );
 }
