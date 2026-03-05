@@ -155,8 +155,9 @@ export function FeedbackButton() {
     <>
       {/* Floating Action Button */}
       <button
+        data-feedback-trigger
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg hover:bg-emerald-700 hover:shadow-xl transition-all active:scale-95 print:hidden"
+        className="fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-forest text-white shadow-lg hover:bg-forest-light hover:shadow-xl transition-all active:scale-95 print:hidden"
         aria-label="Send feedback"
       >
         <MessageSquarePlus className="h-5 w-5" />
@@ -193,7 +194,7 @@ export function FeedbackButton() {
                       "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors",
                       isActive
                         ? ft.activeColor
-                        : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                        : "border-neutral-300 text-neutral-500 hover:bg-neutral-100"
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -215,7 +216,7 @@ export function FeedbackButton() {
             {/* Screenshot */}
             <div className="flex items-center gap-3">
               {screenshotUrl ? (
-                <div className="flex items-center gap-2 text-sm text-emerald-600">
+                <div className="flex items-center gap-2 text-sm text-forest">
                   <Check className="h-4 w-4" />
                   Screenshot attached
                 </div>
@@ -251,7 +252,7 @@ export function FeedbackButton() {
               <Button
                 onClick={handleSubmit}
                 disabled={!description.trim() || submitting}
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="bg-forest hover:bg-forest-light"
               >
                 {submitting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -56,11 +56,11 @@ const COLOR_MAP: Record<
   { border: string; bg: string; ring: string; icon: string; check: string }
 > = {
   green: {
-    border: "border-l-emerald-600",
-    bg: "bg-emerald-50",
-    ring: "ring-emerald-600",
-    icon: "text-emerald-700",
-    check: "bg-emerald-600",
+    border: "border-l-forest",
+    bg: "bg-forest/5",
+    ring: "ring-forest",
+    icon: "text-forest",
+    check: "bg-forest",
   },
   red: {
     border: "border-l-red-600",
@@ -105,10 +105,10 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
               className={cn(
                 "w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-all",
                 currentStep > step.num
-                  ? "bg-emerald-600 text-white"
+                  ? "bg-forest text-white"
                   : currentStep === step.num
-                    ? "bg-emerald-600 text-white ring-4 ring-emerald-100"
-                    : "bg-gray-200 text-gray-500"
+                    ? "bg-forest text-white ring-4 ring-forest/10"
+                    : "bg-neutral-300 text-neutral-500"
               )}
             >
               {currentStep > step.num ? (
@@ -121,15 +121,15 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
               className={cn(
                 "text-sm",
                 currentStep >= step.num
-                  ? "font-medium text-gray-900"
-                  : "text-gray-400"
+                  ? "font-medium text-neutral-900"
+                  : "text-neutral-400"
               )}
             >
               {step.label}
             </span>
           </div>
           {i < steps.length - 1 && (
-            <div className="hidden sm:block flex-1 h-px bg-gray-200 mx-4" />
+            <div className="hidden sm:block flex-1 h-px bg-neutral-300 mx-4" />
           )}
         </div>
       ))}
@@ -153,8 +153,8 @@ function CoverPagePreview({
   isaCertNum: string;
 }) {
   return (
-    <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 bg-white max-w-xs mx-auto">
-      <p className="text-[10px] text-gray-400 uppercase tracking-widest text-center mb-4">
+    <div className="border-2 border-dashed border-neutral-300 rounded-lg p-6 bg-neutral-50 max-w-xs mx-auto">
+      <p className="text-[10px] text-neutral-400 uppercase tracking-widest text-center mb-4">
         Cover Page Preview
       </p>
       <div className="text-center space-y-3">
@@ -166,25 +166,25 @@ function CoverPagePreview({
             className="h-14 mx-auto object-contain"
           />
         ) : (
-          <div className="h-14 w-14 mx-auto rounded-lg bg-gray-100 flex items-center justify-center">
-            <ImageIcon className="h-6 w-6 text-gray-300" />
+          <div className="h-14 w-14 mx-auto rounded-lg bg-neutral-200 flex items-center justify-center">
+            <ImageIcon className="h-6 w-6 text-neutral-300" />
           </div>
         )}
         <h3
-          className="text-base font-semibold text-gray-800"
+          className="text-base font-semibold text-neutral-800"
           style={{ fontFamily: "'Playfair Display', serif" }}
         >
           {companyName || "Your Company Name"}
         </h3>
-        <div className="h-px bg-gray-200 mx-8" />
+        <div className="h-px bg-neutral-300 mx-8" />
         <div>
-          <p className="text-[10px] text-gray-400 uppercase tracking-wider">
+          <p className="text-[10px] text-neutral-400 uppercase tracking-wider">
             Prepared by
           </p>
-          <p className="text-sm font-medium text-gray-700 mt-1">
+          <p className="text-sm font-medium text-neutral-700 mt-1">
             {arboristName || "Your Name"}
           </p>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs text-neutral-400 mt-0.5">
             ISA Certified Arborist #{isaCertNum || "XX-XXXXX"}
           </p>
         </div>
@@ -477,24 +477,24 @@ export default function OnboardingPage() {
 
   if (initialLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 to-green-100">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-forest/5 to-green-100">
+        <Loader2 className="h-8 w-8 animate-spin text-forest" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 to-green-100 px-4 py-12">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-forest/5 to-green-100 px-4 py-12">
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="mx-auto mb-4 rounded-full bg-emerald-100 p-3 w-fit">
-            <TreePine className="h-8 w-8 text-emerald-600" />
+          <div className="mx-auto mb-4 rounded-full bg-forest/10 p-3 w-fit">
+            <TreePine className="h-8 w-8 text-forest" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-neutral-900">
             Welcome to TreeCertify
           </h1>
-          <p className="text-sm text-gray-500 mt-2 max-w-md mx-auto">
+          <p className="text-sm text-neutral-500 mt-2 max-w-md mx-auto">
             {currentStep === 1 &&
               "Let's set up your arborist profile. This info will appear on your certified reports."}
             {currentStep === 2 &&
@@ -515,8 +515,8 @@ export default function OnboardingPage() {
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                  <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                  <ShieldCheck className="h-4 w-4 text-forest" />
+                  <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide">
                     Professional Credentials
                   </h2>
                 </div>
@@ -633,7 +633,7 @@ export default function OnboardingPage() {
             <Button
               onClick={handleStep1}
               disabled={loading}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 h-12 text-base"
+              className="w-full bg-forest hover:bg-forest-light h-12 text-base"
             >
               {loading ? (
                 <>
@@ -658,8 +658,8 @@ export default function OnboardingPage() {
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2 mb-1">
-                  <Building2 className="h-4 w-4 text-emerald-600" />
-                  <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                  <Building2 className="h-4 w-4 text-forest" />
+                  <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide">
                     Company Branding
                   </h2>
                 </div>
@@ -672,7 +672,7 @@ export default function OnboardingPage() {
                   <div className="space-y-2">
                     <Label>Company Logo</Label>
                     <div className="flex items-center gap-4">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 border-dashed border-zinc-200 bg-zinc-50 overflow-hidden shrink-0">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 border-dashed border-neutral-300 bg-neutral-100 overflow-hidden shrink-0">
                         {logoUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -681,7 +681,7 @@ export default function OnboardingPage() {
                             className="h-full w-full object-contain p-1"
                           />
                         ) : (
-                          <ImageIcon className="h-6 w-6 text-zinc-300" />
+                          <ImageIcon className="h-6 w-6 text-neutral-300" />
                         )}
                       </div>
                       <div>
@@ -802,7 +802,7 @@ export default function OnboardingPage() {
               <Button
                 onClick={handleStep2}
                 disabled={loading}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 h-12 text-base"
+                className="flex-1 bg-forest hover:bg-forest-light h-12 text-base"
               >
                 {loading ? (
                   <>
@@ -835,8 +835,8 @@ export default function OnboardingPage() {
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2 mb-1">
-                  <MapPin className="h-4 w-4 text-emerald-600" />
-                  <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                  <MapPin className="h-4 w-4 text-forest" />
+                  <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide">
                     Your First Property
                   </h2>
                 </div>
@@ -868,7 +868,7 @@ export default function OnboardingPage() {
                       placeholder="e.g., Palo Alto"
                     />
                     {showCityValidation && isSupportedCity && (
-                      <p className="flex items-center gap-1.5 text-xs text-emerald-600">
+                      <p className="flex items-center gap-1.5 text-xs text-forest">
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         Tree ordinance data available for {normalizedCity}
                       </p>
@@ -896,7 +896,7 @@ export default function OnboardingPage() {
 
             {/* Report type selector */}
             <div>
-              <Label className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3 block">
+              <Label className="text-sm font-semibold text-neutral-700 uppercase tracking-wider mb-3 block">
                 Report Type <span className="text-red-500">*</span>
               </Label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -915,7 +915,7 @@ export default function OnboardingPage() {
                         colors.border,
                         selected
                           ? `${colors.bg} ring-2 ${colors.ring} border-transparent`
-                          : "bg-white hover:bg-gray-50 border-border"
+                          : "bg-neutral-50 hover:bg-neutral-100 border-border"
                       )}
                     >
                       {selected && (
@@ -967,7 +967,7 @@ export default function OnboardingPage() {
                   !reportType ||
                   creatingProperty
                 }
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 h-12 text-base"
+                className="flex-1 bg-forest hover:bg-forest-light h-12 text-base"
               >
                 {creatingProperty ? (
                   <>

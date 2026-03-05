@@ -158,8 +158,8 @@ export function SpeciesSearch({ value, onChange, className }: SpeciesSearchProps
                       className={cn(
                         "text-xs px-2.5 py-1.5 rounded-full transition-colors border",
                         value === sp.common
-                          ? "bg-emerald-600 text-white border-emerald-600"
-                          : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200"
+                          ? "bg-forest text-white border-forest"
+                          : "bg-forest/5 text-forest hover:bg-forest/10 border-forest/20"
                       )}
                     >
                       {sp.common}

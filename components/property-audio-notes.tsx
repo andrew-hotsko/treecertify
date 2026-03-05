@@ -322,7 +322,7 @@ export function PropertyAudioNotes({ propertyId }: PropertyAudioNotesProps) {
                 size="sm"
                 onClick={handleUploadRecording}
                 disabled={uploading}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="bg-forest hover:bg-forest-light text-white"
               >
                 {uploading ? (
                   <>
@@ -452,7 +452,7 @@ export function PropertyAudioNotes({ propertyId }: PropertyAudioNotesProps) {
                   <div
                     className={`h-full rounded-full transition-all ${
                       playingId === note.id
-                        ? "bg-emerald-500 animate-pulse w-1/2"
+                        ? "bg-forest-light animate-pulse w-1/2"
                         : "bg-muted-foreground/30 w-0"
                     }`}
                   />
