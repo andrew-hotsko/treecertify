@@ -96,6 +96,23 @@ export default async function DashboardPage() {
     ).length,
   };
 
+  // Invoice stats
+  const invoices = await prisma.invoice.findMany({
+    where: { arboristId: arborist.id },
+    select: { status: true, total: true },
+  });
+
+  const invoiceStats = invoices.length > 0
+    ? {
+        totalInvoiced: invoices.reduce((sum, inv) => sum + inv.total, 0),
+        unpaidCount: invoices.filter((inv) => inv.status === "unpaid").length,
+        unpaidTotal: invoices
+          .filter((inv) => inv.status === "unpaid")
+          .reduce((sum, inv) => sum + inv.total, 0),
+        paidCount: invoices.filter((inv) => inv.status === "paid").length,
+      }
+    : null;
+
   // Weekly activity comparison
   const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
@@ -176,6 +193,7 @@ export default async function DashboardPage() {
         treesThisWeek={treesThisWeek}
         treesLastWeek={treesLastWeek}
         welcomeState={welcomeState}
+        invoiceStats={invoiceStats}
       />
     </div>
   );

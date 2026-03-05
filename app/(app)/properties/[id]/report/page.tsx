@@ -48,6 +48,7 @@ import {
   History,
   RotateCcw,
   Trash2,
+  Receipt,
 } from "lucide-react";
 import {
   Sheet,
@@ -73,6 +74,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { PermitStatusPipeline } from "@/components/permit-status-pipeline";
+import { InvoiceDialog } from "@/components/invoice-dialog";
 import { useToast } from "@/hooks/use-toast";
 
 // ---------------------------------------------------------------------------
@@ -149,6 +151,12 @@ interface ArboristInfo {
   companyEmail?: string | null;
   companyWebsite?: string | null;
   signatureName?: string | null;
+  // Invoice defaults
+  invoiceDefaultFee?: number | null;
+  invoiceHourlyRate?: number | null;
+  invoicePaymentInstructions?: string | null;
+  invoicePrefix?: string;
+  invoiceNetTerms?: string;
 }
 
 interface Section {
@@ -269,6 +277,11 @@ export default function PropertyReportPage() {
   // Delete report state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingReport, setDeletingReport] = useState(false);
+
+  // Invoice state
+  const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [existingInvoice, setExistingInvoice] = useState<any>(null);
 
   // Report delivery state
   const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
@@ -1343,6 +1356,29 @@ export default function PropertyReportPage() {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={async () => {
+                    // Fetch existing invoice for this report
+                    try {
+                      const res = await fetch(`/api/invoices?reportId=${report.id}`);
+                      if (res.ok) {
+                        const invoices = await res.json();
+                        setExistingInvoice(invoices.length > 0 ? invoices[0] : null);
+                      } else {
+                        setExistingInvoice(null);
+                      }
+                    } catch {
+                      setExistingInvoice(null);
+                    }
+                    setShowInvoiceDialog(true);
+                  }}
+                >
+                  <Receipt className="h-3.5 w-3.5 mr-1.5" />
+                  Invoice
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={unlockReport}
                   disabled={unlocking}
                 >
@@ -2210,6 +2246,32 @@ export default function PropertyReportPage() {
           </Card>
         </div>
       )}
+      {/* ---- Invoice Dialog ---- */}
+      {report && property && arborist && (
+        <InvoiceDialog
+          open={showInvoiceDialog}
+          onOpenChange={setShowInvoiceDialog}
+          reportId={report.id}
+          propertyId={propertyId}
+          property={{
+            address: property.address,
+            city: property.city,
+            state: property.state,
+            zip: property.zip,
+            homeownerName: property.homeownerName,
+          }}
+          reportType={report.reportType}
+          existingInvoice={existingInvoice}
+          arboristDefaults={{
+            invoiceDefaultFee: arborist.invoiceDefaultFee ?? null,
+            invoiceHourlyRate: arborist.invoiceHourlyRate ?? null,
+            invoicePaymentInstructions: arborist.invoicePaymentInstructions ?? null,
+            invoicePrefix: arborist.invoicePrefix ?? "INV-",
+            invoiceNetTerms: arborist.invoiceNetTerms ?? "Due on Receipt",
+          }}
+        />
+      )}
+
       {/* ---- Version History Sheet ---- */}
       <Sheet open={showVersionHistory} onOpenChange={setShowVersionHistory}>
         <SheetContent className="w-[400px] sm:w-[450px]">

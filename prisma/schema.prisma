@@ -32,12 +32,20 @@ model Arborist {
   reportDefaults   String?  // JSON string for report template defaults
   onboardingStep   Int      @default(0) // 0=not started, 1=credentials, 2=branding, 3=complete
 
+  // Invoice settings
+  invoiceHourlyRate          Float?
+  invoiceDefaultFee          Float?
+  invoicePaymentInstructions String?
+  invoicePrefix              String   @default("INV-")
+  invoiceNetTerms            String   @default("Due on Receipt")
+
   createdAt DateTime @default(now())
 
   properties   Property[]
   reports      Report[]
   apiUsageLogs ApiUsageLog[]
   feedbacks    Feedback[]
+  invoices     Invoice[]
 }
 
 model Property {
@@ -81,6 +89,7 @@ model Property {
   trees              TreeRecord[]
   reports            Report[]
   propertyAudioNotes PropertyAudioNote[]
+  invoices           Invoice[]
 }
 
 model TreeRecord {
@@ -226,6 +235,7 @@ model Report {
   property Property @relation(fields: [propertyId], references: [id])
   arborist Arborist @relation(fields: [arboristId], references: [id])
   versions ReportVersion[]
+  invoices Invoice[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -269,4 +279,30 @@ model Feedback {
   metadata      String?  // JSON: { userAgent, propertyId, viewport, timestamp }
   status        String   @default("new") // new, reviewed, resolved
   createdAt     DateTime @default(now())
+}
+
+model Invoice {
+  id              String   @id @default(cuid())
+  arboristId      String
+  reportId        String
+  propertyId      String
+  invoiceNumber   String
+  invoiceDate     DateTime @default(now())
+  dueDate         DateTime
+  billToName      String?
+  billToAddress   String?
+  lineItems       String   // JSON array: [{description, quantity, rate, amount}]
+  subtotal        Float
+  tax             Float    @default(0)
+  total           Float
+  paymentInstructions String?
+  notes           String?
+  status          String   @default("unpaid") // unpaid, paid
+  paidAt          DateTime?
+  showOnSharePage Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  arborist  Arborist @relation(fields: [arboristId], references: [id])
+  report    Report   @relation(fields: [reportId], references: [id])
+  property  Property @relation(fields: [propertyId], references: [id])
 }

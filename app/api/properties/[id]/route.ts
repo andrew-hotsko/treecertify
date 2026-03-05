@@ -127,10 +127,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Reports don't cascade from Property, so delete them manually.
+    // Reports and Invoices don't cascade from Property, so delete them manually.
     // ReportVersions cascade from Report automatically.
     // TreeRecord, TreePhoto, TreeAudioNote, PropertyAudioNote all cascade from Property.
     await prisma.$transaction([
+      prisma.invoice.deleteMany({
+        where: { propertyId: id },
+      }),
       prisma.reportVersion.deleteMany({
         where: { report: { propertyId: id } },
       }),

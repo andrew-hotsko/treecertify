@@ -21,6 +21,7 @@ import {
   Sparkles,
   Mic,
   Cpu,
+  Receipt,
 } from "lucide-react";
 
 interface ArboristProfile {
@@ -41,6 +42,11 @@ interface ArboristProfile {
   additionalCerts: string | null;
   reportDefaults?: string | null;
   profilePhotoUrl?: string | null;
+  invoiceHourlyRate?: number | null;
+  invoiceDefaultFee?: number | null;
+  invoicePaymentInstructions?: string | null;
+  invoicePrefix?: string;
+  invoiceNetTerms?: string;
 }
 
 interface ReportDefaults {
@@ -101,6 +107,11 @@ export default function SettingsPage() {
     signatureName: "",
     traqCertified: false,
     additionalCerts: "",
+    invoiceHourlyRate: "",
+    invoiceDefaultFee: "",
+    invoicePaymentInstructions: "",
+    invoicePrefix: "INV-",
+    invoiceNetTerms: "Due on Receipt",
   });
 
   const defaultReportDefaults: ReportDefaults = {
@@ -135,6 +146,11 @@ export default function SettingsPage() {
           signatureName: data.signatureName || "",
           traqCertified: data.traqCertified ?? false,
           additionalCerts: data.additionalCerts || "",
+          invoiceHourlyRate: data.invoiceHourlyRate != null ? String(data.invoiceHourlyRate) : "",
+          invoiceDefaultFee: data.invoiceDefaultFee != null ? String(data.invoiceDefaultFee) : "",
+          invoicePaymentInstructions: data.invoicePaymentInstructions || "",
+          invoicePrefix: data.invoicePrefix || "INV-",
+          invoiceNetTerms: data.invoiceNetTerms || "Due on Receipt",
         });
         // Parse report defaults
         try {
@@ -193,6 +209,8 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          invoiceHourlyRate: form.invoiceHourlyRate ? parseFloat(form.invoiceHourlyRate) : null,
+          invoiceDefaultFee: form.invoiceDefaultFee ? parseFloat(form.invoiceDefaultFee) : null,
           reportDefaults: JSON.stringify(reportDefaults),
         }),
       });
@@ -694,6 +712,90 @@ export default function SettingsPage() {
             />
             <p className="text-xs text-muted-foreground mt-1">
               This text will appear as a footer disclaimer on generated reports
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Invoice Settings */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Receipt className="h-5 w-5 text-forest" />
+            Invoice Settings
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="invoiceDefaultFee">Default Flat Fee ($)</Label>
+              <Input
+                id="invoiceDefaultFee"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="e.g., 500.00"
+                value={form.invoiceDefaultFee}
+                onChange={(e) => updateField("invoiceDefaultFee", e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Pre-filled as the default rate on new invoices
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="invoiceHourlyRate">Hourly Rate ($)</Label>
+              <Input
+                id="invoiceHourlyRate"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="e.g., 150.00"
+                value={form.invoiceHourlyRate}
+                onChange={(e) => updateField("invoiceHourlyRate", e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Used if flat fee is not set
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="invoicePrefix">Invoice Number Prefix</Label>
+              <Input
+                id="invoicePrefix"
+                placeholder="INV-"
+                value={form.invoicePrefix}
+                onChange={(e) => updateField("invoicePrefix", e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="invoiceNetTerms">Payment Terms</Label>
+              <select
+                id="invoiceNetTerms"
+                value={form.invoiceNetTerms}
+                onChange={(e) => updateField("invoiceNetTerms", e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="Due on Receipt">Due on Receipt</option>
+                <option value="Net 15">Net 15</option>
+                <option value="Net 30">Net 30</option>
+                <option value="Net 45">Net 45</option>
+                <option value="Net 60">Net 60</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="invoicePaymentInstructions">Payment Instructions</Label>
+            <textarea
+              id="invoicePaymentInstructions"
+              rows={3}
+              placeholder="e.g., Make checks payable to... / Venmo: @your-handle / Pay online at..."
+              value={form.invoicePaymentInstructions}
+              onChange={(e) => updateField("invoicePaymentInstructions", e.target.value)}
+              className="mt-1 flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Shown on invoices — tell clients how to pay you
             </p>
           </div>
         </CardContent>

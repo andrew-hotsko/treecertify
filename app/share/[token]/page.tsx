@@ -11,6 +11,7 @@ import {
   FileText,
   ExternalLink,
   MessageSquare,
+  Receipt,
 } from "lucide-react";
 import { PermitStatusPipeline } from "@/components/permit-status-pipeline";
 import { getCityGuide, getNextStepsText } from "@/lib/city-submission-guides";
@@ -211,6 +212,10 @@ export default async function SharedPropertyPage({
         take: 1,
         include: {
           arborist: true,
+          invoices: {
+            where: { showOnSharePage: true },
+            take: 1,
+          },
         },
       },
     },
@@ -273,6 +278,9 @@ export default async function SharedPropertyPage({
     isCertified && report && report.reportType !== "removal_permit"
       ? getNextStepsText(report.reportType, property.city)
       : null;
+
+  // Invoice for share page
+  const invoice = report?.invoices?.[0] ?? null;
 
   const reportTypeLabel =
     REPORT_TYPE_LABELS[report?.reportType ?? ""] ?? "Arborist Report";
@@ -710,6 +718,65 @@ export default async function SharedPropertyPage({
               >
                 <Download className="h-4 w-4" />
                 Download Report (PDF)
+              </a>
+            </div>
+          </section>
+        )}
+
+        {/* ==== H2. Invoice Section ==== */}
+        {isCertified && invoice && (
+          <section>
+            <div className="bg-white rounded-lg border p-6 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <Receipt className="h-5 w-5 text-forest" />
+                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                  Invoice
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="font-mono font-medium text-neutral-900">
+                    {invoice.invoiceNumber}
+                  </p>
+                  <p className="text-sm text-neutral-500 mt-0.5">
+                    {invoice.status === "paid" ? (
+                      <span className="text-green-700 font-medium">Paid</span>
+                    ) : (
+                      <>
+                        Due{" "}
+                        {new Date(invoice.dueDate).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </>
+                    )}
+                  </p>
+                </div>
+                <p className="text-2xl font-bold font-mono text-neutral-900">
+                  ${invoice.total.toFixed(2)}
+                </p>
+              </div>
+
+              {invoice.paymentInstructions && (
+                <div className="bg-neutral-50 rounded-lg p-3 mb-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-1">
+                    Payment Instructions
+                  </p>
+                  <p className="text-sm text-neutral-700 whitespace-pre-wrap">
+                    {invoice.paymentInstructions}
+                  </p>
+                </div>
+              )}
+
+              <a
+                href={`/api/invoices/${invoice.id}/pdf?token=${token}`}
+                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 border border-forest/30 text-forest hover:bg-forest/5 rounded-lg font-medium text-sm transition-colors w-full"
+                download
+              >
+                <Download className="h-4 w-4" />
+                Download Invoice (PDF)
               </a>
             </div>
           </section>

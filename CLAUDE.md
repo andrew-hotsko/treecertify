@@ -165,5 +165,19 @@
 - **Arborist contact card**: tap-to-call and tap-to-email buttons in forest-tinted style, website link.
 - Not-certified state: shows only branded header (DRAFT badge), amber in-progress banner, tree count, arborist contact. Hides summary, tree details, next steps, PDF.
 
+## Invoice Generation
+- `Invoice` model in `prisma/schema.prisma` — linked to Arborist, Report, and Property. Line items stored as JSON string. Status: unpaid/paid. `showOnSharePage` boolean controls share page visibility.
+- Arborist model has 5 invoice settings fields: `invoiceHourlyRate`, `invoiceDefaultFee`, `invoicePaymentInstructions`, `invoicePrefix` (default "INV-"), `invoiceNetTerms` (default "Due on Receipt").
+- Invoice number auto-generated per arborist: `${prefix}${String(count + 1).padStart(4, "0")}`.
+- CRUD routes: `app/api/invoices/route.ts` (POST + GET), `app/api/invoices/[id]/route.ts` (GET + PUT + DELETE). PUT auto-sets `paidAt` when status="paid".
+- Invoice PDF route: `app/api/invoices/[id]/pdf/route.ts` — Puppeteer, same auth pattern as report PDF (share token + showOnSharePage, OR Clerk session). Brand fonts (Instrument Sans, Roboto, IBM Plex Mono), forest green accents, company logo via `photoToBase64()`.
+- `InvoiceDialog` component (`components/invoice-dialog.tsx`): pre-fills from report type + arborist defaults, dynamic line items table, auto-calculate totals, "Show on client share page" toggle, "Mark as Paid" button for existing invoices.
+- Report page toolbar: "Invoice" button in certified actions block (between Send Report and Unlock & Revise). Fetches existing invoice before opening dialog.
+- Share page: invoice section after PDF download (when `showOnSharePage: true`). Shows invoice number, total, due date or "Paid" status, payment instructions, download button.
+- Dashboard: "Invoice Summary" card (Total Invoiced, Unpaid count + $, Paid count). Only shows when invoices exist.
+- Settings page: "Invoice Settings" card with Default Flat Fee, Hourly Rate, Invoice Prefix, Payment Terms (select), Payment Instructions (textarea).
+- Middleware: `/api/invoices/(.*)/pdf` added to public routes.
+- Property cascade delete includes `prisma.invoice.deleteMany` in the `$transaction`.
+
 ## Session Completion
 - When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.
