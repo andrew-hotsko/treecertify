@@ -114,7 +114,7 @@ export async function GET(
 
     // Condition color mapping for inventory table
     const conditionColors: Record<number, string> = {
-      0: "#6b7280",
+      0: "#6B6B63",
       1: "#dc2626",
       2: "#ea580c",
       3: "#d97706",
@@ -160,13 +160,13 @@ export async function GET(
           conditionLabels[tree.conditionRating] ??
           `${tree.conditionRating}`;
         const condColor =
-          conditionColors[tree.conditionRating] ?? "#6b7280";
+          conditionColors[tree.conditionRating] ?? "#6B6B63";
         const actionRaw = tree.recommendedAction || "";
         const actionLabel =
           actionRaw
             .replace(/_/g, " ")
             .replace(/\b\w/g, (c: string) => c.toUpperCase()) || "N/A";
-        const actionColor = actionColors[actionRaw] || "#374151";
+        const actionColor = actionColors[actionRaw] || "#3A3A36";
 
         // Protection status with shield + code reference
         let protCell = '<span style="color:#ccc;">\u2014</span>';
@@ -174,7 +174,7 @@ export async function GET(
           const reason = tree.protectionReason
             ? `<br/><span style="font-size:6.5pt;color:#666;">${esc(tree.protectionReason)}</span>`
             : "";
-          protCell = `<span style="color:#2d5016;font-size:10pt;">\u{1F6E1}</span>${reason}`;
+          protCell = `<span style="color:#1D4E3E;font-size:10pt;">\u{1F6E1}</span>${reason}`;
         }
 
         return `
@@ -256,7 +256,7 @@ export async function GET(
                 if (!base64) {
                   return `
             <div class="photo-cell">
-              <div style="width:100%;height:200px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;border-radius:6px;color:#9ca3af;font-size:12px;border:1px solid #e5e7eb;">Photo unavailable</div>
+              <div style="width:100%;height:200px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;border-radius:6px;color:#9ca3af;font-size:12px;border:1px solid #e5e4df;">Photo unavailable</div>
               <div class="photo-meta">
                 <span class="photo-ref">Tree #${tree.treeNumber}${catLabel ? ` &mdash; ${catLabel}` : ""}${photo.isAnnotated ? " (annotated)" : ""}</span>
                 ${photoDate ? `<span class="photo-date">${photoDate}</span>` : ""}
@@ -1026,12 +1026,12 @@ export async function GET(
     /* =========================================================================
        BASE TYPOGRAPHY & LAYOUT
        ========================================================================= */
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Source+Sans+3:wght@300;400;600;700&family=Dancing+Script:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Dancing+Script:wght@700&display=swap');
 
     * { box-sizing: border-box; }
     body {
-      font-family: 'Source Sans 3', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      color: #1a1a1a;
+      font-family: 'Roboto', 'Source Sans 3', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      color: #3A3A36;
       font-size: 10.5pt;
       line-height: 1.55;
       margin: 0;
@@ -1057,14 +1057,14 @@ export async function GET(
       padding: 0.5in 0;
     }
     .cl-letterhead {
-      border-bottom: 2px solid #2d5016;
+      border-bottom: 2px solid #1D4E3E;
       padding-bottom: 12px;
       margin-bottom: 24px;
     }
     .cl-company {
       font-size: 14pt;
       font-weight: bold;
-      color: #2d5016;
+      color: #1D4E3E;
       margin: 0;
     }
     .cl-contact {
@@ -1078,8 +1078,8 @@ export async function GET(
     .cl-re {
       margin-bottom: 20px;
       padding: 8px 12px;
-      border-left: 3px solid #2d5016;
-      background-color: #f8faf5;
+      border-left: 3px solid #1D4E3E;
+      background-color: #FBF9F6;
     }
     .cover-letter ul { padding-left: 24px; margin: 8px 0; }
     .cover-letter li { margin-bottom: 4px; }
@@ -1106,7 +1106,7 @@ export async function GET(
     .cover-company-block {
       text-align: center;
       padding: 40px 0 24px 0;
-      border-bottom: 2.5px solid #2d5016;
+      border-bottom: 2.5px solid #1D4E3E;
       margin-bottom: 0;
     }
     .cover-logo-img {
@@ -1117,10 +1117,10 @@ export async function GET(
       margin-bottom: 12px;
     }
     .cover-company-name {
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Instrument Sans', sans-serif;
       font-size: 18pt;
       font-weight: 700;
-      color: #2d5016;
+      color: #1D4E3E;
       letter-spacing: 1px;
       margin: 0;
     }
@@ -1144,14 +1144,14 @@ export async function GET(
     .cover-rule {
       width: 240px;
       border: none;
-      border-top: 3px double #2d5016;
+      border-top: 3px double #1D4E3E;
       margin: 0 auto 28px auto;
     }
     .cover-report-title {
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Instrument Sans', sans-serif;
       font-size: 26pt;
       font-weight: 700;
-      color: #1a1a1a;
+      color: #3A3A36;
       letter-spacing: 2px;
       text-transform: uppercase;
       margin: 0 0 12px 0;
@@ -1178,12 +1178,12 @@ export async function GET(
       border-radius: 20px;
       margin-bottom: 4px;
     }
-    .badge-certified { background: #2d5016; color: #fff; }
-    .badge-draft { background: #e5e7eb; color: #6b7280; }
+    .badge-certified { background: #1D4E3E; color: #fff; }
+    .badge-draft { background: #e5e4df; color: #6B6B63; }
     .cover-rule-bottom {
       width: 240px;
       border: none;
-      border-top: 3px double #2d5016;
+      border-top: 3px double #1D4E3E;
       margin: 24px auto 0 auto;
     }
 
@@ -1212,7 +1212,7 @@ export async function GET(
     }
     .cover-prepared-value .name {
       font-weight: 600;
-      color: #1a1a1a;
+      color: #3A3A36;
       font-size: 10.5pt;
     }
 
@@ -1253,12 +1253,12 @@ export async function GET(
       padding: 40px 0;
     }
     .toc-title {
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Instrument Sans', sans-serif;
       font-size: 18pt;
-      color: #2d5016;
+      color: #1D4E3E;
       font-weight: 700;
       margin: 0 0 6px 0;
-      border-bottom: 2.5px solid #2d5016;
+      border-bottom: 2.5px solid #1D4E3E;
       padding-bottom: 8px;
     }
     .toc-table {
@@ -1275,13 +1275,13 @@ export async function GET(
     }
     .toc-num {
       width: 30px;
-      color: #2d5016;
+      color: #1D4E3E;
       font-weight: 600;
       font-size: 10pt;
     }
     .toc-table .toc-title-cell {
       font-size: 10.5pt;
-      color: #1a1a1a;
+      color: #3A3A36;
       font-weight: 500;
     }
     .toc-dots {
@@ -1346,29 +1346,29 @@ export async function GET(
        REPORT BODY
        ========================================================================= */
     .section-title {
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Instrument Sans', sans-serif;
       font-size: 14pt;
-      color: #2d5016;
+      color: #1D4E3E;
       margin: 28px 0 8px 0;
-      border-bottom: 2.5px solid #2d5016;
+      border-bottom: 2.5px solid #1D4E3E;
       padding-bottom: 5px;
       font-weight: 700;
     }
     .report-body h1 {
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Instrument Sans', sans-serif;
       font-size: 14pt;
-      color: #2d5016;
-      border-bottom: 2.5px solid #2d5016;
+      color: #1D4E3E;
+      border-bottom: 2.5px solid #1D4E3E;
       padding-bottom: 5px;
       margin: 32px 0 10px 0;
       font-weight: 700;
     }
     .report-body h2 {
       font-size: 12pt;
-      color: #1a1a1a;
+      color: #3A3A36;
       margin: 22px 0 8px 0;
       font-weight: 600;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid #e5e4df;
       padding-bottom: 3px;
     }
     .report-body h3 {
@@ -1388,7 +1388,7 @@ export async function GET(
       font-size: 9pt;
     }
     .report-body table th {
-      background: #2d5016;
+      background: #1D4E3E;
       color: white;
       padding: 5px 8px;
       text-align: left;
@@ -1399,7 +1399,7 @@ export async function GET(
       padding: 4px 8px;
       border: 1px solid #ddd;
     }
-    .report-body table tr:nth-child(even) { background: #f7f9f5; }
+    .report-body table tr:nth-child(even) { background: #FEFDFB; }
 
     /* Limitations section — distinct visual treatment */
     .report-body h1:has(+ *),
@@ -1443,7 +1443,7 @@ export async function GET(
       font-size: 8.5pt;
     }
     .inventory-table th {
-      background: #2d5016;
+      background: #1D4E3E;
       color: white;
       padding: 7px 6px;
       text-align: left;
@@ -1453,16 +1453,16 @@ export async function GET(
     }
     .inventory-table td {
       padding: 5px 6px;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid #e5e4df;
     }
-    .inventory-table tr.alt { background: #f7f9f5; }
+    .inventory-table tr.alt { background: #FEFDFB; }
     .inventory-table td.center,
     .inventory-table th.center { text-align: center; }
     .inventory-table td.num-cell { text-align: right; font-variant-numeric: tabular-nums; }
     .inventory-table th.num-cell { text-align: right; }
     .summary-row {
-      background-color: #f0f4ec !important;
-      border-top: 2px solid #2d5016;
+      background-color: #F5F4F0 !important;
+      border-top: 2px solid #1D4E3E;
       font-size: 8.5pt;
     }
     .summary-row td {
@@ -1482,12 +1482,12 @@ export async function GET(
       margin-bottom: 20px;
     }
     .photo-tree-header {
-      font-family: 'Source Sans 3', sans-serif;
+      font-family: 'Instrument Sans', sans-serif;
       font-size: 11pt;
-      color: #2d5016;
+      color: #1D4E3E;
       margin: 0 0 10px 0;
       font-weight: 600;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid #e5e4df;
       padding-bottom: 4px;
     }
     .photo-grid-2col {
@@ -1514,7 +1514,7 @@ export async function GET(
     }
     .photo-ref {
       font-size: 7.5pt;
-      color: #2d5016;
+      color: #1D4E3E;
       font-weight: 600;
     }
     .photo-caption-text {
@@ -1539,7 +1539,7 @@ export async function GET(
     .traq-form {
       page-break-inside: avoid;
       page-break-before: always;
-      border: 1.5px solid #3d5c2e;
+      border: 1.5px solid #3D7D68;
       padding: 12px 16px;
       margin-bottom: 16px;
       font-size: 9px;
@@ -1548,13 +1548,13 @@ export async function GET(
     .traq-header {
       text-align: center;
       margin-bottom: 8px;
-      border-bottom: 1.5px solid #3d5c2e;
+      border-bottom: 1.5px solid #3D7D68;
       padding-bottom: 6px;
     }
     .traq-header h3 {
       font-size: 13px;
       margin: 0;
-      color: #3d5c2e;
+      color: #3D7D68;
     }
     .traq-subtitle {
       font-size: 9px;
@@ -1562,7 +1562,7 @@ export async function GET(
       margin: 2px 0 0 0;
     }
     .traq-section-header {
-      background: #3d5c2e;
+      background: #3D7D68;
       color: white;
       font-weight: 700;
       font-size: 9px;
@@ -1597,7 +1597,7 @@ export async function GET(
       padding: 2px 6px;
     }
     .traq-overall-risk {
-      border: 2px solid #3d5c2e;
+      border: 2px solid #3D7D68;
       padding: 6px 12px;
       margin: 8px 0;
       text-align: center;
@@ -1610,7 +1610,7 @@ export async function GET(
       margin-left: 8px;
     }
     .traq-risk-low { background-color: #e8f5e9; }
-    .traq-risk-low .traq-risk-value { color: #2d5016; }
+    .traq-risk-low .traq-risk-value { color: #1D4E3E; }
     .traq-risk-moderate { background-color: #fff8e1; }
     .traq-risk-moderate .traq-risk-value { color: #b8860b; }
     .traq-risk-high { background-color: #fff3e0; }
@@ -1648,7 +1648,7 @@ export async function GET(
       width: 70px;
     }
     .matrix-active {
-      background-color: #3d5c2e;
+      background-color: #3D7D68;
       color: white;
       font-weight: 700;
     }
@@ -1697,7 +1697,7 @@ export async function GET(
       margin-bottom: 16px;
     }
     .mitigation-table th {
-      background-color: #2d5016;
+      background-color: #1D4E3E;
       color: white;
       padding: 6px 8px;
       text-align: left;
@@ -1709,7 +1709,7 @@ export async function GET(
     }
     .mitigation-total {
       background-color: #f5f5f0;
-      border-top: 2px solid #2d5016;
+      border-top: 2px solid #1D4E3E;
     }
     .mitigation-note {
       font-size: 8.5pt;
@@ -1729,8 +1729,8 @@ export async function GET(
       padding-top: 20px;
     }
     .cert-statement {
-      border: 2px solid #2d5016;
-      background: #f8faf5;
+      border: 2px solid #1D4E3E;
+      background: #FBF9F6;
       padding: 24px 28px;
       margin: 16px 0 32px 0;
       border-radius: 2px;
@@ -1749,7 +1749,7 @@ export async function GET(
     .sig-esignature {
       font-family: 'Dancing Script', cursive;
       font-size: 22pt;
-      color: #1a1a1a;
+      color: #3A3A36;
       padding-bottom: 4px;
     }
     .sig-rule {
@@ -1765,7 +1765,7 @@ export async function GET(
     }
     .sig-details {
       margin-top: 16px;
-      border: 1.5px solid #e5e7eb;
+      border: 1.5px solid #e5e4df;
       border-radius: 3px;
       overflow: hidden;
     }
@@ -1775,7 +1775,7 @@ export async function GET(
       border-bottom: 1px solid #f0f0f0;
     }
     .sig-detail-row:last-child { border-bottom: none; }
-    .sig-detail-row:nth-child(even) { background: #fafbf8; }
+    .sig-detail-row:nth-child(even) { background: #FAF9F6; }
     .sig-detail-label {
       font-weight: 600;
       color: #555;
