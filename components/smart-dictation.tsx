@@ -114,7 +114,20 @@ export function SmartDictation({ onApply }: SmartDictationProps) {
         body: formData,
       });
 
-      if (!transcribeRes.ok) throw new Error("Transcription failed");
+      if (!transcribeRes.ok) {
+        let errorMsg = "Transcription failed";
+        try {
+          const errData = await transcribeRes.json();
+          if (errData?.error?.includes("OPENAI_API_KEY") || errData?.error?.includes("API key")) {
+            errorMsg = "Voice transcription requires an OpenAI API key. Add OPENAI_API_KEY to your .env file.";
+          } else if (errData?.error) {
+            errorMsg = errData.error;
+          }
+        } catch {
+          // couldn't parse error response
+        }
+        throw new Error(errorMsg);
+      }
       const { text } = await transcribeRes.json();
       if (!text?.trim()) throw new Error("No speech detected");
 
@@ -128,7 +141,16 @@ export function SmartDictation({ onApply }: SmartDictationProps) {
         body: JSON.stringify({ text }),
       });
 
-      if (!parseRes.ok) throw new Error("Parsing failed");
+      if (!parseRes.ok) {
+        let errorMsg = "Field extraction failed";
+        try {
+          const errData = await parseRes.json();
+          if (errData?.error) errorMsg = errData.error;
+        } catch {
+          // couldn't parse error response
+        }
+        throw new Error(errorMsg);
+      }
       const { parsed: fields } = await parseRes.json();
 
       setParsed(fields);

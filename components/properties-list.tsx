@@ -7,6 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   MapPin,
   Plus,
   TreePine,
@@ -14,9 +24,12 @@ import {
   ArrowRight,
   Search,
   ChevronDown,
+  Trash2,
+  X,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -31,6 +44,7 @@ interface PropertyTree {
 interface PropertyReport {
   id: string;
   status: string;
+  permitStatus?: string | null;
 }
 
 interface PropertyItem {
@@ -48,6 +62,7 @@ interface PropertyItem {
 interface PropertiesListProps {
   properties: PropertyItem[];
   initialFilter?: string;
+  initialPermitFilter?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -109,15 +124,29 @@ function formatReportType(reportType: string) {
 
 const VALID_FILTERS: FilterStatus[] = ["all", "inProgress", "draft", "certified"];
 
-export function PropertiesList({ properties, initialFilter }: PropertiesListProps) {
+const PERMIT_FILTER_LABELS: Record<string, string> = {
+  pending: "Pending Submission",
+  submitted: "Submitted / Under Review",
+  approved: "Approved",
+  revision: "Needing Revision",
+};
+
+export function PropertiesList({ properties: initialProperties, initialFilter, initialPermitFilter }: PropertiesListProps) {
+  const { toast } = useToast();
+  const [properties, setProperties] = useState(initialProperties);
   const [filter, setFilter] = useState<FilterStatus>(
     VALID_FILTERS.includes(initialFilter as FilterStatus) ? (initialFilter as FilterStatus) : "all"
+  );
+  const [permitFilter, setPermitFilter] = useState<string | null>(
+    initialPermitFilter && Object.keys(PERMIT_FILTER_LABELS).includes(initialPermitFilter) ? initialPermitFilter : null
   );
   const [sortKey, setSortKey] = useState<SortKey>("recent");
   const [search, setSearch] = useState("");
   const [showSort, setShowSort] = useState(false);
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [deletePropertyId, setDeletePropertyId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Derive unique cities and report types for filter dropdowns
   const uniqueCities = useMemo(() => {
@@ -147,6 +176,20 @@ export function PropertiesList({ properties, initialFilter }: PropertiesListProp
   // Filter + search + sort
   const filteredProperties = useMemo(() => {
     let result = properties;
+
+    // Filter by permit status (from dashboard pipeline click)
+    if (permitFilter) {
+      result = result.filter((p) => {
+        const ps = p.reports[0]?.permitStatus;
+        switch (permitFilter) {
+          case "pending": return p.reports[0]?.status === "certified" && !ps;
+          case "submitted": return ps === "submitted" || ps === "under_review";
+          case "approved": return ps === "approved";
+          case "revision": return ps === "denied" || ps === "revision_requested";
+          default: return true;
+        }
+      });
+    }
 
     // Filter by status
     if (filter !== "all") {
@@ -201,7 +244,7 @@ export function PropertiesList({ properties, initialFilter }: PropertiesListProp
     });
 
     return result;
-  }, [properties, filter, search, sortKey, cityFilter, typeFilter]);
+  }, [properties, filter, permitFilter, search, sortKey, cityFilter, typeFilter]);
 
   const filters: { key: FilterStatus; label: string }[] = [
     { key: "all", label: `All (${counts.all})` },
@@ -217,8 +260,51 @@ export function PropertiesList({ properties, initialFilter }: PropertiesListProp
     { key: "dueSoonest", label: "Due Date" },
   ];
 
+  const deleteTarget = properties.find((p) => p.id === deletePropertyId);
+
+  const handleDeleteProperty = async () => {
+    if (!deletePropertyId) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/properties/${deletePropertyId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete property");
+      setProperties((prev) => prev.filter((p) => p.id !== deletePropertyId));
+      toast({
+        title: "Property deleted",
+        description: `"${deleteTarget?.address}" has been deleted.`,
+      });
+    } catch {
+      toast({
+        title: "Delete failed",
+        description: "Could not delete property. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletePropertyId(null);
+      setDeleting(false);
+    }
+  };
+
   return (
     <>
+      {/* Permit filter banner */}
+      {permitFilter && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-forest/5 border border-forest/20 text-sm">
+          <span className="text-neutral-700">
+            Showing: <span className="font-semibold text-forest">{PERMIT_FILTER_LABELS[permitFilter]}</span>
+          </span>
+          <button
+            onClick={() => setPermitFilter(null)}
+            className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* Search + Sort */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
@@ -356,112 +442,158 @@ export function PropertiesList({ properties, initialFilter }: PropertiesListProp
             const dueIndicator = getDueIndicator(property.neededByDate);
 
             return (
-              <Link
-                key={property.id}
-                href={`/properties/${property.id}`}
-                className="block"
-              >
-                <Card className="hover:border-forest/30 hover:shadow-md transition-all duration-150 cursor-pointer">
-                  <CardContent className="p-4 sm:p-5">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                        <div className="flex-shrink-0 hidden sm:block">
-                          <div className="rounded-full bg-forest/5 p-2">
-                            <MapPin className="h-5 w-5 text-forest" />
+              <div key={property.id} className="group relative">
+                <Link
+                  href={`/properties/${property.id}`}
+                  className="block"
+                >
+                  <Card className="hover:border-forest/30 hover:shadow-md transition-all duration-150 cursor-pointer">
+                    <CardContent className="p-4 sm:p-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                          <div className="flex-shrink-0 hidden sm:block">
+                            <div className="rounded-full bg-forest/5 p-2">
+                              <MapPin className="h-5 w-5 text-forest" />
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">
-                              {property.address}
-                            </h3>
-                            {property.address === "123 Sample Street" && (
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] px-1.5 py-0 text-muted-foreground border-muted-foreground/30 shrink-0"
-                              >
-                                Sample
-                              </Badge>
-                            )}
-                            <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-neutral-200 text-neutral-600">
-                              {formatReportType(property.reportType)}
-                            </span>
-                            <span
-                              className={cn(
-                                "text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0",
-                                workflow.color
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">
+                                {property.address}
+                              </h3>
+                              {property.address === "123 Sample Street" && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] px-1.5 py-0 text-muted-foreground border-muted-foreground/30 shrink-0"
+                                >
+                                  Sample
+                                </Badge>
                               )}
-                            >
-                              {workflow.label}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span className="truncate">
-                              {property.city}
-                              {property.county
-                                ? `, ${property.county} County`
-                                : ""}
-                            </span>
-                            {dueIndicator && (
+                              <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-neutral-200 text-neutral-600">
+                                {formatReportType(property.reportType)}
+                              </span>
                               <span
                                 className={cn(
-                                  "text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0",
-                                  dueIndicator.className
+                                  "text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0",
+                                  workflow.color
                                 )}
                               >
-                                {dueIndicator.label}
+                                {workflow.label}
                               </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3 sm:gap-5 flex-shrink-0">
-                        <div className="hidden sm:block text-right">
-                          <div className="flex items-center gap-2 text-sm">
-                            <TreePine className="h-4 w-4 text-forest" />
-                            <span className="font-mono font-medium">
-                              {treeCount}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            {protectedCount > 0 && (
-                              <span className="flex items-center gap-1 text-xs text-forest">
-                                <ShieldCheck className="h-3 w-3" />
-                                {protectedCount}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <span className="truncate">
+                                {property.city}
+                                {property.county
+                                  ? `, ${property.county} County`
+                                  : ""}
                               </span>
-                            )}
-                            {assessedCount > 0 && (
-                              <span className="text-xs text-muted-foreground">
-                                {assessedCount}/{treeCount}
-                              </span>
-                            )}
+                              {dueIndicator && (
+                                <span
+                                  className={cn(
+                                    "text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0",
+                                    dueIndicator.className
+                                  )}
+                                >
+                                  {dueIndicator.label}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
 
-                        {/* Mobile tree count */}
-                        <span className="flex items-center gap-1 sm:hidden text-xs shrink-0">
-                          <TreePine className="h-3.5 w-3.5 text-forest" />
-                          <span className="font-mono">{treeCount}</span>
-                        </span>
+                        <div className="flex items-center gap-3 sm:gap-5 flex-shrink-0">
+                          <div className="hidden sm:block text-right">
+                            <div className="flex items-center gap-2 text-sm">
+                              <TreePine className="h-4 w-4 text-forest" />
+                              <span className="font-mono font-medium">
+                                {treeCount}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {protectedCount > 0 && (
+                                <span className="flex items-center gap-1 text-xs text-forest">
+                                  <ShieldCheck className="h-3 w-3" />
+                                  {protectedCount}
+                                </span>
+                              )}
+                              {assessedCount > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  {assessedCount}/{treeCount}
+                                </span>
+                              )}
+                            </div>
+                          </div>
 
-                        <span className="hidden md:inline-block text-xs text-muted-foreground">
-                          {format(
-                            new Date(property.updatedAt),
-                            "MMM d, yyyy"
-                          )}
-                        </span>
+                          {/* Mobile tree count */}
+                          <span className="flex items-center gap-1 sm:hidden text-xs shrink-0">
+                            <TreePine className="h-3.5 w-3.5 text-forest" />
+                            <span className="font-mono">{treeCount}</span>
+                          </span>
 
-                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                          <span className="hidden md:inline-block text-xs text-muted-foreground">
+                            {format(
+                              new Date(property.updatedAt),
+                              "MMM d, yyyy"
+                            )}
+                          </span>
+
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                    </CardContent>
+                  </Card>
+                </Link>
+                {/* Delete button — appears on hover */}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDeletePropertyId(property.id);
+                  }}
+                  className="absolute top-3 right-3 z-10 p-1.5 rounded-md opacity-0 group-hover:opacity-100 sm:transition-opacity bg-neutral-50/80 hover:bg-red-50 text-muted-foreground hover:text-red-600"
+                  title="Delete property"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             );
           })}
         </div>
       )}
+
+      {/* Delete Property Confirmation */}
+      <AlertDialog open={!!deletePropertyId} onOpenChange={(open) => !open && setDeletePropertyId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Property?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  This will permanently delete{" "}
+                  <span className="font-semibold text-foreground">&ldquo;{deleteTarget?.address}&rdquo;</span> and all associated data:
+                </p>
+                <ul className="list-disc pl-5 space-y-1 text-sm">
+                  <li>{deleteTarget?.trees.length ?? 0} tree{(deleteTarget?.trees.length ?? 0) !== 1 ? "s" : ""} and their assessments</li>
+                  <li>{deleteTarget?.reports.length ?? 0} report{(deleteTarget?.reports.length ?? 0) !== 1 ? "s" : ""}</li>
+                  <li>All photos and audio notes</li>
+                </ul>
+                <p className="font-medium text-destructive">This cannot be undone.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteProperty}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleting ? "Deleting..." : "Delete Property"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

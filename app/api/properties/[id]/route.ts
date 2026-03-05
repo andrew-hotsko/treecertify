@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { getCurrentArborist } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -96,6 +97,56 @@ export async function PUT(
     console.error("Error updating property:", error);
     return NextResponse.json(
       { error: "Failed to update property" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const arborist = await getCurrentArborist();
+    if (!arborist) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = params;
+
+    const property = await prisma.property.findUnique({
+      where: { id },
+      select: { id: true, arboristId: true },
+    });
+
+    if (!property) {
+      return NextResponse.json({ error: "Property not found" }, { status: 404 });
+    }
+
+    if (property.arboristId !== arborist.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Reports don't cascade from Property, so delete them manually.
+    // ReportVersions cascade from Report automatically.
+    // TreeRecord, TreePhoto, TreeAudioNote, PropertyAudioNote all cascade from Property.
+    await prisma.$transaction([
+      prisma.reportVersion.deleteMany({
+        where: { report: { propertyId: id } },
+      }),
+      prisma.report.deleteMany({
+        where: { propertyId: id },
+      }),
+      prisma.property.delete({
+        where: { id },
+      }),
+    ]);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting property:", error);
+    return NextResponse.json(
+      { error: "Failed to delete property" },
       { status: 500 }
     );
   }

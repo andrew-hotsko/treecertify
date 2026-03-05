@@ -8,7 +8,7 @@ import { PropertiesList } from "@/components/properties-list";
 export default async function PropertiesPage({
   searchParams,
 }: {
-  searchParams: { status?: string };
+  searchParams: { status?: string; permitStatus?: string };
 }) {
   const arborist = await requireArborist();
   const properties = await prisma.property.findMany({
@@ -19,7 +19,7 @@ export default async function PropertiesPage({
         orderBy: { treeNumber: "asc" },
       },
       reports: {
-        select: { id: true, status: true },
+        select: { id: true, status: true, permitStatus: true },
         orderBy: { updatedAt: "desc" },
         take: 1,
       },
@@ -50,7 +50,7 @@ export default async function PropertiesPage({
       </div>
 
       <div className="space-y-4">
-        <PropertiesList properties={serialized} initialFilter={searchParams.status} />
+        <PropertiesList properties={serialized} initialFilter={searchParams.status} initialPermitFilter={searchParams.permitStatus} />
       </div>
     </div>
   );

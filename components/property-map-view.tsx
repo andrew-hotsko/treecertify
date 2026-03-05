@@ -39,7 +39,18 @@ import {
   PanelLeftOpen,
   ShieldCheck,
   Zap,
+  Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Dynamically import PropertyMap with SSR disabled (Mapbox GL needs window/DOM)
 const PropertyMap = dynamic(
@@ -176,6 +187,9 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
 
   // Filter chips
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
+
+  // Delete confirmation dialog
+  const [deleteConfirmTreeId, setDeleteConfirmTreeId] = useState<string | null>(null);
 
   // Map legend
   const [showLegend, setShowLegend] = useState(false);
@@ -586,22 +600,37 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         setSaving(false);
       }
     },
-    [pendingPin, selectedTreeId, property.id, trees, trees.length, quickAddMode, setPendingCount, toast]
+    [pendingPin, selectedTreeId, property.id, trees, quickAddMode, setPendingCount, toast]
   );
 
-  const handleDelete = useCallback(async () => {
-    if (!selectedTreeId) return;
+  const handleDeleteRequest = useCallback((treeId?: string) => {
+    setDeleteConfirmTreeId(treeId ?? selectedTreeId);
+  }, [selectedTreeId]);
+
+  const handleDeleteConfirmed = useCallback(async () => {
+    const treeId = deleteConfirmTreeId;
+    if (!treeId) return;
+    setDeleteConfirmTreeId(null);
     setSaving(true);
     try {
-      const res = await fetch(`/api/trees/${selectedTreeId}`, {
+      const res = await fetch(`/api/properties/${property.id}/trees/${treeId}`, {
         method: "DELETE",
       });
 
       if (!res.ok) throw new Error("Failed to delete tree");
 
-      setTrees((prev) => prev.filter((t) => t.id !== selectedTreeId));
-      setSelectedTreeId(null);
-      setShowSidePanel(false);
+      const deletedTree = trees.find((t) => t.id === treeId);
+      setTrees((prev) => prev.filter((t) => t.id !== treeId));
+      if (selectedTreeId === treeId) {
+        setSelectedTreeId(null);
+        setShowSidePanel(false);
+      }
+      toast({
+        title: "Tree deleted",
+        description: deletedTree
+          ? `Tree #${deletedTree.treeNumber} (${deletedTree.speciesCommon || "Unidentified"}) deleted`
+          : "Tree deleted successfully",
+      });
     } catch (err) {
       console.error("Delete failed:", err);
       toast({
@@ -612,7 +641,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     } finally {
       setSaving(false);
     }
-  }, [selectedTreeId, toast]);
+  }, [deleteConfirmTreeId, selectedTreeId, property.id, trees, toast]);
 
   const handleClosePanel = useCallback(() => {
     setShowSidePanel(false);
@@ -1271,42 +1300,56 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                 .map((tree) => {
                   const isDimmed = dimmedPinIds.includes(tree.id);
                   return (
-                    <button
+                    <div
                       key={tree.id}
-                      onClick={() => handleSelectTreeFromList(tree.id)}
-                      className={`w-full text-left px-3 py-2 text-xs hover:bg-neutral-100 transition-colors flex items-center gap-2 ${
+                      className={`group w-full text-left px-3 py-2 text-xs hover:bg-neutral-100 transition-colors flex items-center gap-2 ${
                         selectedTreeId === tree.id
                           ? "bg-forest/5 border-l-2 border-forest"
                           : ""
                       } ${isDimmed ? "opacity-40" : ""}`}
                     >
-                      <span className="font-mono font-semibold text-muted-foreground w-6">
-                        #{tree.treeNumber}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate font-medium">
-                          {tree.speciesCommon || "Unidentified"}
-                        </p>
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          {tree.dbhInches ? (
-                            <span>{tree.dbhInches}&quot;</span>
-                          ) : null}
-                          {tree.conditionRating != null && tree.conditionRating > 0 ? (
-                            <span className="flex items-center gap-0.5">
-                              <span
-                                className={`inline-block w-1.5 h-1.5 rounded-full ${
-                                  CONDITION_DOT_COLOR[tree.conditionRating] ?? "bg-gray-400"
-                                }`}
-                              />
-                              {CONDITION_LABELS[tree.conditionRating]}
-                            </span>
-                          ) : null}
+                      <button
+                        onClick={() => handleSelectTreeFromList(tree.id)}
+                        className="flex items-center gap-2 flex-1 min-w-0"
+                      >
+                        <span className="font-mono font-semibold text-muted-foreground w-6">
+                          #{tree.treeNumber}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate font-medium text-left">
+                            {tree.speciesCommon || "Unidentified"}
+                          </p>
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            {tree.dbhInches ? (
+                              <span>{tree.dbhInches}&quot;</span>
+                            ) : null}
+                            {tree.conditionRating != null && tree.conditionRating > 0 ? (
+                              <span className="flex items-center gap-0.5">
+                                <span
+                                  className={`inline-block w-1.5 h-1.5 rounded-full ${
+                                    CONDITION_DOT_COLOR[tree.conditionRating] ?? "bg-gray-400"
+                                  }`}
+                                />
+                                {CONDITION_LABELS[tree.conditionRating]}
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
-                      </div>
-                      {tree.isProtected && (
-                        <ShieldCheck className="h-3 w-3 text-forest flex-shrink-0" />
-                      )}
-                    </button>
+                        {tree.isProtected && (
+                          <ShieldCheck className="h-3 w-3 text-forest flex-shrink-0" />
+                        )}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteRequest(tree.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 flex-shrink-0"
+                        title={`Delete Tree #${tree.treeNumber}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   );
                 })}
             </div>
@@ -1455,7 +1498,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             reportType={reportType}
             onSave={handleSave}
             onDelete={
-              selectedTree ? handleDelete : undefined
+              selectedTree ? () => handleDeleteRequest() : undefined
             }
             onClose={handleClosePanel}
             saving={saving}
@@ -1473,6 +1516,43 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         onSelectTree={handleSelectTreeFromSummary}
         reportType={reportType}
       />
+
+      {/* Delete Tree Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmTreeId} onOpenChange={(open) => !open && setDeleteConfirmTreeId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Tree?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                {(() => {
+                  const tree = trees.find((t) => t.id === deleteConfirmTreeId);
+                  if (!tree) return <p>This tree will be permanently deleted.</p>;
+                  return (
+                    <>
+                      <p>
+                        Permanently delete <span className="font-semibold text-foreground">Tree #{tree.treeNumber}</span>
+                        {tree.speciesCommon ? ` (${tree.speciesCommon}` : ""}
+                        {tree.speciesCommon && tree.dbhInches ? `, ${tree.dbhInches}" DBH` : ""}
+                        {tree.speciesCommon ? ")" : ""}?
+                      </p>
+                      <p>All photos and audio notes for this tree will also be deleted. This cannot be undone.</p>
+                    </>
+                  );
+                })()}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirmed}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete Tree
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

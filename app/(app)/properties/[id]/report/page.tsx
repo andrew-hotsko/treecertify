@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,7 @@ import {
   ExternalLink,
   History,
   RotateCcw,
+  Trash2,
 } from "lucide-react";
 import {
   Sheet,
@@ -61,6 +62,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { PermitStatusPipeline } from "@/components/permit-status-pipeline";
 import { useToast } from "@/hooks/use-toast";
 
@@ -212,6 +223,7 @@ function timeAgo(date: Date): string {
 export default function PropertyReportPage() {
   const params = useParams();
   const propertyId = params.id as string;
+  const router = useRouter();
   const { toast } = useToast();
 
   // Data state
@@ -248,6 +260,10 @@ export default function PropertyReportPage() {
 
   // Report options state (PDF appendix toggles)
   const [reportOptions, setReportOptions] = useState<ReportOptions>({});
+
+  // Delete report state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletingReport, setDeletingReport] = useState(false);
 
   // Report delivery state
   const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
@@ -1317,6 +1333,17 @@ export default function PropertyReportPage() {
               Versions
             </Button>
 
+            {/* Delete Report */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDeleteDialog(true)}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              Delete
+            </Button>
+
             <Separator orientation="vertical" className="h-6" />
 
             {/* Export actions — always visible */}
@@ -2231,6 +2258,45 @@ export default function PropertyReportPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Report Confirmation */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Report?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>This will delete the report and all its content.</p>
+                <p>Your tree assessments and photos will <span className="font-semibold text-foreground">NOT</span> be deleted — only the report text.</p>
+                <p>You can generate a new report afterward.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingReport}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deletingReport}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={async () => {
+                if (!report) return;
+                setDeletingReport(true);
+                try {
+                  const res = await fetch(`/api/reports/${report.id}`, { method: "DELETE" });
+                  if (!res.ok) throw new Error("Failed to delete report");
+                  toast({ title: "Report deleted", description: "You can generate a new report from the property page." });
+                  router.push(`/properties/${propertyId}`);
+                } catch {
+                  toast({ title: "Delete failed", description: "Could not delete report. Please try again.", variant: "destructive" });
+                  setDeletingReport(false);
+                  setShowDeleteDialog(false);
+                }
+              }}
+            >
+              {deletingReport ? "Deleting..." : "Delete Report"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

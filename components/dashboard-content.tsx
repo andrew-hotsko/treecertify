@@ -406,34 +406,37 @@ export function DashboardContent({
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-neutral-100">
-                <Send className="h-4 w-4 text-neutral-500" />
-                <div>
-                  <p className="text-2xl font-bold font-mono text-neutral-900">{permitStats.pendingSubmission}</p>
-                  <p className="text-xs text-neutral-500">Pending Submission</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50">
-                <Clock className="h-4 w-4 text-amber-600" />
-                <div>
-                  <p className="text-2xl font-bold font-mono text-neutral-900">{permitStats.submittedOrReview}</p>
-                  <p className="text-xs text-neutral-500">Submitted / Under Review</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-forest/5">
-                <ShieldCheck className="h-4 w-4 text-forest" />
-                <div>
-                  <p className="text-2xl font-bold font-mono text-neutral-900">{permitStats.approved}</p>
-                  <p className="text-xs text-neutral-500">Approved</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-red-50">
-                <AlertTriangle className="h-4 w-4 text-red-500" />
-                <div>
-                  <p className="text-2xl font-bold font-mono text-neutral-900">{permitStats.needingRevision}</p>
-                  <p className="text-xs text-neutral-500">Needing Revision</p>
-                </div>
-              </div>
+              {[
+                { count: permitStats.pendingSubmission, label: "Pending Submission", param: "pending", icon: Send, iconColor: "text-neutral-500", bg: "bg-neutral-100" },
+                { count: permitStats.submittedOrReview, label: "Submitted / Under Review", param: "submitted", icon: Clock, iconColor: "text-amber-600", bg: "bg-amber-50" },
+                { count: permitStats.approved, label: "Approved", param: "approved", icon: ShieldCheck, iconColor: "text-forest", bg: "bg-forest/5" },
+                { count: permitStats.needingRevision, label: "Needing Revision", param: "revision", icon: AlertTriangle, iconColor: "text-red-500", bg: "bg-red-50" },
+              ].map((item) => {
+                const Icon = item.icon;
+                const inner = (
+                  <div className={cn(
+                    "flex items-center gap-3 p-3 rounded-lg transition-all",
+                    item.bg,
+                    item.count > 0
+                      ? "cursor-pointer hover:shadow-md hover:ring-1 hover:ring-forest/20"
+                      : "opacity-50"
+                  )}>
+                    <Icon className={`h-4 w-4 ${item.iconColor}`} />
+                    <div>
+                      <p className="text-2xl font-bold font-mono text-neutral-900">{item.count}</p>
+                      <p className="text-xs text-neutral-500">{item.label}</p>
+                    </div>
+                  </div>
+                );
+                if (item.count > 0) {
+                  return (
+                    <Link key={item.param} href={`/properties?permitStatus=${item.param}`}>
+                      {inner}
+                    </Link>
+                  );
+                }
+                return <div key={item.param}>{inner}</div>;
+              })}
             </div>
           </CardContent>
         </Card>

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Mic, MicOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 interface VoiceInputProps {
   onTranscript: (text: string) => void;
@@ -13,6 +14,7 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const { toast } = useToast();
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -55,9 +57,31 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
             if (text?.trim()) {
               onTranscript(text.trim());
             }
+          } else {
+            let errorMsg = "Transcription failed";
+            try {
+              const errData = await res.json();
+              if (errData?.error?.includes("OPENAI_API_KEY") || errData?.error?.includes("API key")) {
+                errorMsg = "Voice transcription requires an OpenAI API key. Add OPENAI_API_KEY to your .env file.";
+              } else if (errData?.error) {
+                errorMsg = errData.error;
+              }
+            } catch {
+              // couldn't parse error response
+            }
+            toast({
+              title: "Transcription error",
+              description: errorMsg,
+              variant: "destructive",
+            });
           }
         } catch (err) {
           console.error("Transcription failed:", err);
+          toast({
+            title: "Transcription error",
+            description: "Could not connect to transcription service",
+            variant: "destructive",
+          });
         } finally {
           setTranscribing(false);
         }

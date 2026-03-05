@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { getCurrentArborist } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -102,6 +103,44 @@ export async function PUT(
     console.error("Error updating report:", error);
     return NextResponse.json(
       { error: "Failed to update report" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const arborist = await getCurrentArborist();
+    if (!arborist) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = params;
+
+    const report = await prisma.report.findUnique({
+      where: { id },
+      select: { id: true, arboristId: true, propertyId: true },
+    });
+
+    if (!report) {
+      return NextResponse.json({ error: "Report not found" }, { status: 404 });
+    }
+
+    if (report.arboristId !== arborist.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // ReportVersions cascade automatically via onDelete: Cascade
+    await prisma.report.delete({ where: { id } });
+
+    return NextResponse.json({ success: true, propertyId: report.propertyId });
+  } catch (error) {
+    console.error("Error deleting report:", error);
+    return NextResponse.json(
+      { error: "Failed to delete report" },
       { status: 500 }
     );
   }
