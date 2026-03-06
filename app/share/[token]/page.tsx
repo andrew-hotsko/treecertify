@@ -56,6 +56,7 @@ const REPORT_TYPE_LABELS: Record<string, string> = {
   health_assessment: "Tree Health Assessment",
   tree_valuation: "Tree Valuation Appraisal",
   construction_encroachment: "Construction Encroachment Assessment",
+  real_estate_package: "Certified Tree Canopy Report",
 };
 
 // ---------------------------------------------------------------------------
@@ -72,6 +73,7 @@ function buildSummaryStats(
     recommendedAction: string;
     isProtected: boolean;
     typeSpecificData: string | null;
+    valuationAppraisedValue?: number | null;
   }>,
   reportType: string
 ): { stats: { label: string; value: string }[]; explanation: string } {
@@ -181,6 +183,39 @@ function buildSummaryStats(
           needsProtection > 0
             ? `${needsProtection} tree${needsProtection !== 1 ? "s" : ""} will require protection measures during construction. The report includes a detailed Tree Protection Plan for your contractor.`
             : "Review the full report for construction impact assessment details.",
+      };
+    }
+
+    case "real_estate_package": {
+      let totalValue = 0;
+      let valueCount = 0;
+      const excellent = trees.filter((t) => t.conditionRating >= 4).length;
+      const needsAttention = trees.filter((t) => t.conditionRating <= 2).length;
+      for (const tree of trees) {
+        const val = tree.valuationAppraisedValue;
+        if (val != null && val > 0) {
+          totalValue += val;
+          valueCount++;
+        }
+      }
+      const fmt = (v: number) =>
+        v >= 1000
+          ? `$${Math.round(v).toLocaleString()}`
+          : `$${Math.round(v)}`;
+      return {
+        stats: [
+          { label: "Trees Assessed", value: String(total) },
+          {
+            label: "Canopy Value",
+            value: totalValue > 0 ? fmt(totalValue) : "—",
+          },
+          { label: "Good or Excellent", value: String(excellent) },
+          { label: "Needs Attention", value: String(needsAttention) },
+        ],
+        explanation:
+          totalValue > 0
+            ? `The property's tree canopy has a combined appraised value of ${fmt(totalValue)} across ${valueCount} tree${valueCount !== 1 ? "s" : ""}, assessed using the ISA Trunk Formula Method.${excellent > 0 ? ` ${excellent} ${excellent !== 1 ? "are" : "is"} in good or excellent condition.` : ""}`
+            : "See the full report for detailed tree assessments and valuations.",
       };
     }
 
@@ -1022,6 +1057,10 @@ export default async function SharedPropertyPage({
                   Submit this PDF with your tree removal permit application to
                   your local planning department.
                 </p>
+              ) : report.reportType === "real_estate_package" ? (
+                <p className="text-sm text-neutral-600 mb-4 max-w-md mx-auto">
+                  Download the Certified Tree Canopy Report for your real estate transaction records, lender, or buyer.
+                </p>
               ) : (
                 <p className="text-sm text-neutral-600 mb-4 max-w-md mx-auto">
                   Download the full certified report for your records.
@@ -1177,6 +1216,45 @@ export default async function SharedPropertyPage({
                   <Globe className="h-3.5 w-3.5" />
                   {arborist.companyWebsite.replace(/^https?:\/\//, "")}
                 </a>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* ==== J2. Realtor Contact Card (real_estate_package only) ==== */}
+        {isCertified && report?.reportType === "real_estate_package" && report.reRealtorName && (
+          <section>
+            <div className="bg-violet-50 border border-violet-200 rounded-lg p-6 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-violet-600 mb-4">
+                Listing Agent
+              </p>
+              <div className="text-sm space-y-1 mb-4">
+                <p className="font-medium text-neutral-900">{report.reRealtorName}</p>
+                {report.reRealtorCompany && (
+                  <p className="text-neutral-600">{report.reRealtorCompany}</p>
+                )}
+              </div>
+              {(report.reRealtorPhone || report.reRealtorEmail) && (
+                <div className="grid grid-cols-2 gap-3">
+                  {report.reRealtorPhone && (
+                    <a
+                      href={`tel:${report.reRealtorPhone}`}
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-100 hover:bg-violet-200 text-violet-800 rounded-lg text-sm font-medium transition-colors border border-violet-200"
+                    >
+                      <Phone className="h-4 w-4" />
+                      Call
+                    </a>
+                  )}
+                  {report.reRealtorEmail && (
+                    <a
+                      href={`mailto:${report.reRealtorEmail}`}
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-100 hover:bg-violet-200 text-violet-800 rounded-lg text-sm font-medium transition-colors border border-violet-200"
+                    >
+                      <Mail className="h-4 w-4" />
+                      Email
+                    </a>
+                  )}
+                </div>
               )}
             </div>
           </section>

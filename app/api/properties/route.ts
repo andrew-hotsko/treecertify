@@ -13,6 +13,8 @@ function defaultScope(reportType: string, address: string, city: string): string
       return `Perform a Level 2 basic assessment per ISA Best Management Practices of the subject tree(s) at ${location} to evaluate potential impacts from proposed construction activity, assess tree protection zone encroachment, and provide tree preservation recommendations per ANSI A300 Part 5 standards.`;
     case "tree_valuation":
       return `Perform a Level 2 basic assessment per ISA Best Management Practices and appraise the subject tree(s) at ${location} using the CTLA Trunk Formula Method (10th Edition) to determine replacement value for insurance, litigation, or municipal purposes.`;
+    case "real_estate_package":
+      return `Perform a Level 2 basic assessment per ISA Best Management Practices and appraise the subject tree(s) at ${location} to evaluate health, structural condition, and appraised value using the CTLA Trunk Formula Method (10th Edition) for the purpose of a real estate transaction.`;
     default:
       return `Perform a Level 2 basic assessment per ISA Best Management Practices of the subject tree(s) at ${location} to evaluate health, structural condition, and provide professional arborist recommendations.`;
   }

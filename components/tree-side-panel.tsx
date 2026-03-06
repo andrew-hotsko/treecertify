@@ -545,11 +545,11 @@ export function TreeSidePanel({
         : (protectionResult?.mitigationRequired ?? null),
       tagNumber,
       typeSpecificData:
-        reportType && reportType !== "tree_valuation" && Object.keys(typeData).length > 0
+        reportType && reportType !== "tree_valuation" && reportType !== "real_estate_package" && Object.keys(typeData).length > 0
           ? JSON.stringify(typeData)
           : undefined,
-      // CTLA Valuation fields (only sent for tree_valuation report type)
-      ...(reportType === "tree_valuation" ? {
+      // CTLA Valuation fields (sent for tree_valuation and real_estate_package)
+      ...((reportType === "tree_valuation" || reportType === "real_estate_package") ? {
         valuationUnitPrice: valuationData.valuationUnitPrice,
         valuationHealthRating: valuationData.valuationHealthRating,
         valuationStructureRating: valuationData.valuationStructureRating,
@@ -1228,7 +1228,7 @@ export function TreeSidePanel({
               />
             )}
 
-            {reportType === "tree_valuation" && (
+            {(reportType === "tree_valuation" || reportType === "real_estate_package") && (
               <TreeValuationFields
                 values={valuationData}
                 onChange={setValuationData}

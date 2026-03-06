@@ -324,6 +324,78 @@ SECTION-BY-SECTION INSTRUCTIONS:
 8. **Limitations and Assumptions**
    Standard limitations plus: construction impact predictions are estimates based on current project plans. Actual impacts may vary based on construction methods, weather, and unforeseen conditions. The Tree Protection Plan requires compliance by all contractors and subcontractors. The arborist assumes no liability for damage resulting from non-compliance.`,
   },
+  {
+    reportType: "real_estate_package",
+    displayName: "Certified Tree Canopy Report",
+    promptVersion: "2.0",
+    requiredSections: [
+      "Introduction and Scope",
+      "Site Description",
+      "Executive Tree Summary",
+      "Individual Tree Assessments",
+      "Canopy Valuation Summary",
+      "Maintenance Outlook",
+      "Limitations and Assumptions",
+    ],
+    systemInstructions: `REPORT-TYPE INSTRUCTIONS — Certified Tree Canopy Report (v2.0)
+
+CONTEXT:
+This report is prepared for a REAL ESTATE TRANSACTION. The audience is homebuyers, realtors, and property stakeholders — NOT municipal reviewers. The tone should be accessible, positive, and asset-oriented while maintaining professional ISA standards.
+
+VOICE AND STANDARDS:
+- Write in professional third person. Use ISA standards and CTLA 10th Edition methodology.
+- Frame trees as PROPERTY ASSETS — emphasize value, beauty, shade, and environmental contribution.
+- Use plain English alongside technical terms. When introducing an ISA term, briefly explain it: "codominant stems (two trunks of similar size sharing a single point of attachment)."
+- Avoid alarming language unless a genuine safety hazard exists. Instead of "failure risk," say "may benefit from structural pruning."
+- Reference ANSI A300 for maintenance. Reference CTLA Trunk Formula Method, 10th Edition for valuations.
+
+SECTION-BY-SECTION INSTRUCTIONS:
+
+1. **Introduction and Scope**
+   State this is a Tree Canopy Report prepared for a real estate transaction. Include property address, assessment date, methodology (Level 2 Basic visual assessment), and purpose: "to evaluate the health, structural condition, and appraised value of the tree canopy assets on the subject property." Use Scope of Assignment if provided.
+
+2. **Site Description**
+   Describe the property setting, landscape character, and how the tree canopy contributes to the property's appeal and value. Use site observations from the arborist. Frame positively: "The mature canopy provides substantial shade to the rear patio and contributes to the established character of the neighborhood."
+
+3. **Executive Tree Summary**
+   A concise overview table or structured summary:
+   - Total trees, species diversity, overall canopy condition
+   - Total appraised canopy value (from CTLA valuations)
+   - Count by condition category (Excellent/Good, Fair, Needs Attention)
+   - Count by recommended action (Retain, Prune, Monitor, Remove)
+   Present this as a buyer-friendly snapshot. The total canopy value should be prominently featured.
+
+4. **Individual Tree Assessments**
+   For each tree, write a balanced assessment that a homebuyer can understand:
+   - Species, size, and location on property
+   - Health condition in plain language: "in good health with a full canopy" or "showing moderate stress that can be addressed with routine maintenance"
+   - Key structural observations (if any) explained simply
+   - CTLA appraised value with brief explanation
+   - Recommended action framed positively:
+     - Retain: "This tree is a healthy asset that enhances property value."
+     - Prune: "Routine maintenance pruning will maintain this tree's health and appearance."
+     - Monitor: "This tree should be periodically inspected to ensure continued vigor."
+     - Remove: Frame carefully — explain the reason, suggest replacement: "Replacement planting would restore canopy coverage in this area."
+
+   Scale depth to significance: high-value trees (top 2-3) get detailed treatment; healthy retained trees get concise summaries.
+
+5. **Canopy Valuation Summary**
+   Present the CTLA Trunk Formula valuations:
+   - Brief methodology explanation suitable for a non-arborist audience
+   - Summary table: tree number, species, DBH, appraised value
+   - Total canopy value prominently displayed
+   - Note that values represent the contributory value of trees to the property
+
+6. **Maintenance Outlook**
+   Forward-looking section aimed at the new homeowner:
+   - Immediate maintenance needs (if any) with estimated priority
+   - Routine annual maintenance recommendations
+   - Expected long-term canopy trajectory: "The diverse species composition provides resilient canopy coverage that should continue to appreciate in value."
+   Group by priority level when multiple trees need attention.
+
+7. **Limitations and Assumptions**
+   Standard limitations plus: "This report is intended to inform real estate transaction decisions and does not constitute a real estate appraisal. Tree values represent contributory landscape value calculated using the CTLA Trunk Formula Method, 10th Edition."`,
+  },
 ];
 
 /**

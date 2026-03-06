@@ -53,6 +53,7 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronUp,
+  Home,
 } from "lucide-react";
 import {
   Sheet,
@@ -135,6 +136,14 @@ interface Report {
   approvedAt: string | null;
   permitExpiresAt: string | null;
   clientNote: string | null;
+  // Real estate package fields
+  reListingAddress?: string | null;
+  reRealtorName?: string | null;
+  reRealtorEmail?: string | null;
+  reRealtorPhone?: string | null;
+  reRealtorCompany?: string | null;
+  reListingPrice?: number | null;
+  rePackageNotes?: string | null;
 }
 
 interface ReportOptions {
@@ -288,6 +297,16 @@ export default function PropertyReportPage() {
   const [billingPaidAt, setBillingPaidAt] = useState<string | null>(null);
   const [savingBilling, setSavingBilling] = useState(false);
 
+  // Listing info state (real_estate_package only)
+  const [reListingAddress, setReListingAddress] = useState("");
+  const [reRealtorName, setReRealtorName] = useState("");
+  const [reRealtorEmail, setReRealtorEmail] = useState("");
+  const [reRealtorPhone, setReRealtorPhone] = useState("");
+  const [reRealtorCompany, setReRealtorCompany] = useState("");
+  const [reListingPrice, setReListingPrice] = useState("");
+  const [rePackageNotes, setRePackageNotes] = useState("");
+  const [savingListing, setSavingListing] = useState(false);
+
   // Report delivery state
   const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState("");
@@ -357,6 +376,14 @@ export default function PropertyReportPage() {
             setReportOptions(JSON.parse(r.reportOptions || "{}"));
           } catch { /* default empty */ }
           setClientNote(r.clientNote ?? "");
+          // Initialize listing info state (real_estate_package)
+          setReListingAddress(r.reListingAddress ?? "");
+          setReRealtorName(r.reRealtorName ?? "");
+          setReRealtorEmail(r.reRealtorEmail ?? "");
+          setReRealtorPhone(r.reRealtorPhone ?? "");
+          setReRealtorCompany(r.reRealtorCompany ?? "");
+          setReListingPrice(r.reListingPrice != null ? String(r.reListingPrice) : "");
+          setRePackageNotes(r.rePackageNotes ?? "");
           // Initialize billing state
           setBillingAmount(r.billingAmount != null ? String(r.billingAmount) : "");
           try {
@@ -519,6 +546,38 @@ export default function PropertyReportPage() {
       setSavingNote(false);
     }
   }, [report, clientNote, toast]);
+
+  const saveListingInfo = useCallback(async () => {
+    if (!report) return;
+    setSavingListing(true);
+    try {
+      const res = await fetch(`/api/reports/${report.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reListingAddress: reListingAddress || null,
+          reRealtorName: reRealtorName || null,
+          reRealtorEmail: reRealtorEmail || null,
+          reRealtorPhone: reRealtorPhone || null,
+          reRealtorCompany: reRealtorCompany || null,
+          reListingPrice: reListingPrice ? parseFloat(reListingPrice) : null,
+          rePackageNotes: rePackageNotes || null,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save listing info");
+      const updated = await res.json();
+      setReport(updated);
+      toast({ title: "Listing info saved" });
+    } catch (err) {
+      toast({
+        title: "Failed to save listing info",
+        description: err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingListing(false);
+    }
+  }, [report, reListingAddress, reRealtorName, reRealtorEmail, reRealtorPhone, reRealtorCompany, reListingPrice, rePackageNotes, toast]);
 
   // -------------------------------------------------------------------------
   // Auto-save every 30s
@@ -1222,7 +1281,7 @@ export default function PropertyReportPage() {
                 </div>
 
                 {/* Report Options (PDF appendix toggles) */}
-                {(reportType === "health_assessment" || reportType === "removal_permit" || reportType === "tree_valuation" || reportType === "construction_encroachment") && (
+                {(reportType === "health_assessment" || reportType === "removal_permit" || reportType === "tree_valuation" || reportType === "construction_encroachment" || reportType === "real_estate_package") && (
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" size="sm">
@@ -1703,6 +1762,93 @@ export default function PropertyReportPage() {
                     mode="interactive"
                     onUpdatePermitStatus={updatePermitStatus}
                   />
+                )}
+
+                {/* ---- Listing Information (real_estate_package only) ---- */}
+                {isCertified && reportType === "real_estate_package" && (
+                  <div className="border border-violet-200 rounded-lg overflow-hidden mb-4">
+                    <div className="flex items-center justify-between px-4 py-3 bg-violet-50">
+                      <div className="flex items-center gap-2">
+                        <Home className="h-4 w-4 text-violet-600" />
+                        <span className="text-sm font-semibold text-violet-700">Listing Information</span>
+                      </div>
+                    </div>
+                    <div className="p-4 space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-neutral-600">Realtor Name</Label>
+                          <Input
+                            value={reRealtorName}
+                            onChange={(e) => setReRealtorName(e.target.value)}
+                            placeholder="Agent name"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-neutral-600">Realtor Company</Label>
+                          <Input
+                            value={reRealtorCompany}
+                            onChange={(e) => setReRealtorCompany(e.target.value)}
+                            placeholder="Brokerage name"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-neutral-600">Realtor Email</Label>
+                          <Input
+                            type="email"
+                            value={reRealtorEmail}
+                            onChange={(e) => setReRealtorEmail(e.target.value)}
+                            placeholder="agent@example.com"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-neutral-600">Realtor Phone</Label>
+                          <Input
+                            type="tel"
+                            value={reRealtorPhone}
+                            onChange={(e) => setReRealtorPhone(e.target.value)}
+                            placeholder="(555) 555-5555"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-neutral-600">Listing Address</Label>
+                          <Input
+                            value={reListingAddress}
+                            onChange={(e) => setReListingAddress(e.target.value)}
+                            placeholder="Usually same as property address"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-neutral-600">Listing Price</Label>
+                          <Input
+                            type="number"
+                            value={reListingPrice}
+                            onChange={(e) => setReListingPrice(e.target.value)}
+                            placeholder="e.g. 2500000"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-neutral-600">Notes for Realtor</Label>
+                        <Textarea
+                          value={rePackageNotes}
+                          onChange={(e) => setRePackageNotes(e.target.value)}
+                          placeholder="Any additional notes for the real estate agent..."
+                          rows={2}
+                          className="resize-none"
+                        />
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          onClick={saveListingInfo}
+                          disabled={savingListing}
+                          className="bg-violet-600 hover:bg-violet-700"
+                        >
+                          {savingListing ? "Saving…" : "Save Listing Info"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 )}
 
                 {/* ---- Note to Client ---- */}

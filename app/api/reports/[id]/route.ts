@@ -106,6 +106,14 @@ export async function PUT(
         ...(body.valuationPurpose !== undefined && { valuationPurpose: body.valuationPurpose }),
         ...(body.valuationBasisStatement !== undefined && { valuationBasisStatement: body.valuationBasisStatement }),
         ...(body.valuationTotalValue !== undefined && { valuationTotalValue: body.valuationTotalValue != null ? parseFloat(body.valuationTotalValue) : null }),
+        // Real estate package fields
+        ...(body.reListingAddress !== undefined && { reListingAddress: body.reListingAddress }),
+        ...(body.reRealtorName !== undefined && { reRealtorName: body.reRealtorName }),
+        ...(body.reRealtorEmail !== undefined && { reRealtorEmail: body.reRealtorEmail }),
+        ...(body.reRealtorPhone !== undefined && { reRealtorPhone: body.reRealtorPhone }),
+        ...(body.reRealtorCompany !== undefined && { reRealtorCompany: body.reRealtorCompany }),
+        ...(body.reListingPrice !== undefined && { reListingPrice: body.reListingPrice != null ? parseFloat(body.reListingPrice) : null }),
+        ...(body.rePackageNotes !== undefined && { rePackageNotes: body.rePackageNotes }),
       },
     });
 

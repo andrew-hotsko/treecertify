@@ -23,6 +23,7 @@ import {
   Axe,
   DollarSign,
   HardHat,
+  Home,
   CheckCircle2,
   AlertTriangle,
 } from "lucide-react";
@@ -49,7 +50,7 @@ const COUNTY_MAP: Record<string, string> = {
   "Portola Valley": "San Mateo",
 };
 
-const ICON_MAP = { Stethoscope, Axe, DollarSign, HardHat } as const;
+const ICON_MAP = { Stethoscope, Axe, DollarSign, HardHat, Home } as const;
 
 const COLOR_MAP: Record<
   string,
@@ -82,6 +83,13 @@ const COLOR_MAP: Record<
     ring: "ring-blue-600",
     icon: "text-blue-700",
     check: "bg-blue-600",
+  },
+  violet: {
+    border: "border-l-violet-600",
+    bg: "bg-violet-50",
+    ring: "ring-violet-600",
+    icon: "text-violet-700",
+    check: "bg-violet-600",
   },
 };
 

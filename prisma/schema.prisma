@@ -245,7 +245,7 @@ model Report {
   propertyId String
   arboristId String
 
-  reportType     String // removal_permit, construction_encroachment, health_assessment, tree_valuation
+  reportType     String // removal_permit, construction_encroachment, health_assessment, tree_valuation, real_estate_package
   aiDraftContent String? // markdown
   finalContent   String? // markdown after edits
   citySections   String  @default("{}") // JSON
@@ -279,6 +279,15 @@ model Report {
   valuationTotalValue        Float?    // sum of all appraised tree values
   valuationPurpose           String?   // "Insurance", "Real Estate", "Legal/Litigation", "Estate Planning", "Other"
   valuationBasisStatement    String?   // arborist's statement of appraisal basis (appears in report)
+
+  // Real estate package fields
+  reListingAddress           String?   // listing address (usually same as property)
+  reRealtorName              String?
+  reRealtorEmail             String?
+  reRealtorPhone             String?
+  reRealtorCompany           String?
+  reListingPrice             Float?
+  rePackageNotes             String?   // arborist notes for the RE agent
 
   status String @default("draft") // draft, review, certified, filed
 

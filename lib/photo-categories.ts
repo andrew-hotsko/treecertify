@@ -35,6 +35,13 @@ export const PHOTO_CATEGORIES: Record<string, PhotoCategory[]> = {
     { value: "crown_spread", label: "Crown Spread Reference", required: false },
     { value: "site_landscape", label: "Site / Landscape Context", required: false },
   ],
+  real_estate_package: [
+    { value: "full_tree", label: "Full Tree", required: true },
+    { value: "trunk_dbh", label: "Trunk at DBH Height", required: false },
+    { value: "crown_detail", label: "Crown Detail", required: false },
+    { value: "site_landscape", label: "Site / Landscape Context", required: false },
+    { value: "defects_noted", label: "Any Defects Noted", required: false },
+  ],
 };
 
 /**

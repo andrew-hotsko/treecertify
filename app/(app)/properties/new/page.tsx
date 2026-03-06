@@ -14,6 +14,7 @@ import {
   Axe,
   DollarSign,
   HardHat,
+  Home,
   Check,
   Calendar,
 } from "lucide-react";
@@ -53,6 +54,7 @@ const ICON_MAP = {
   Axe,
   DollarSign,
   HardHat,
+  Home,
 } as const;
 
 const COLOR_MAP: Record<string, { border: string; bg: string; ring: string; icon: string; check: string }> = {
@@ -83,6 +85,13 @@ const COLOR_MAP: Record<string, { border: string; bg: string; ring: string; icon
     ring: "ring-blue-600",
     icon: "text-blue-700",
     check: "bg-blue-600",
+  },
+  violet: {
+    border: "border-l-violet-600",
+    bg: "bg-violet-50",
+    ring: "ring-violet-600",
+    icon: "text-violet-700",
+    check: "bg-violet-600",
   },
 };
 

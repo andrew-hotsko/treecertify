@@ -59,6 +59,7 @@ const REPORT_TYPE_LABELS: Record<string, string> = {
   construction_encroachment: "Construction Impact Report",
   health_assessment: "Tree Health Assessment",
   tree_valuation: "Tree Valuation Report",
+  real_estate_package: "Certified Tree Canopy Report",
 };
 
 // ---------------------------------------------------------------------------

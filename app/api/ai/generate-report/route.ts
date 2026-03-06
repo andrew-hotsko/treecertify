@@ -180,6 +180,18 @@ function formatTypeSpecificBlock(
           .filter(Boolean)
           .join("\n");
 
+      case "real_estate_package":
+        return [
+          d.maintenanceItems?.length
+            ? `    - Maintenance Items: ${d.maintenanceItems.join(", ")}`
+            : "",
+          d.maintenancePriority
+            ? `    - Maintenance Priority: ${d.maintenancePriority}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n");
+
       default:
         return "";
     }
@@ -474,7 +486,7 @@ export async function POST(request: NextRequest) {
     - Photos on File: ${t.treePhotos.length > 0 ? `${t.treePhotos.length} photo(s)` : "None"}
 ${t.treePhotos.length > 0 ? photoLines : ""}
     - Field Audio Notes:
-${audioLines}${typeBlock ? `\n    - Type-Specific Assessment:\n${typeBlock}` : ""}${body.reportType === "tree_valuation" ? `
+${audioLines}${typeBlock ? `\n    - Type-Specific Assessment:\n${typeBlock}` : ""}${(body.reportType === "tree_valuation" || body.reportType === "real_estate_package") ? `
     - CTLA Valuation — Unit Price: $${t.valuationUnitPrice ?? "N/A"}/sq in, Health: ${t.valuationHealthRating ?? "N/A"}%, Structure: ${t.valuationStructureRating ?? "N/A"}%, Form: ${t.valuationFormRating ?? "N/A"}%, Condition (geometric mean): ${t.valuationConditionRating ?? "N/A"}%, Species: ${t.valuationSpeciesRating ?? "N/A"}%, Site: ${t.valuationSiteRating ?? "N/A"}%, Contribution: ${t.valuationContributionRating ?? "N/A"}%, Location: ${t.valuationLocationRating ?? "N/A"}%, Basic Value: $${t.valuationBasicValue ?? "N/A"}, Appraised Value: $${t.valuationAppraisedValue ?? "N/A"}
     - Valuation Notes: ${t.valuationNotes || "None"}` : ""}`;
           }
@@ -555,7 +567,7 @@ PROPERTY DATA:
   body.reportType === "construction_encroachment"
     ? `\n- Project Description: ${(property as Record<string, unknown>).projectDescription || "N/A"}\n- Permit Number: ${(property as Record<string, unknown>).permitNumber || "N/A"}\n- Developer/Contractor: ${(property as Record<string, unknown>).developerName || "N/A"}\n- Architect: ${(property as Record<string, unknown>).architectName || "N/A"}`
     : ""
-}${body.reportType === "tree_valuation" ? `\nVALUATION CONTEXT:\n- Purpose: ${body.valuationPurpose || "Not specified"}\n- Basis Statement: ${body.valuationBasisStatement || "CTLA Trunk Formula Method, 10th Edition"}\n- Total Appraised Value: $${property.trees.reduce((sum: number, t: { valuationAppraisedValue?: number | null }) => sum + (t.valuationAppraisedValue ?? 0), 0).toLocaleString()}` : ""}
+}${(body.reportType === "tree_valuation" || body.reportType === "real_estate_package") ? `\nVALUATION CONTEXT:\n- Purpose: ${body.reportType === "real_estate_package" ? "Real Estate Transaction" : (body.valuationPurpose || "Not specified")}\n- Basis Statement: ${body.valuationBasisStatement || "CTLA Trunk Formula Method, 10th Edition"}\n- Total Appraised Value: $${property.trees.reduce((sum: number, t: { valuationAppraisedValue?: number | null }) => sum + (t.valuationAppraisedValue ?? 0), 0).toLocaleString()}` : ""}
 
 TREE ASSESSMENT DATA:
 ${treeDataBlock}

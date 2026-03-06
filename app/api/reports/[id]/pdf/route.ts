@@ -14,6 +14,7 @@ const REPORT_TYPE_TITLES: Record<string, string> = {
   health_assessment: "Tree Health Assessment Report",
   tree_valuation: "Tree Appraisal & Valuation Report",
   construction_encroachment: "Tree Protection & Construction Impact Assessment",
+  real_estate_package: "Certified Tree Canopy Report",
 };
 
 export async function GET(
@@ -781,7 +782,7 @@ export async function GET(
     // VALUATION SUMMARY (tree_valuation reports only)
     // =========================================================================
     let valuationSummaryHtml = "";
-    if (report.reportType === "tree_valuation") {
+    if (report.reportType === "tree_valuation" || report.reportType === "real_estate_package") {
       const treesWithValue = trees.filter(t => t.valuationAppraisedValue != null && t.valuationAppraisedValue > 0);
       const totalValue = treesWithValue.reduce((sum, t) => sum + (t.valuationAppraisedValue ?? 0), 0);
 
@@ -826,7 +827,7 @@ export async function GET(
           <p><strong>Date of Assessment:</strong> ${new Date(report.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</p>
           <p><strong>Method:</strong> Trunk Formula Technique, Cost Approach (Reproduction Method)</p>
           <p><strong>Standard:</strong> CTLA Guide for Plant Appraisal, 10th Edition (2019)</p>
-          ${report.valuationPurpose ? `<p><strong>Purpose:</strong> ${esc(report.valuationPurpose)}</p>` : ""}
+          ${report.valuationPurpose ? `<p><strong>Purpose:</strong> ${esc(report.valuationPurpose)}</p>` : report.reportType === "real_estate_package" ? `<p><strong>Purpose:</strong> Real Estate Transaction</p>` : ""}
         </div>
 
         ${treeBreakdowns}
@@ -1034,9 +1035,18 @@ export async function GET(
     preparedForLines.push(
       `${esc(property.city)}, ${esc(property.state || "CA")}${property.zip ? ` ${esc(property.zip)}` : ""}`
     );
-    preparedForLines.push(""); // spacer
-    preparedForLines.push(`City of ${esc(property.city)}`);
-    preparedForLines.push("Planning & Development Services");
+    if (report.reportType === "real_estate_package") {
+      // Real estate package: show realtor info instead of city planning
+      if (report.reRealtorName) {
+        preparedForLines.push(""); // spacer
+        preparedForLines.push(`Listing Agent: ${esc(report.reRealtorName)}`);
+        if (report.reRealtorCompany) preparedForLines.push(esc(report.reRealtorCompany));
+      }
+    } else {
+      preparedForLines.push(""); // spacer
+      preparedForLines.push(`City of ${esc(property.city)}`);
+      preparedForLines.push("Planning & Development Services");
+    }
 
     // =========================================================================
     // SIGNATURE BLOCK

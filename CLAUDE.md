@@ -229,5 +229,16 @@
 - **GAP**: No `MunicipalOrdinance` data seeded for North Bay, Tahoe, or Reno cities — `checkTreeProtection()` does not cover these regions yet. Future session needed to add ordinance data.
 - `lib/city-submission-guides.ts` still exists (legacy, not imported anywhere). Can be removed in future cleanup.
 
+## Real Estate Package
+- `real_estate_package` report type bundles health assessment + CTLA valuation for real estate transactions. Generates a "Certified Tree Canopy Report."
+- Report model has 7 RE listing fields: `reListingAddress`, `reRealtorName`, `reRealtorEmail`, `reRealtorPhone`, `reRealtorCompany`, `reListingPrice` (Float), `rePackageNotes`. All nullable.
+- Shares CTLA valuation columns with `tree_valuation` on TreeRecord (valuationUnitPrice, valuationAppraisedValue, etc.) — NOT typeSpecificData JSON.
+- Report page: violet-themed "Listing Information" card (certified view) for realtor contact and listing details. Saves via existing report PUT API.
+- Share page: realtor contact card with violet styling, canopy value highlight in summary stats, "Share with Your Realtor" next-steps text.
+- PDF: "Certified Tree Canopy Report" title, "Prepared For" shows realtor info instead of city planning, valuation summary section included, purpose defaults to "Real Estate Transaction."
+- AI template in `lib/report-templates.ts`: buyer-friendly language, asset-oriented tone, 7 required sections (Introduction, Site Description, Executive Tree Summary, Individual Assessments, Canopy Valuation, Maintenance Outlook, Limitations).
+- Icon: Home (lucide), color: violet. Appears in new property page, onboarding, and report type selectors.
+- Tree side panel and property-map-view show CTLA valuation fields for `real_estate_package` (same as `tree_valuation`).
+
 ## Session Completion
 - When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.

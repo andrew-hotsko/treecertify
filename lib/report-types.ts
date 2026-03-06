@@ -11,7 +11,7 @@ export interface ReportTypeConfig {
   id: string;
   label: string;
   description: string;
-  icon: "Stethoscope" | "Axe" | "DollarSign" | "HardHat";
+  icon: "Stethoscope" | "Axe" | "DollarSign" | "HardHat" | "Home";
   color: string; // Tailwind color prefix (e.g. "green", "red")
 }
 
@@ -43,6 +43,13 @@ export const REPORT_TYPES: ReportTypeConfig[] = [
     description: "TPZ/SRZ analysis with tree protection zones and construction impact plan",
     icon: "HardHat",
     color: "blue",
+  },
+  {
+    id: "real_estate_package",
+    label: "Real Estate Package",
+    description: "Bundled health assessment + CTLA valuation for real estate transactions",
+    icon: "Home",
+    color: "violet",
   },
 ];
 
@@ -111,11 +118,20 @@ export interface ConstructionEncroachmentData {
   monitoringSchedule?: string;
 }
 
+export interface RealEstatePackageData {
+  // Combines health + valuation fields
+  // Health-related
+  maintenanceItems?: string[];
+  maintenancePriority?: "low" | "moderate" | "high" | "urgent";
+  // Valuation is on the dedicated TreeRecord columns (valuationXxx)
+}
+
 export type TypeSpecificData =
   | HealthAssessmentData
   | RemovalPermitData
   | TreeValuationData
-  | ConstructionEncroachmentData;
+  | ConstructionEncroachmentData
+  | RealEstatePackageData;
 
 // ---------------------------------------------------------------------------
 // Auto-calculation helpers

@@ -282,6 +282,31 @@ export async function validateReportForCertification(
     }
   }
 
+  if (reportType === "real_estate_package") {
+    // Check that trees have valuation data (appraised value)
+    const treesWithoutValue = trees.filter(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (t) => !(t as any).valuationAppraisedValue
+    );
+    if (treesWithoutValue.length > 0) {
+      const nums = treesWithoutValue.map((t) => `#${t.treeNumber}`).join(", ");
+      checks.push({
+        id: "re_valuation_data",
+        label: "Tree valuation data",
+        status: "warning",
+        message: `${treesWithoutValue.length} tree${treesWithoutValue.length === 1 ? " is" : "s are"} missing appraised value (${nums})`,
+        fixPath: `/properties/${property.id}`,
+      });
+    } else {
+      checks.push({
+        id: "re_valuation_data",
+        label: "Tree valuation data",
+        status: "pass",
+        message: "All trees have valuation data",
+      });
+    }
+  }
+
   // 7. Report sections shorter than 50 characters (placeholder content)
   if (reportContent.trim()) {
     const sectionPattern = /^#{1,3}\s+.+$/gm;

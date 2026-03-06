@@ -511,6 +511,11 @@ const NON_REMOVAL_NEXT_STEPS: Record<
     description:
       "Share this report with your contractor and submit it to the city before construction begins. The Tree Protection Plan includes specific measures your contractor must follow to protect trees during construction.",
   },
+  real_estate_package: {
+    title: "Share with Your Realtor",
+    description:
+      "This Certified Tree Canopy Report documents the health and appraised value of the trees on this property. Share it with your realtor, lender, or buyer to inform the real estate transaction.",
+  },
 };
 
 // ---------------------------------------------------------------------------
