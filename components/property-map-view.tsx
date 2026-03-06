@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { TreeSidePanel, type TreeFormData } from "@/components/tree-side-panel";
 import { MobileFieldMode } from "@/components/mobile-field-mode";
+import { type Observation } from "@/lib/default-observations";
 import { TreeSummaryPanel } from "@/components/tree-summary-panel";
 import type { TreePin, CircleOverlay } from "@/components/property-map";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -269,6 +270,45 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   const reportType = property.reportType ?? "health_assessment";
   const reportTypeConfig = getReportTypeConfig(reportType);
 
+  // ---- Arborist customization settings ----
+  const [arboristHealthObs, setArboristHealthObs] = useState<Observation[] | undefined>(undefined);
+  const [arboristStructuralObs, setArboristStructuralObs] = useState<Observation[] | undefined>(undefined);
+  const [arboristRecommendationMap, setArboristRecommendationMap] = useState<Record<string, string> | undefined>(undefined);
+  const [arboristCommonSpecies, setArboristCommonSpecies] = useState<string[] | undefined>(undefined);
+  const [arboristScopeTemplates, setArboristScopeTemplates] = useState<Record<string, string> | undefined>(undefined);
+
+  useEffect(() => {
+    async function loadArboristSettings() {
+      try {
+        const res = await fetch("/api/arborist/profile");
+        if (!res.ok) return;
+        const data = await res.json();
+        // Parse observation library
+        if (data.healthObservations) {
+          try { setArboristHealthObs(JSON.parse(data.healthObservations)); } catch { /* use defaults */ }
+        }
+        if (data.structuralObservations) {
+          try { setArboristStructuralObs(JSON.parse(data.structuralObservations)); } catch { /* use defaults */ }
+        }
+        // Parse recommendation map from reportDefaults
+        if (data.reportDefaults) {
+          try {
+            const rd = JSON.parse(data.reportDefaults);
+            if (rd.recommendationMap) setArboristRecommendationMap(rd.recommendationMap);
+            if (rd.scopeTemplates) setArboristScopeTemplates(rd.scopeTemplates);
+          } catch { /* use defaults */ }
+        }
+        // Parse species presets
+        if (data.commonSpecies) {
+          try { setArboristCommonSpecies(JSON.parse(data.commonSpecies)); } catch { /* use defaults */ }
+        }
+      } catch {
+        // Non-critical — arborist settings are optional
+      }
+    }
+    loadArboristSettings();
+  }, []);
+
   // ---- Connectivity + offline queue ----
   const { isOnline, setPendingCount } = useConnectivity();
   const { toast } = useToast();
@@ -305,17 +345,29 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   // Auto-generate scope of assignment when empty on report type change
   useEffect(() => {
     if (!scopeOfAssignment.trim()) {
-      setScopeOfAssignment(
-        generateScopeTemplate(
-          reportType,
-          property.address,
-          property.city,
-          trees.length
-        )
-      );
+      // Check arborist's custom scope template first
+      const customTemplate = arboristScopeTemplates?.[reportType];
+      if (customTemplate) {
+        const count = trees.length > 0
+          ? `${trees.length} tree${trees.length !== 1 ? "s" : ""}`
+          : "the subject tree(s)";
+        const address = `${property.address}, ${property.city}`;
+        setScopeOfAssignment(
+          customTemplate.replace(/\{count\}/g, count).replace(/\{address\}/g, address)
+        );
+      } else {
+        setScopeOfAssignment(
+          generateScopeTemplate(
+            reportType,
+            property.address,
+            property.city,
+            trees.length
+          )
+        );
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportType]);
+  }, [reportType, arboristScopeTemplates]);
 
   // Lazy migration: pull PropertyAudioNote transcriptions into siteObservations
   useEffect(() => {
@@ -1610,6 +1662,10 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               saving={saving}
               lastSavedTree={lastSavedTree}
               recentSpecies={recentSpecies}
+              arboristHealthObs={arboristHealthObs}
+              arboristStructuralObs={arboristStructuralObs}
+              arboristRecommendationMap={arboristRecommendationMap}
+              arboristCommonSpecies={arboristCommonSpecies}
             />
           ) : (
             <TreeSidePanel
@@ -1628,6 +1684,10 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               lastSavedTree={lastSavedTree}
               recentSpecies={recentSpecies}
               quickAddMode={quickAddMode}
+              arboristHealthObs={arboristHealthObs}
+              arboristStructuralObs={arboristStructuralObs}
+              arboristRecommendationMap={arboristRecommendationMap}
+              arboristCommonSpecies={arboristCommonSpecies}
             />
           )
         )}

@@ -75,6 +75,8 @@ export async function PUT(
         ...(body.status !== undefined && { status: body.status }),
         ...(body.tagNumber !== undefined && { tagNumber: body.tagNumber }),
         ...(body.typeSpecificData !== undefined && { typeSpecificData: body.typeSpecificData }),
+        ...(body.healthObservationCanonical !== undefined && { healthObservationCanonical: body.healthObservationCanonical }),
+        ...(body.structuralObservationCanonical !== undefined && { structuralObservationCanonical: body.structuralObservationCanonical }),
       },
     });
 

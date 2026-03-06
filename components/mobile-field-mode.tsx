@@ -24,6 +24,12 @@ import {
   CONDITION_BUTTON_COLORS,
 } from "@/lib/observation-helpers";
 import {
+  type Observation,
+  labelToCanonical,
+  getDefaultHealthObservations,
+  getDefaultStructuralObservations,
+} from "@/lib/default-observations";
+import {
   X,
   Save,
   ShieldCheck,
@@ -83,6 +89,11 @@ interface MobileFieldModeProps {
   saving?: boolean;
   lastSavedTree?: TreeRecord | null;
   recentSpecies?: { common: string; scientific: string }[];
+  // Arborist customization
+  arboristHealthObs?: Observation[];
+  arboristStructuralObs?: Observation[];
+  arboristRecommendationMap?: Record<string, string>;
+  arboristCommonSpecies?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -114,10 +125,25 @@ export function MobileFieldMode({
   saving = false,
   lastSavedTree,
   recentSpecies = [],
+  arboristHealthObs,
+  arboristStructuralObs,
+  arboristRecommendationMap,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  arboristCommonSpecies,
 }: MobileFieldModeProps) {
   const { isOnline } = useConnectivity();
   const { toast } = useToast();
   const isNewTree = !tree?.id;
+
+  // ---- Computed observation arrays (arborist customization or fallback) ----
+  const effectiveHealthObs = arboristHealthObs
+    ? arboristHealthObs.filter((o) => o.enabled).map((o) => o.label)
+    : HEALTH_OBSERVATIONS;
+  const effectiveStructuralObs = arboristStructuralObs
+    ? arboristStructuralObs.filter((o) => o.enabled).map((o) => o.label)
+    : STRUCTURAL_OBSERVATIONS;
+  const allHealthObs = arboristHealthObs || getDefaultHealthObservations();
+  const allStructuralObs = arboristStructuralObs || getDefaultStructuralObservations();
 
   // ---- Form state ----
   const [tagNumber, setTagNumber] = useState(tree?.tagNumber ?? "");
@@ -322,12 +348,17 @@ export function MobileFieldMode({
     (rating: number) => {
       setConditionRating(rating);
       haptic(10);
+      // Auto-select recommended action from arborist's map
+      if (arboristRecommendationMap) {
+        const action = arboristRecommendationMap[String(rating)];
+        if (action) setRecommendedAction(action);
+      }
       // Auto-scroll to observations section
       setTimeout(() => {
         sectionRefs.current[3]?.scrollIntoView({ behavior: "smooth" });
       }, 150);
     },
-    []
+    [arboristRecommendationMap]
   );
 
   const buildFormData = useCallback((): TreeFormData => {
@@ -340,6 +371,14 @@ export function MobileFieldMode({
       conditionRating,
       healthNotes,
       structuralNotes,
+      healthObservationCanonical: healthChecks
+        .filter((c) => c !== "No significant concerns")
+        .map((c) => labelToCanonical(c, allHealthObs))
+        .join(", ") || (healthChecks.includes("No significant concerns") ? "no_significant_concerns" : undefined),
+      structuralObservationCanonical: structuralChecks
+        .filter((c) => c !== "No significant concerns")
+        .map((c) => labelToCanonical(c, allStructuralObs))
+        .join(", ") || (structuralChecks.includes("No significant concerns") ? "no_significant_concerns" : undefined),
       recommendedAction,
       isProtected: protectionResult?.isProtected ?? false,
       protectionReason: protectionResult?.reason ?? null,
@@ -355,6 +394,10 @@ export function MobileFieldMode({
     conditionRating,
     healthNotes,
     structuralNotes,
+    healthChecks,
+    structuralChecks,
+    allHealthObs,
+    allStructuralObs,
     recommendedAction,
     protectionResult,
     tagNumber,
@@ -699,7 +742,7 @@ export function MobileFieldMode({
               />
             </div>
             <MultiCheckbox
-              options={HEALTH_OBSERVATIONS}
+              options={effectiveHealthObs}
               selected={healthChecks}
               onChange={(selected) => {
                 setHealthChecks(selected);
@@ -743,7 +786,7 @@ export function MobileFieldMode({
               />
             </div>
             <MultiCheckbox
-              options={STRUCTURAL_OBSERVATIONS}
+              options={effectiveStructuralObs}
               selected={structuralChecks}
               onChange={(selected) => {
                 setStructuralChecks(selected);

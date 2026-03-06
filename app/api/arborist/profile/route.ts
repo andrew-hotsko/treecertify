@@ -68,6 +68,16 @@ export async function PUT(request: NextRequest) {
       "invoicePrefix",
       "invoiceNetTerms",
       "billingPaymentInstructions",
+      // Customization settings (JSON strings)
+      "healthObservations",
+      "structuralObservations",
+      "commonSpecies",
+      "defaultReportType",
+      "defaultRecommendationMap",
+      "defaultScopeTemplate",
+      "pdfCoverAccentColor",
+      "shareDefaultMessage",
+      "shareThankYouMessage",
     ];
 
     const updateData: Record<string, string | boolean | number | null> = {};
@@ -83,6 +93,12 @@ export async function PUT(request: NextRequest) {
     if ("showBillingOnShare" in body) {
       updateData.showBillingOnShare = !!body.showBillingOnShare;
     }
+    if ("pdfShowTraqAppendix" in body) {
+      updateData.pdfShowTraqAppendix = !!body.pdfShowTraqAppendix;
+    }
+    if ("pdfShowCityContacts" in body) {
+      updateData.pdfShowCityContacts = !!body.pdfShowCityContacts;
+    }
     // Float fields
     if ("invoiceHourlyRate" in body) {
       updateData.invoiceHourlyRate = body.invoiceHourlyRate != null ? parseFloat(body.invoiceHourlyRate) : null;
@@ -92,6 +108,13 @@ export async function PUT(request: NextRequest) {
     }
     if ("defaultReportFee" in body) {
       updateData.defaultReportFee = body.defaultReportFee != null ? parseFloat(body.defaultReportFee) : null;
+    }
+    // Int fields
+    if ("photoRequiredCount" in body) {
+      const count = parseInt(body.photoRequiredCount, 10);
+      if (!isNaN(count) && count >= 1 && count <= 10) {
+        updateData.photoRequiredCount = count;
+      }
     }
 
     const updated = await prisma.arborist.update({

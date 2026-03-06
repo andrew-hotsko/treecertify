@@ -36,6 +36,12 @@ import {
   ACTION_OPTIONS,
 } from "@/lib/observation-helpers";
 import {
+  type Observation,
+  labelToCanonical,
+  getDefaultHealthObservations,
+  getDefaultStructuralObservations,
+} from "@/lib/default-observations";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -73,6 +79,8 @@ export interface TreeFormData {
   conditionRating: number;
   healthNotes: string;
   structuralNotes: string;
+  healthObservationCanonical?: string;
+  structuralObservationCanonical?: string;
   recommendedAction: string;
   isProtected: boolean;
   protectionReason: string | null;
@@ -140,6 +148,11 @@ interface TreeSidePanelProps {
   lastSavedTree?: TreeRecord | null;
   recentSpecies?: { common: string; scientific: string }[];
   quickAddMode?: boolean;
+  // Arborist customization
+  arboristHealthObs?: Observation[];
+  arboristStructuralObs?: Observation[];
+  arboristRecommendationMap?: Record<string, string>;
+  arboristCommonSpecies?: string[];
 }
 
 
@@ -170,8 +183,26 @@ export function TreeSidePanel({
   lastSavedTree,
   recentSpecies = [],
   quickAddMode = false,
+  arboristHealthObs,
+  arboristStructuralObs,
+  arboristRecommendationMap,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  arboristCommonSpecies,
 }: TreeSidePanelProps) {
   const { toast } = useToast();
+
+  // ---- Computed observation arrays (arborist customization or fallback) ----
+  const effectiveHealthObs = arboristHealthObs
+    ? arboristHealthObs.filter((o) => o.enabled).map((o) => o.label)
+    : HEALTH_OBSERVATIONS;
+  const effectiveStructuralObs = arboristStructuralObs
+    ? arboristStructuralObs.filter((o) => o.enabled).map((o) => o.label)
+    : STRUCTURAL_OBSERVATIONS;
+
+  // Full observation arrays for canonical lookup (includes disabled)
+  const allHealthObs = arboristHealthObs || getDefaultHealthObservations();
+  const allStructuralObs = arboristStructuralObs || getDefaultStructuralObservations();
+
   // ---- Form state ----
   const [tagNumber, setTagNumber] = useState(tree?.tagNumber ?? "");
   const [speciesCommon, setSpeciesCommon] = useState(tree?.speciesCommon ?? "");
@@ -451,6 +482,14 @@ export function TreeSidePanel({
       conditionRating,
       healthNotes,
       structuralNotes,
+      healthObservationCanonical: healthChecks
+        .filter((c) => c !== "No significant concerns")
+        .map((c) => labelToCanonical(c, allHealthObs))
+        .join(", ") || (healthChecks.includes("No significant concerns") ? "no_significant_concerns" : undefined),
+      structuralObservationCanonical: structuralChecks
+        .filter((c) => c !== "No significant concerns")
+        .map((c) => labelToCanonical(c, allStructuralObs))
+        .join(", ") || (structuralChecks.includes("No significant concerns") ? "no_significant_concerns" : undefined),
       recommendedAction,
       isProtected: useOverride
         ? overrideIsProtected
@@ -758,7 +797,14 @@ export function TreeSidePanel({
           <Label>Condition Rating</Label>
           <ConditionRating
             value={conditionRating}
-            onChange={setConditionRating}
+            onChange={(rating) => {
+              setConditionRating(rating);
+              // Auto-select recommended action from arborist's map
+              if (arboristRecommendationMap) {
+                const action = arboristRecommendationMap[String(rating)];
+                if (action) setRecommendedAction(action);
+              }
+            }}
             size="sm"
           />
         </div>
@@ -768,7 +814,7 @@ export function TreeSidePanel({
           <div className="space-y-1.5">
             <Label className="text-xs">Health Observations</Label>
             <MultiCheckbox
-              options={HEALTH_OBSERVATIONS}
+              options={effectiveHealthObs}
               selected={healthChecks}
               onChange={(selected) => {
                 setHealthChecks(selected);
@@ -814,7 +860,7 @@ export function TreeSidePanel({
           <div className="space-y-1.5">
             <Label className="text-xs">Structural Observations</Label>
             <MultiCheckbox
-              options={STRUCTURAL_OBSERVATIONS}
+              options={effectiveStructuralObs}
               selected={structuralChecks}
               onChange={(selected) => {
                 setStructuralChecks(selected);

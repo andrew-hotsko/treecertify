@@ -461,7 +461,9 @@ export async function POST(request: NextRequest) {
     - Height: ${t.heightFt ? `${t.heightFt} feet` : "Not measured"}
     - Canopy Spread: ${t.canopySpreadFt ? `${t.canopySpreadFt} feet` : "Not measured"}
     - Condition Rating: ${t.conditionRating}/5
+    - Health Observations (canonical): ${t.healthObservationCanonical || ""}
     - Health Notes (raw field dictation — transform to professional language): ${t.healthNotes || "None provided by arborist"}
+    - Structural Observations (canonical): ${t.structuralObservationCanonical || ""}
     - Structural Notes (raw field dictation — transform to professional language): ${t.structuralNotes || "None provided by arborist"}
     - Protected Status: ${t.isProtected ? "Yes" : "No"}
     - Protection Reason: ${t.protectionReason || "N/A"}

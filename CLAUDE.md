@@ -84,12 +84,13 @@
 
 ## Observation Checkboxes
 - ISA-standard health and structural observations are shown as checkbox grids in the tree side panel, above the free-text notes textareas.
-- 12 health observations (chlorosis, crown dieback, decay, pest damage, etc.) and 12 structural observations (codominant stems, included bark, cavities, etc.).
-- "No significant concerns" is an exclusive toggle — selecting it unchecks all others and vice versa.
-- Stored in existing `healthNotes`/`structuralNotes` fields using `"Observed: X, Y\n\n{free text}"` prefix format. No schema changes needed.
+- 12 health observations (chlorosis, crown dieback, decay, pest damage, etc.) and 11 structural observations (codominant stems, included bark, cavities, etc.).
+- "No significant concerns" is an exclusive toggle — selecting it unchecks all others and vice versa. NOT part of the observation library — handled as `exclusiveOption` prop on MultiCheckbox.
+- Stored in existing `healthNotes`/`structuralNotes` fields using `"Observed: X, Y\n\n{free text}"` prefix format.
+- Canonical terms also saved to `healthObservationCanonical`/`structuralObservationCanonical` fields as comma-separated ISA terms (e.g., `"chlorosis, crown_dieback"`).
 - Helper functions: `parseObservedLine()`, `extractFreeText()`, `buildNotesWithObserved()` in `components/tree-side-panel.tsx`.
 - PDF TRAQ appendix formats these cleanly via `formatNotesForTRAQ()` in the PDF route — strips "Observed:" prefix, formats as "Observed conditions: X, Y." sentence, shows free text below.
-- These are standard ISA terminology — not customizable per arborist.
+- Observations are customizable per arborist via the Observation Library (see Arborist Customization below). Falls back to hardcoded defaults in `lib/observation-helpers.ts` when arborist has no customizations.
 
 ## Dictation
 - Inline mic button on each notes field = raw OpenAI Whisper transcription (no Claude parsing). Component: `components/voice-input.tsx`.
@@ -183,6 +184,19 @@
 - Dashboard: "Outstanding Payments" counter (count + $ total of unpaid billing). Only shows when unpaid billing exists.
 - Settings page: "Client Billing" card with Default Report Fee, Payment Instructions, "Show billing on share page" toggle.
 - Billing fields saved via report PUT route (`/api/reports/[id]`), not separate API.
+
+## Arborist Customization
+- `lib/default-observations.ts` — `Observation` interface (id, label, canonical, enabled, builtIn) and factory functions for default health (12) and structural (11) observations.
+- Canonical terms: stable snake_case ISA identifiers (e.g., `chlorosis`, `codominant_stems`) for AI pipeline stability. Custom observations added by arborists get `canonical: "(custom) {label}"`.
+- `LOCKED_OBSERVATION_COUNT = 6` — first 6 observations per category cannot be hidden (always enabled).
+- **Observation Library** (Settings page): drag-and-drop reordering via `@dnd-kit/sortable`, toggle enable/disable, inline rename, add custom observations, reset to defaults. Saved as JSON to `Arborist.healthObservations`/`structuralObservations` via `PUT /api/settings/observations`.
+- **Species Presets** (Settings page): tag-style input with autocomplete against `PENINSULA_SPECIES`. Arborist's common species appear first in species dropdown. Saved as JSON string array to `Arborist.commonSpecies` via `PUT /api/settings/species-presets`. Max 30 items.
+- **Recommendation Map** (Settings page, Report Defaults card): condition rating (0–5) → default action (retain/remove/prune/monitor). Auto-selects recommended action when condition rating changes in tree assessment. Saved in `reportDefaults` JSON via existing profile PUT route. Default: Dead/Critical/Poor → remove, Fair → monitor, Good/Excellent → retain.
+- **Scope Templates** (Settings page, Report Defaults card): per-report-type scope of assignment templates with `{count}` and `{address}` placeholders. Used by `property-map-view.tsx` when auto-generating scope on report type change (arborist template takes precedence over built-in `generateScopeTemplate()`). Saved in `reportDefaults` JSON.
+- **PDF & Share Preferences** (Settings page): toggles for TRAQ appendix and city contacts in PDF, required photo count per tree (1–10), default share message, thank-you message. Saved to individual Arborist model fields via `PUT /api/settings/pdf-share`.
+- `property-map-view.tsx` fetches arborist profile on mount and passes customization props to `TreeSidePanel` and `MobileFieldMode`. Both components compute effective observation lists with fallback to hardcoded defaults.
+- AI report generation (`app/api/ai/generate-report/route.ts`) includes canonical terms in tree data block alongside raw notes. Backward compatible: pre-customization trees have null canonical fields, AI falls back to notes.
+- Arborist model has 12 new customization fields. TreeRecord has 2 new canonical fields (`healthObservationCanonical`, `structuralObservationCanonical`).
 
 ## City Submission Contacts
 - `lib/city-contacts.ts` — expanded from `lib/city-submission-guides.ts` with detailed department contact info for 5 Peninsula cities.

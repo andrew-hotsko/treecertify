@@ -44,6 +44,20 @@ model Arborist {
   defaultReportFee           Float?
   billingPaymentInstructions String?
 
+  // Customization settings
+  healthObservations          String?   // JSON: Observation[]
+  structuralObservations      String?   // JSON: Observation[]
+  commonSpecies               String?   // JSON: string[] (common names)
+  defaultReportType           String?   // removal_permit | health_assessment | etc.
+  defaultRecommendationMap    String?   // JSON: { "0": "remove", "1": "remove", ... }
+  defaultScopeTemplate        String?   // JSON: { removal_permit: "...", ... }
+  pdfShowTraqAppendix         Boolean   @default(true)
+  pdfShowCityContacts         Boolean   @default(true)
+  pdfCoverAccentColor         String?   // hex color, default forest #1D4E3E
+  shareDefaultMessage         String?
+  shareThankYouMessage        String?
+  photoRequiredCount          Int       @default(2)
+
   createdAt DateTime @default(now())
 
   properties   Property[]
@@ -115,6 +129,8 @@ model TreeRecord {
   conditionRating   Int      @default(0) // 1-5 scale
   healthNotes       String?
   structuralNotes   String?
+  healthObservationCanonical     String?  // comma-separated canonical ISA terms
+  structuralObservationCanonical String?  // comma-separated canonical ISA terms
 
   isProtected        Boolean @default(false)
   protectionReason   String?
