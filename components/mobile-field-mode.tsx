@@ -94,6 +94,7 @@ interface MobileFieldModeProps {
   arboristStructuralObs?: Observation[];
   arboristRecommendationMap?: Record<string, string>;
   arboristCommonSpecies?: string[];
+  arboristDefaultUnitPrice?: number;
 }
 
 // ---------------------------------------------------------------------------

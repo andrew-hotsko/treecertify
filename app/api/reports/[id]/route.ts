@@ -102,6 +102,10 @@ export async function PUT(
         ...(body.billingPaymentInstructions !== undefined && { billingPaymentInstructions: body.billingPaymentInstructions }),
         ...(body.billingIncluded !== undefined && { billingIncluded: !!body.billingIncluded }),
         ...(body.billingPaidAt !== undefined && { billingPaidAt: body.billingPaidAt ? new Date(body.billingPaidAt) : null }),
+        // Valuation report fields
+        ...(body.valuationPurpose !== undefined && { valuationPurpose: body.valuationPurpose }),
+        ...(body.valuationBasisStatement !== undefined && { valuationBasisStatement: body.valuationBasisStatement }),
+        ...(body.valuationTotalValue !== undefined && { valuationTotalValue: body.valuationTotalValue != null ? parseFloat(body.valuationTotalValue) : null }),
       },
     });
 

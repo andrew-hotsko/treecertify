@@ -21,6 +21,7 @@ import type { TreePin, CircleOverlay } from "@/components/property-map";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { VoiceInput } from "@/components/voice-input";
 import { getReportTypeConfig, calcTpzRadius, calcSrzRadius } from "@/lib/report-types";
+import { VALUATION_PURPOSES, DEFAULT_BASIS_STATEMENT, DEFAULT_UNIT_PRICE, formatCurrency } from "@/lib/valuation";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/status-badge";
 import {
@@ -43,6 +44,8 @@ import {
   Trash2,
   Smartphone,
   Monitor,
+  DollarSign,
+  Save,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -95,6 +98,7 @@ interface TreeData {
   mitigationRequired: string | null;
   status: string;
   typeSpecificData?: string | null;
+  valuationAppraisedValue?: number | null;
 }
 
 interface PropertyData {
@@ -112,7 +116,7 @@ interface PropertyData {
   scopeOfAssignment?: string | null;
   neededByDate?: string | null;
   trees: TreeData[];
-  reports: { id: string; status: string; reportType: string; certifiedAt?: string | null }[];
+  reports: { id: string; status: string; reportType: string; certifiedAt?: string | null; valuationPurpose?: string | null; valuationBasisStatement?: string | null; valuationTotalValue?: number | null }[];
 }
 
 interface PropertyMapViewProps {
@@ -276,6 +280,12 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   const [arboristRecommendationMap, setArboristRecommendationMap] = useState<Record<string, string> | undefined>(undefined);
   const [arboristCommonSpecies, setArboristCommonSpecies] = useState<string[] | undefined>(undefined);
   const [arboristScopeTemplates, setArboristScopeTemplates] = useState<Record<string, string> | undefined>(undefined);
+  const [arboristDefaultUnitPrice, setArboristDefaultUnitPrice] = useState<number | undefined>(undefined);
+
+  // ---- Valuation report-level settings ----
+  const latestReport = property.reports?.[0] ?? null;
+  const [valuationPurpose, setValuationPurpose] = useState<string>(latestReport?.valuationPurpose ?? "");
+  const [valuationBasisStatement, setValuationBasisStatement] = useState<string>(latestReport?.valuationBasisStatement ?? DEFAULT_BASIS_STATEMENT);
 
   useEffect(() => {
     async function loadArboristSettings() {
@@ -301,6 +311,10 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         // Parse species presets
         if (data.commonSpecies) {
           try { setArboristCommonSpecies(JSON.parse(data.commonSpecies)); } catch { /* use defaults */ }
+        }
+        // Parse default valuation unit price
+        if (data.defaultValuationUnitPrice) {
+          setArboristDefaultUnitPrice(data.defaultValuationUnitPrice);
         }
       } catch {
         // Non-critical — arborist settings are optional
@@ -865,6 +879,29 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     }
   }, [property.id, scopeOfAssignment, siteObservations, neededByDate, toast]);
 
+  // ---- Valuation computed totals ----
+  const valuationTotal = trees.reduce((sum, t) => sum + (t.valuationAppraisedValue ?? 0), 0);
+  const treesWithValues = trees.filter(t => t.valuationAppraisedValue != null && t.valuationAppraisedValue > 0);
+
+  const saveValuationReportSettings = useCallback(async () => {
+    if (!latestReport?.id) return;
+    try {
+      const res = await fetch(`/api/reports/${latestReport.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          valuationPurpose,
+          valuationBasisStatement,
+          valuationTotalValue: valuationTotal,
+        }),
+      });
+      if (!res.ok) throw new Error("Save failed");
+      toast({ title: "Valuation settings saved" });
+    } catch {
+      toast({ title: "Failed to save", variant: "destructive" });
+    }
+  }, [latestReport?.id, valuationPurpose, valuationBasisStatement, valuationTotal, toast]);
+
   const handleDuplicate = useCallback(async () => {
     try {
       const res = await fetch("/api/properties", {
@@ -1389,6 +1426,69 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         )}
       </Card>
 
+      {/* Valuation Report Settings */}
+      {property.reportType === "tree_valuation" && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <DollarSign className="h-4 w-4 text-amber-600" />
+              Valuation Report Settings
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-sm">Purpose of Appraisal</Label>
+              <select
+                value={valuationPurpose}
+                onChange={(e) => setValuationPurpose(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="">Select purpose...</option>
+                {VALUATION_PURPOSES.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm">Basis Statement</Label>
+              <Textarea
+                value={valuationBasisStatement}
+                onChange={(e) => setValuationBasisStatement(e.target.value)}
+                rows={4}
+                className="text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                This statement appears in the generated report describing the appraisal methodology.
+              </p>
+            </div>
+
+            {/* Summary */}
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-amber-900">Total Appraised Value</span>
+                <span className="font-mono text-xl font-bold text-amber-900">
+                  {formatCurrency(valuationTotal)}
+                </span>
+              </div>
+              {treesWithValues.length > 0 && (
+                <p className="text-xs text-amber-700">
+                  {treesWithValues.length} tree{treesWithValues.length !== 1 ? "s" : ""} assessed · Average: {formatCurrency(valuationTotal / treesWithValues.length)} per tree
+                </p>
+              )}
+            </div>
+
+            <Button
+              size="sm"
+              onClick={saveValuationReportSettings}
+              className="bg-forest hover:bg-forest-light"
+            >
+              <Save className="h-3.5 w-3.5 mr-1.5" />
+              Save Valuation Settings
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Protected Trees Permit Warning Banner */}
       {trees.some((t) => t.isProtected) && (
@@ -1666,6 +1766,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               arboristStructuralObs={arboristStructuralObs}
               arboristRecommendationMap={arboristRecommendationMap}
               arboristCommonSpecies={arboristCommonSpecies}
+              arboristDefaultUnitPrice={arboristDefaultUnitPrice}
             />
           ) : (
             <TreeSidePanel
@@ -1688,6 +1789,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               arboristStructuralObs={arboristStructuralObs}
               arboristRecommendationMap={arboristRecommendationMap}
               arboristCommonSpecies={arboristCommonSpecies}
+              arboristDefaultUnitPrice={arboristDefaultUnitPrice}
             />
           )
         )}

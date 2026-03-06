@@ -778,6 +778,88 @@ export async function GET(
     }
 
     // =========================================================================
+    // VALUATION SUMMARY (tree_valuation reports only)
+    // =========================================================================
+    let valuationSummaryHtml = "";
+    if (report.reportType === "tree_valuation") {
+      const treesWithValue = trees.filter(t => t.valuationAppraisedValue != null && t.valuationAppraisedValue > 0);
+      const totalValue = treesWithValue.reduce((sum, t) => sum + (t.valuationAppraisedValue ?? 0), 0);
+
+      const fmtMoney = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v);
+
+      // Per-tree valuation breakdown boxes
+      const treeBreakdowns = treesWithValue.map(t => {
+        const trunkArea = t.dbhInches > 0 ? Math.PI * Math.pow(t.dbhInches / 2, 2) : 0;
+        return `
+        <div class="val-tree-box">
+          <div class="val-tree-header">Tree #${t.treeNumber} — ${esc(t.speciesCommon)}${t.speciesScientific ? ` <em>(${esc(t.speciesScientific)})</em>` : ""}</div>
+          <div class="val-tree-meta">DBH: ${t.dbhInches}" | Height: ${t.heightFt ? t.heightFt + "'" : "\u2014"} | Canopy: ${t.canopySpreadFt ? t.canopySpreadFt + "'" : "\u2014"}</div>
+          <table class="val-calc-table">
+            <tr><td>Trunk Cross-Sectional Area:</td><td class="val-num">${trunkArea.toFixed(1)} sq in</td></tr>
+            <tr><td>Unit Price:</td><td class="val-num">\u00D7 $${(t.valuationUnitPrice ?? 38).toFixed(2)}/sq in</td></tr>
+            <tr class="val-subtotal"><td>Basic Value:</td><td class="val-num">= ${fmtMoney(t.valuationBasicValue ?? 0)}</td></tr>
+            <tr><td>Condition (H:${t.valuationHealthRating ?? 0}/S:${t.valuationStructureRating ?? 0}/F:${t.valuationFormRating ?? 0}):</td><td class="val-num">\u00D7 ${(t.valuationConditionRating ?? 0).toFixed(1)}%</td></tr>
+            <tr><td>Species Rating:</td><td class="val-num">\u00D7 ${t.valuationSpeciesRating ?? 0}%</td></tr>
+            <tr><td>Location (Site:${t.valuationSiteRating ?? 0}/Cont:${t.valuationContributionRating ?? 0}):</td><td class="val-num">\u00D7 ${(t.valuationLocationRating ?? 0).toFixed(1)}%</td></tr>
+            <tr class="val-total"><td><strong>APPRAISED VALUE:</strong></td><td class="val-num"><strong>${fmtMoney(t.valuationAppraisedValue ?? 0)}</strong></td></tr>
+          </table>
+          ${t.valuationNotes ? `<div class="val-notes">${esc(t.valuationNotes)}</div>` : ""}
+        </div>`;
+      }).join("\n");
+
+      // Summary table
+      const summaryValRows = treesWithValue.map((t, idx) => `
+        <tr${idx % 2 === 1 ? ' class="alt"' : ""}>
+          <td class="num-cell">${t.treeNumber}</td>
+          <td>${esc(t.speciesCommon)}</td>
+          <td class="num-cell">${t.dbhInches}"</td>
+          <td class="num-cell">${(t.valuationConditionRating ?? 0).toFixed(1)}%</td>
+          <td class="num-cell" style="font-weight:600;">${fmtMoney(t.valuationAppraisedValue ?? 0)}</td>
+        </tr>`).join("\n");
+
+      valuationSummaryHtml = `
+        <div class="page-break"></div>
+        <h2 class="section-title">Valuation Summary</h2>
+
+        <div class="val-meta">
+          <p><strong>Property:</strong> ${esc(property.address)}, ${esc(property.city)}, ${property.state}</p>
+          <p><strong>Date of Assessment:</strong> ${new Date(report.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</p>
+          <p><strong>Method:</strong> Trunk Formula Technique, Cost Approach (Reproduction Method)</p>
+          <p><strong>Standard:</strong> CTLA Guide for Plant Appraisal, 10th Edition (2019)</p>
+          ${report.valuationPurpose ? `<p><strong>Purpose:</strong> ${esc(report.valuationPurpose)}</p>` : ""}
+        </div>
+
+        ${treeBreakdowns}
+
+        <h3 style="margin-top:24pt;margin-bottom:8pt;font-family:'Instrument Sans',sans-serif;font-size:12pt;color:#1D4E3E;">Tree Inventory Value Summary</h3>
+        <table class="inventory-table">
+          <thead>
+            <tr>
+              <th class="num-cell" style="width:8%">Tree</th>
+              <th>Species</th>
+              <th class="num-cell" style="width:10%">DBH</th>
+              <th class="num-cell" style="width:12%">Condition</th>
+              <th class="num-cell" style="width:18%">Appraised Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${summaryValRows}
+            <tr class="summary-row">
+              <td colspan="4"><strong>TOTAL APPRAISED VALUE OF TREE CANOPY:</strong></td>
+              <td class="num-cell" style="font-size:11pt;"><strong>${fmtMoney(totalValue)}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        ${report.valuationBasisStatement ? `
+        <div style="margin-top:16pt;padding:12pt;background:#f8f7f5;border-radius:4pt;font-size:9pt;color:#666;">
+          <p>${esc(report.valuationBasisStatement)}</p>
+          <p style="margin-top:8pt;">This appraisal represents the replacement cost value of the assessed trees as of the date of assessment. Values reflect conditions observed on the date of assessment and may change due to tree health, growth, or other factors.</p>
+        </div>` : ""}
+      `;
+    }
+
+    // =========================================================================
     // ADDITIONAL CERTS
     // =========================================================================
     let additionalCertsArr: string[] = [];
@@ -917,6 +999,12 @@ export async function GET(
       tocSections.push({
         title: "Appendix: Mitigation Requirements Summary",
         desc: "",
+      });
+    }
+    if (valuationSummaryHtml) {
+      tocSections.push({
+        title: "Valuation Summary",
+        desc: `${trees.filter(t => t.valuationAppraisedValue != null && t.valuationAppraisedValue > 0).length} trees appraised`,
       });
     }
     tocSections.push({
@@ -1722,6 +1810,21 @@ export async function GET(
     .center { text-align: center; }
 
     /* =========================================================================
+       VALUATION SUMMARY (tree_valuation reports)
+       ========================================================================= */
+    .val-tree-box { margin: 16pt 0; padding: 12pt; border: 1pt solid #ddd; border-radius: 4pt; page-break-inside: avoid; }
+    .val-tree-header { font-family: 'Instrument Sans', sans-serif; font-size: 11pt; font-weight: 600; color: #1D4E3E; margin-bottom: 4pt; }
+    .val-tree-meta { font-size: 8.5pt; color: #888; margin-bottom: 8pt; font-family: 'IBM Plex Mono', monospace; }
+    .val-calc-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+    .val-calc-table td { padding: 2pt 0; }
+    .val-calc-table .val-num { text-align: right; font-family: 'IBM Plex Mono', monospace; white-space: nowrap; }
+    .val-calc-table .val-subtotal td { border-top: 0.5pt solid #ccc; padding-top: 4pt; }
+    .val-calc-table .val-total td { border-top: 1.5pt solid #1D4E3E; padding-top: 6pt; font-size: 10pt; color: #1D4E3E; }
+    .val-notes { margin-top: 6pt; font-size: 8.5pt; color: #666; font-style: italic; }
+    .val-meta { margin-bottom: 16pt; font-size: 9pt; line-height: 1.6; }
+    .val-meta p { margin: 2pt 0; }
+
+    /* =========================================================================
        SIGNATURE BLOCK
        ========================================================================= */
     .signature-block {
@@ -1921,6 +2024,9 @@ export async function GET(
 
   <!-- ========== MITIGATION SUMMARY ========== -->
   ${mitigationHtml}
+
+  <!-- ========== VALUATION SUMMARY ========== -->
+  ${valuationSummaryHtml}
 
   <!-- ========== SIGNATURE BLOCK ========== -->
   ${signatureBlock}
