@@ -94,6 +94,7 @@ interface ArboristProfile {
   shareDefaultMessage?: string | null;
   shareThankYouMessage?: string | null;
   photoRequiredCount?: number;
+  defaultValuationUnitPrice?: number | null;
 }
 
 interface ReportDefaults {
@@ -311,6 +312,10 @@ export default function SettingsPage() {
   });
   const [savingPdfShare, setSavingPdfShare] = useState(false);
 
+  // Valuation defaults state
+  const [valuationUnitPrice, setValuationUnitPrice] = useState<string>("");
+  const [savingValuation, setSavingValuation] = useState(false);
+
   // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -344,6 +349,7 @@ export default function SettingsPage() {
           defaultReportFee: data.defaultReportFee != null ? String(data.defaultReportFee) : "",
           billingPaymentInstructions: data.billingPaymentInstructions || "",
         });
+        setValuationUnitPrice(data.defaultValuationUnitPrice ? String(data.defaultValuationUnitPrice) : "");
         // Parse report defaults
         try {
           const parsed = JSON.parse(data.reportDefaults || "{}");
@@ -517,6 +523,25 @@ export default function SettingsPage() {
       setMessage({ type: "error", text: "Failed to save preferences" });
     } finally {
       setSavingPdfShare(false);
+    }
+  };
+
+  const saveValuationDefaults = async () => {
+    setSavingValuation(true);
+    try {
+      const res = await fetch("/api/settings/valuation", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          defaultValuationUnitPrice: valuationUnitPrice ? parseFloat(valuationUnitPrice) : null,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      setMessage({ type: "success", text: "Valuation defaults saved" });
+    } catch {
+      setMessage({ type: "error", text: "Failed to save valuation defaults" });
+    } finally {
+      setSavingValuation(false);
     }
   };
 
@@ -1531,6 +1556,53 @@ export default function SettingsPage() {
               {savingPdfShare ? "Saving..." : "Save Preferences"}
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Valuation Defaults ── */}
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <DollarSign className="h-4 w-4 text-amber-600" />
+            Valuation Defaults
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="val-unit-price-setting" className="text-sm">
+              Default Unit Price ($ per square inch)
+            </Label>
+            <div className="relative max-w-xs">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+              <Input
+                id="val-unit-price-setting"
+                type="number"
+                min="0"
+                step="1"
+                placeholder="38.00"
+                value={valuationUnitPrice}
+                onChange={(e) => setValuationUnitPrice(e.target.value)}
+                className="pl-7 font-mono"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Used as the starting value when creating valuation assessments. Update annually when CTLA publishes new regional price tables. Current suggested range for Bay Area / North Bay: $32–$45/sq in.
+            </p>
+          </div>
+
+          <Button
+            onClick={saveValuationDefaults}
+            disabled={savingValuation}
+            size="sm"
+            className="bg-forest hover:bg-forest-light"
+          >
+            {savingValuation ? (
+              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+            ) : (
+              <Save className="h-3.5 w-3.5 mr-1.5" />
+            )}
+            Save Valuation Defaults
+          </Button>
         </CardContent>
       </Card>
 
