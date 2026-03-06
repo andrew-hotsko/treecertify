@@ -77,6 +77,18 @@ export async function PUT(
         ...(body.typeSpecificData !== undefined && { typeSpecificData: body.typeSpecificData }),
         ...(body.healthObservationCanonical !== undefined && { healthObservationCanonical: body.healthObservationCanonical }),
         ...(body.structuralObservationCanonical !== undefined && { structuralObservationCanonical: body.structuralObservationCanonical }),
+        ...(body.valuationUnitPrice !== undefined && { valuationUnitPrice: body.valuationUnitPrice }),
+        ...(body.valuationHealthRating !== undefined && { valuationHealthRating: body.valuationHealthRating }),
+        ...(body.valuationStructureRating !== undefined && { valuationStructureRating: body.valuationStructureRating }),
+        ...(body.valuationFormRating !== undefined && { valuationFormRating: body.valuationFormRating }),
+        ...(body.valuationConditionRating !== undefined && { valuationConditionRating: body.valuationConditionRating }),
+        ...(body.valuationSpeciesRating !== undefined && { valuationSpeciesRating: body.valuationSpeciesRating }),
+        ...(body.valuationSiteRating !== undefined && { valuationSiteRating: body.valuationSiteRating }),
+        ...(body.valuationContributionRating !== undefined && { valuationContributionRating: body.valuationContributionRating }),
+        ...(body.valuationLocationRating !== undefined && { valuationLocationRating: body.valuationLocationRating }),
+        ...(body.valuationBasicValue !== undefined && { valuationBasicValue: body.valuationBasicValue }),
+        ...(body.valuationAppraisedValue !== undefined && { valuationAppraisedValue: body.valuationAppraisedValue }),
+        ...(body.valuationNotes !== undefined && { valuationNotes: body.valuationNotes }),
       },
     });
 

@@ -58,6 +58,9 @@ model Arborist {
   shareThankYouMessage        String?
   photoRequiredCount          Int       @default(2)
 
+  // Valuation defaults
+  defaultValuationUnitPrice  Float?    // arborist's preferred default unit price
+
   createdAt DateTime @default(now())
 
   properties   Property[]
@@ -139,6 +142,20 @@ model TreeRecord {
 
   // Type-specific assessment data (JSON string, parsed per reportType)
   typeSpecificData String?
+
+  // CTLA Valuation fields (only used when report type is tree_valuation)
+  valuationUnitPrice         Float?    // $/sq in — arborist-entered, defaults from settings
+  valuationHealthRating      Int?      // 0-100
+  valuationStructureRating   Int?      // 0-100
+  valuationFormRating        Int?      // 0-100
+  valuationConditionRating   Float?    // computed: geometric mean, stored for PDF
+  valuationSpeciesRating     Int?      // 0-100, pre-filled from species table, editable
+  valuationSiteRating        Int?      // 0-100
+  valuationContributionRating Int?     // 0-100
+  valuationLocationRating    Float?    // computed: (site+contribution)/2, stored for PDF
+  valuationBasicValue        Float?    // computed: trunk area × unit price
+  valuationAppraisedValue    Float?    // final appraised value
+  valuationNotes             String?   // arborist notes on this tree's valuation
 
   photos String @default("[]") // DEPRECATED - use treePhotos relation instead
   status String @default("draft") // draft, assessed, certified
@@ -257,6 +274,11 @@ model Report {
   denialReason         String?
   approvedAt           DateTime?
   permitExpiresAt      DateTime?
+
+  // Valuation report fields
+  valuationTotalValue        Float?    // sum of all appraised tree values
+  valuationPurpose           String?   // "Insurance", "Real Estate", "Legal/Litigation", "Estate Planning", "Other"
+  valuationBasisStatement    String?   // arborist's statement of appraisal basis (appears in report)
 
   status String @default("draft") // draft, review, certified, filed
 

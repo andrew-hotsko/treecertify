@@ -121,12 +121,19 @@ export type TypeSpecificData =
 // Auto-calculation helpers
 // ---------------------------------------------------------------------------
 
-/** Calculate trunk cross-sectional area in square inches from DBH. */
+/**
+ * @deprecated Use `calculateTFT()` from `lib/valuation.ts` instead.
+ * This simplified function does not implement CTLA 10th Edition geometric mean.
+ */
 export function calcTrunkArea(dbhInches: number): number {
   return Math.PI * Math.pow(dbhInches / 2, 2);
 }
 
-/** Calculate CTLA appraised value. */
+/**
+ * @deprecated Use `calculateTFT()` from `lib/valuation.ts` instead.
+ * This simplified function does not implement CTLA 10th Edition condition decomposition
+ * (Health × Structure × Form geometric mean) or Location (Site + Contribution average).
+ */
 export function calcAppraisedValue(
   trunkArea: number,
   costPerSqInch: number,
@@ -295,3 +302,9 @@ export const PROTECTION_MEASURES = [
   "Arborist supervision during excavation",
   "Crown pruning for clearance",
 ] as const;
+
+// ---------------------------------------------------------------------------
+// Re-exports from lib/valuation.ts (CTLA 10th Edition)
+// ---------------------------------------------------------------------------
+
+export { calculateTFT, formatCurrency, getDefaultSpeciesRating } from "./valuation";

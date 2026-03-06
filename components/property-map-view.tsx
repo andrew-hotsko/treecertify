@@ -21,7 +21,7 @@ import type { TreePin, CircleOverlay } from "@/components/property-map";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { VoiceInput } from "@/components/voice-input";
 import { getReportTypeConfig, calcTpzRadius, calcSrzRadius } from "@/lib/report-types";
-import { VALUATION_PURPOSES, DEFAULT_BASIS_STATEMENT, DEFAULT_UNIT_PRICE, formatCurrency } from "@/lib/valuation";
+import { VALUATION_PURPOSES, DEFAULT_BASIS_STATEMENT, formatCurrency } from "@/lib/valuation";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/status-badge";
 import {

@@ -109,6 +109,9 @@ export async function PUT(request: NextRequest) {
     if ("defaultReportFee" in body) {
       updateData.defaultReportFee = body.defaultReportFee != null ? parseFloat(body.defaultReportFee) : null;
     }
+    if ("defaultValuationUnitPrice" in body) {
+      updateData.defaultValuationUnitPrice = body.defaultValuationUnitPrice != null ? parseFloat(body.defaultValuationUnitPrice) : null;
+    }
     // Int fields
     if ("photoRequiredCount" in body) {
       const count = parseInt(body.photoRequiredCount, 10);

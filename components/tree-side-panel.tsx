@@ -18,13 +18,12 @@ import { VoiceInput } from "@/components/voice-input";
 import { SmartDictation } from "@/components/smart-dictation";
 import { HealthAssessmentFields } from "@/components/type-fields/health-assessment-fields";
 import { RemovalPermitFields } from "@/components/type-fields/removal-permit-fields";
-import { TreeValuationFields } from "@/components/type-fields/tree-valuation-fields";
+import { TreeValuationFields, type ValuationFieldValues } from "@/components/type-fields/tree-valuation-fields";
 import { ConstructionEncroachmentFields } from "@/components/type-fields/construction-encroachment-fields";
 import {
   getReportTypeConfig,
   type HealthAssessmentData,
   type RemovalPermitData,
-  type TreeValuationData,
   type ConstructionEncroachmentData,
 } from "@/lib/report-types";
 import {
@@ -87,6 +86,19 @@ export interface TreeFormData {
   mitigationRequired: string | null;
   tagNumber: string;
   typeSpecificData?: string; // JSON string
+  // CTLA Valuation fields (only when reportType === "tree_valuation")
+  valuationUnitPrice?: number | null;
+  valuationHealthRating?: number | null;
+  valuationStructureRating?: number | null;
+  valuationFormRating?: number | null;
+  valuationConditionRating?: number | null;
+  valuationSpeciesRating?: number | null;
+  valuationSiteRating?: number | null;
+  valuationContributionRating?: number | null;
+  valuationLocationRating?: number | null;
+  valuationBasicValue?: number | null;
+  valuationAppraisedValue?: number | null;
+  valuationNotes?: string | null;
 }
 
 interface OrdinanceContext {
@@ -132,6 +144,19 @@ interface TreeRecord {
   mitigationRequired?: string | null;
   status?: string;
   typeSpecificData?: string | null;
+  // CTLA Valuation fields
+  valuationUnitPrice?: number | null;
+  valuationHealthRating?: number | null;
+  valuationStructureRating?: number | null;
+  valuationFormRating?: number | null;
+  valuationConditionRating?: number | null;
+  valuationSpeciesRating?: number | null;
+  valuationSiteRating?: number | null;
+  valuationContributionRating?: number | null;
+  valuationLocationRating?: number | null;
+  valuationBasicValue?: number | null;
+  valuationAppraisedValue?: number | null;
+  valuationNotes?: string | null;
 }
 
 interface TreeSidePanelProps {
@@ -153,6 +178,7 @@ interface TreeSidePanelProps {
   arboristStructuralObs?: Observation[];
   arboristRecommendationMap?: Record<string, string>;
   arboristCommonSpecies?: string[];
+  arboristDefaultUnitPrice?: number;
 }
 
 
@@ -188,6 +214,7 @@ export function TreeSidePanel({
   arboristRecommendationMap,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   arboristCommonSpecies,
+  arboristDefaultUnitPrice,
 }: TreeSidePanelProps) {
   const { toast } = useToast();
 
@@ -247,6 +274,22 @@ export function TreeSidePanel({
     }
     return {};
   });
+
+  // ---- CTLA Valuation state (only used when reportType === "tree_valuation") ----
+  const [valuationData, setValuationData] = useState<ValuationFieldValues>(() => ({
+    valuationUnitPrice: tree?.valuationUnitPrice ?? null,
+    valuationHealthRating: tree?.valuationHealthRating ?? null,
+    valuationStructureRating: tree?.valuationStructureRating ?? null,
+    valuationFormRating: tree?.valuationFormRating ?? null,
+    valuationConditionRating: tree?.valuationConditionRating ?? null,
+    valuationSpeciesRating: tree?.valuationSpeciesRating ?? null,
+    valuationSiteRating: tree?.valuationSiteRating ?? null,
+    valuationContributionRating: tree?.valuationContributionRating ?? null,
+    valuationLocationRating: tree?.valuationLocationRating ?? null,
+    valuationBasicValue: tree?.valuationBasicValue ?? null,
+    valuationAppraisedValue: tree?.valuationAppraisedValue ?? null,
+    valuationNotes: tree?.valuationNotes ?? null,
+  }));
 
   // ---- Quick photos state ----
   const [photos, setPhotos] = useState<QuickPhoto[]>([]);
@@ -502,9 +545,24 @@ export function TreeSidePanel({
         : (protectionResult?.mitigationRequired ?? null),
       tagNumber,
       typeSpecificData:
-        reportType && Object.keys(typeData).length > 0
+        reportType && reportType !== "tree_valuation" && Object.keys(typeData).length > 0
           ? JSON.stringify(typeData)
           : undefined,
+      // CTLA Valuation fields (only sent for tree_valuation report type)
+      ...(reportType === "tree_valuation" ? {
+        valuationUnitPrice: valuationData.valuationUnitPrice,
+        valuationHealthRating: valuationData.valuationHealthRating,
+        valuationStructureRating: valuationData.valuationStructureRating,
+        valuationFormRating: valuationData.valuationFormRating,
+        valuationConditionRating: valuationData.valuationConditionRating,
+        valuationSpeciesRating: valuationData.valuationSpeciesRating,
+        valuationSiteRating: valuationData.valuationSiteRating,
+        valuationContributionRating: valuationData.valuationContributionRating,
+        valuationLocationRating: valuationData.valuationLocationRating,
+        valuationBasicValue: valuationData.valuationBasicValue,
+        valuationAppraisedValue: valuationData.valuationAppraisedValue,
+        valuationNotes: valuationData.valuationNotes,
+      } : {}),
     });
     // Clear draft after save (data is either sent to server or queued for offline sync)
     try {
@@ -1172,11 +1230,11 @@ export function TreeSidePanel({
 
             {reportType === "tree_valuation" && (
               <TreeValuationFields
-                data={typeData as TreeValuationData}
-                onChange={setTypeData}
+                values={valuationData}
+                onChange={setValuationData}
                 dbhInches={Number(dbhInches) || 0}
-                conditionRating={conditionRating}
                 speciesCommon={speciesCommon}
+                defaultUnitPrice={arboristDefaultUnitPrice}
               />
             )}
 

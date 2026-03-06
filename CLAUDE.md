@@ -198,6 +198,23 @@
 - AI report generation (`app/api/ai/generate-report/route.ts`) includes canonical terms in tree data block alongside raw notes. Backward compatible: pre-customization trees have null canonical fields, AI falls back to notes.
 - Arborist model has 12 new customization fields. TreeRecord has 2 new canonical fields (`healthObservationCanonical`, `structuralObservationCanonical`).
 
+## CTLA Tree Valuation (10th Edition)
+- Implements the CTLA Trunk Formula Technique (TFT) from the *Guide for Plant Appraisal, 10th Edition* (2019) — the legal standard for tree appraisal in California.
+- **Calculation engine**: `lib/valuation.ts` — `calculateTFT()` computes Appraised Value = Trunk Area × Unit Price × Condition × Species × Location.
+  - Condition = geometric mean of Health%, Structure%, Form% — `(H × S × F)^(1/3)` (10th Ed. method, NOT a single percentage).
+  - Location = arithmetic average of Site% and Contribution% — `(Site + Contribution) / 2`.
+  - If any condition sub-rating is 0, condition = 0 (zero-value protection).
+- **Species ratings**: `lib/species-ratings.ts` — 100+ species keyed by common name (matching `TreeRecord.speciesCommon` format). `getDefaultSpeciesRating()` with case-insensitive matching and partial match fallback. Default 60% for unlisted species.
+- **Default unit price**: `DEFAULT_UNIT_PRICE = $38/sq in` (Bay Area, 2026). Editable per-arborist via `Arborist.defaultValuationUnitPrice` and per-tree via `TreeRecord.valuationUnitPrice`.
+- **Valuation data storage**: 12 dedicated fields on `TreeRecord` (NOT in `typeSpecificData` JSON) — `valuationUnitPrice`, `valuationHealthRating`, `valuationStructureRating`, `valuationFormRating`, `valuationConditionRating` (computed), `valuationSpeciesRating`, `valuationSiteRating`, `valuationContributionRating`, `valuationLocationRating` (computed), `valuationBasicValue` (computed), `valuationAppraisedValue` (computed), `valuationNotes`.
+- **Report-level fields**: `Report.valuationTotalValue` (Float), `Report.valuationPurpose` (String), `Report.valuationBasisStatement` (String).
+- **Tree assessment UI**: `components/type-fields/tree-valuation-fields.tsx` — slider+number input combos for all sub-ratings (step=5 slider, 0-100 freeform input), live `calculateTFT()` calculation, full breakdown display. Species rating auto-fills from `getDefaultSpeciesRating()` with `userOverrodeSpeciesRef` to avoid overriding manual edits.
+- **Report-level card**: `property-map-view.tsx` shows "Valuation Report Settings" card when report type is `tree_valuation` — purpose dropdown (`VALUATION_PURPOSES`), basis statement textarea, live total of all tree appraised values.
+- **Settings**: "Valuation Defaults" card in settings page with default unit price. API: `PUT /api/settings/valuation`.
+- **PDF output**: Per-tree valuation breakdown boxes showing all factors + formula steps. Valuation Summary table with all trees, their appraised values, and a prominent grand total row. Added to TOC.
+- **AI generation**: Tree data block includes CTLA fields (unit price, sub-ratings, basic/appraised values). Report-level valuation context (purpose, basis, total) injected into system prompt. AI instructed NOT to include dollar figures in narrative paragraphs — values belong in the valuation table only.
+- **Backward compatibility**: Old `TreeValuationData` interface in `report-types.ts` retained. Old `calcTrunkArea`/`calcAppraisedValue` marked `@deprecated`. `report-types.ts` re-exports `calculateTFT`, `formatCurrency`, `getDefaultSpeciesRating` from `lib/valuation.ts`.
+
 ## City Submission Contacts
 - `lib/city-contacts.ts` — expanded from `lib/city-submission-guides.ts` with detailed department contact info for 5 Peninsula cities.
 - `CityContact` interface: department, phone, email, address, hours, portalUrl, websiteUrl, submissionMethod, requiredDocuments[], typicalTimeline, applicationFee, mitigationSummary, tips[] (array, not string).
