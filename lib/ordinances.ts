@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { getSpeciesByName } from "./species";
+import { toTitleCase } from "./utils";
 
 export interface ProtectedSpeciesRule {
   species: string;
@@ -42,9 +43,7 @@ export async function getOrdinanceByCity(
   cityName: string
 ): Promise<OrdinanceData | null> {
   // Normalize input: trim + title case, and use case-insensitive match
-  const normalized = cityName
-    .trim()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  const normalized = toTitleCase(cityName);
 
   const ord = await prisma.municipalOrdinance.findFirst({
     where: {

@@ -216,11 +216,17 @@
 - **Backward compatibility**: Old `TreeValuationData` interface in `report-types.ts` retained. Old `calcTrunkArea`/`calcAppraisedValue` marked `@deprecated`. `report-types.ts` re-exports `calculateTFT`, `formatCurrency`, `getDefaultSpeciesRating` from `lib/valuation.ts`.
 
 ## City Submission Contacts
-- `lib/city-contacts.ts` — expanded from `lib/city-submission-guides.ts` with detailed department contact info for 5 Peninsula cities.
-- `CityContact` interface: department, phone, email, address, hours, portalUrl, websiteUrl, submissionMethod, requiredDocuments[], typicalTimeline, applicationFee, mitigationSummary, tips[] (array, not string).
-- `getCityContact(city, reportType?)` — returns contact for removal_permit type only. Returns null for other report types.
-- `getNextStepsText(reportType)` — generic guidance for non-removal report types (health_assessment, tree_valuation, construction_encroachment).
-- Share page "What Happens Next" section: tap-to-call phone links, tap-to-email links, office address with MapPin icon, office hours, portal URL as CTA button, tips as bulleted list, required documents checklist.
+- `lib/city-contacts.ts` — static city contact data for share page. No database queries.
+- **Coverage**: Peninsula (Palo Alto, Menlo Park, Atherton, Woodside, Portola Valley), North Bay (Sonoma County, Santa Rosa, City of Napa, Windsor, Healdsburg), Tahoe Basin (TRPA), Reno.
+- **JurisdictionType** union: `"city"` | `"county"` | `"regional"` | `"no_permit"` — added to `CityContact` interface. Determines share page display logic.
+- **Tahoe Basin**: TRPA is a bi-state regional authority that overrides local city/county for tree permits. `CITY_ALIASES` map resolves South Lake Tahoe, Incline Village, Tahoe City, Kings Beach, Stateline, Zephyr Cove, Tahoe Vista, Crystal Bay → "Tahoe Basin". Share page shows amber warning callout explaining TRPA is the sole permit authority.
+- **Reno**: `no_permit` jurisdiction — no private-property tree removal permit required. Share page shows positive "good news" framing with emerald styling. Supports both `removal_permit` and `health_assessment` report types.
+- `getCityContact(city, reportType?)` — resolves city aliases, then looks up by city and report type. Returns null if no contact info exists.
+- `getNextStepsText(reportType)` — generic guidance for non-removal report types when no city-specific contact exists.
+- **Title-case normalization**: `toTitleCase()` extracted to `lib/utils.ts` — shared between `lib/city-contacts.ts` and `lib/ordinances.ts`. Single source of truth for city name normalization.
+- Share page "What Happens Next" section: handles 5 cases — no_permit (emerald card), regional (amber warning + standard steps), city/county (standard steps), unsupported city fallback, non-removal generic guidance.
+- **VERIFY**: All North Bay and Reno contact info marked `// VERIFY` — phone confirmation needed before beta launch.
+- **GAP**: No `MunicipalOrdinance` data seeded for North Bay, Tahoe, or Reno cities — `checkTreeProtection()` does not cover these regions yet. Future session needed to add ordinance data.
 - `lib/city-submission-guides.ts` still exists (legacy, not imported anywhere). Can be removed in future cleanup.
 
 ## Session Completion

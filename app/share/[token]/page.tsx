@@ -13,6 +13,7 @@ import {
   MessageSquare,
   MapPin,
   DollarSign,
+  AlertTriangle,
 } from "lucide-react";
 import { PermitStatusPipeline } from "@/components/permit-status-pipeline";
 import { getCityContact, getNextStepsText } from "@/lib/city-contacts";
@@ -264,15 +265,15 @@ export default async function SharedPropertyPage({
       ? buildSummaryStats(property.trees, report.reportType)
       : null;
 
-  // City contact for removal permits
+  // City contact — now supports all report types and jurisdiction types
   const cityContact =
     isCertified && report
       ? getCityContact(property.city, report.reportType)
       : null;
 
-  // Next steps text for non-removal types
+  // Next steps text for non-removal types (only used when no city-specific contact exists)
   const nextSteps =
-    isCertified && report && report.reportType !== "removal_permit"
+    isCertified && report && !cityContact && report.reportType !== "removal_permit"
       ? getNextStepsText(report.reportType)
       : null;
 
@@ -511,13 +512,86 @@ export default async function SharedPropertyPage({
           </section>
         )}
 
-        {/* ==== F. What Happens Next — City-Specific (removal_permit) ==== */}
-        {isCertified && report && cityContact && (
+        {/* ==== F. What Happens Next ==== */}
+
+        {/* F1: No-permit jurisdiction (e.g. Reno) — positive framing */}
+        {isCertified && report && cityContact && cityContact.jurisdictionType === "no_permit" && (
+          <section>
+            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3">
+              What To Do With This Report
+            </p>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-6">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="h-6 w-6 text-emerald-600 shrink-0 mt-0.5" />
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-emerald-900">
+                    Good news — the City of {property.city} does not require a permit to remove trees on private property.
+                  </h3>
+                  <p className="text-sm text-emerald-800">
+                    {cityContact.submissionMethod}
+                  </p>
+                  {cityContact.tips.length > 0 && (
+                    <ul className="space-y-1.5 mt-2">
+                      {cityContact.tips.map((tip, i) => (
+                        <li key={i} className="text-sm text-emerald-700 flex items-start gap-2">
+                          <span className="text-emerald-400 mt-1 shrink-0">&#8226;</span>
+                          {tip}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* City contact info for public right-of-way questions */}
+            {cityContact.phone && (
+              <div className="bg-white rounded-lg border p-4 space-y-2 mt-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">
+                  {cityContact.department}
+                </p>
+                <a
+                  href={`tel:${cityContact.phone.replace(/[^\d+]/g, "")}`}
+                  className="flex items-center gap-2 text-sm text-forest hover:text-forest-light font-medium"
+                >
+                  <Phone className="h-3.5 w-3.5" />
+                  {cityContact.phone}
+                </a>
+                {cityContact.address && (
+                  <p className="flex items-center gap-2 text-sm text-neutral-600">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                    {cityContact.address}
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* F2: Regional authority (e.g. TRPA) — amber warning callout + standard guidance */}
+        {isCertified && report && cityContact && cityContact.jurisdictionType === "regional" && (
           <section>
             <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-4">
               What Happens Next
             </p>
             <div className="space-y-4">
+              {/* Regional authority warning callout */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-5">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-amber-900 text-sm uppercase tracking-wide">
+                      Important — {property.city} Properties
+                    </h3>
+                    {cityContact.coverageNote && (
+                      <p className="text-sm text-amber-800 mt-2 leading-relaxed">
+                        {cityContact.coverageNote}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Step 1: Submit */}
               <div className="flex gap-4">
                 <div className="flex-none flex items-start">
@@ -531,8 +605,7 @@ export default async function SharedPropertyPage({
                   </h3>
                   <p className="text-sm text-neutral-600 mt-1">
                     File your application with the{" "}
-                    <span className="font-medium">{cityContact.department}</span>{" "}
-                    in {property.city}.
+                    <span className="font-medium">{cityContact.department}</span>.
                   </p>
                   <p className="text-sm text-neutral-500 mt-1">
                     {cityContact.submissionMethod}
@@ -544,18 +617,7 @@ export default async function SharedPropertyPage({
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 mt-2 px-4 py-2 bg-forest hover:bg-forest-light text-white rounded-lg text-sm font-medium transition-colors"
                     >
-                      Open City Portal
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  )}
-                  {!cityContact.portalUrl && cityContact.websiteUrl && (
-                    <a
-                      href={cityContact.websiteUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm text-forest hover:text-forest-light mt-1.5 font-medium"
-                    >
-                      Visit City Website
+                      Open Agency Portal
                       <ExternalLink className="h-3.5 w-3.5" />
                     </a>
                   )}
@@ -592,7 +654,7 @@ export default async function SharedPropertyPage({
                 </div>
               </div>
 
-              {/* Step 3: City Review */}
+              {/* Step 3: Agency Review */}
               <div className="flex gap-4">
                 <div className="flex-none flex items-start">
                   <span className="h-7 w-7 rounded-full bg-forest text-white text-sm font-semibold flex items-center justify-center">
@@ -601,7 +663,7 @@ export default async function SharedPropertyPage({
                 </div>
                 <div>
                   <h3 className="font-medium text-neutral-900 text-sm">
-                    City Review
+                    Agency Review
                   </h3>
                   <p className="text-sm text-neutral-600 mt-1">
                     {cityContact.typicalTimeline}
@@ -626,7 +688,190 @@ export default async function SharedPropertyPage({
                 </div>
               </div>
 
-              {/* City Contact Info Card */}
+              {/* Agency Contact Info Card */}
+              <div className="bg-white rounded-lg border p-4 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">
+                  {cityContact.department}
+                </p>
+                {cityContact.phone && (
+                  <a
+                    href={`tel:${cityContact.phone.replace(/[^\d+]/g, "")}`}
+                    className="flex items-center gap-2 text-sm text-forest hover:text-forest-light font-medium"
+                  >
+                    <Phone className="h-3.5 w-3.5" />
+                    {cityContact.phone}
+                  </a>
+                )}
+                {cityContact.email && (
+                  <a
+                    href={`mailto:${cityContact.email}`}
+                    className="flex items-center gap-2 text-sm text-forest hover:text-forest-light font-medium"
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                    {cityContact.email}
+                  </a>
+                )}
+                {cityContact.address && (
+                  <p className="flex items-center gap-2 text-sm text-neutral-600">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                    {cityContact.address}
+                  </p>
+                )}
+                {cityContact.hours && (
+                  <p className="flex items-center gap-2 text-sm text-neutral-500">
+                    <Clock className="h-3.5 w-3.5 shrink-0" />
+                    {cityContact.hours}
+                  </p>
+                )}
+              </div>
+
+              {/* Tips */}
+              {cityContact.tips.length > 0 && (
+                <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 mt-2">
+                  <p className="text-xs font-semibold text-amber-800 mb-2">Tips</p>
+                  <ul className="space-y-1.5">
+                    {cityContact.tips.map((tip, i) => (
+                      <li key={i} className="text-sm text-amber-800 flex items-start gap-2">
+                        <span className="text-amber-400 mt-1 shrink-0">&#8226;</span>
+                        {tip}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Need help line */}
+              {arborist && (
+                <p className="text-sm text-neutral-500">
+                  Need help?{" "}
+                  <span className="font-medium text-neutral-700">
+                    {arborist.name}
+                  </span>{" "}
+                  can assist with the permit process.
+                </p>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* F3: Standard city/county submission guidance */}
+        {isCertified && report && cityContact &&
+         cityContact.jurisdictionType !== "no_permit" &&
+         cityContact.jurisdictionType !== "regional" && (
+          <section>
+            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-4">
+              What Happens Next
+            </p>
+            <div className="space-y-4">
+              {/* Step 1: Submit */}
+              <div className="flex gap-4">
+                <div className="flex-none flex items-start">
+                  <span className="h-7 w-7 rounded-full bg-forest text-white text-sm font-semibold flex items-center justify-center">
+                    1
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-medium text-neutral-900 text-sm">
+                    Submit Your Application
+                  </h3>
+                  <p className="text-sm text-neutral-600 mt-1">
+                    File your application with the{" "}
+                    <span className="font-medium">{cityContact.department}</span>{" "}
+                    in {property.city}.
+                  </p>
+                  <p className="text-sm text-neutral-500 mt-1">
+                    {cityContact.submissionMethod}
+                  </p>
+                  {cityContact.portalUrl && (
+                    <a
+                      href={cityContact.portalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 mt-2 px-4 py-2 bg-forest hover:bg-forest-light text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                      {cityContact.jurisdictionType === "county" ? "Open County Portal" : "Open City Portal"}
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  )}
+                  {!cityContact.portalUrl && cityContact.websiteUrl && (
+                    <a
+                      href={cityContact.websiteUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-sm text-forest hover:text-forest-light mt-1.5 font-medium"
+                    >
+                      {cityContact.jurisdictionType === "county" ? "Visit County Website" : "Visit City Website"}
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Step 2: Required Documents */}
+              <div className="flex gap-4">
+                <div className="flex-none flex items-start">
+                  <span className="h-7 w-7 rounded-full bg-forest text-white text-sm font-semibold flex items-center justify-center">
+                    2
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-medium text-neutral-900 text-sm">
+                    Required Documents
+                  </h3>
+                  <ul className="mt-1.5 space-y-1">
+                    {cityContact.requiredDocuments.map((doc) => (
+                      <li
+                        key={doc}
+                        className="flex items-center gap-2 text-sm text-neutral-600"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5 text-forest shrink-0" />
+                        {doc}
+                      </li>
+                    ))}
+                  </ul>
+                  {cityContact.applicationFee && (
+                    <p className="text-xs text-neutral-500 mt-2">
+                      {cityContact.applicationFee}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Step 3: Review */}
+              <div className="flex gap-4">
+                <div className="flex-none flex items-start">
+                  <span className="h-7 w-7 rounded-full bg-forest text-white text-sm font-semibold flex items-center justify-center">
+                    3
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-medium text-neutral-900 text-sm">
+                    {cityContact.jurisdictionType === "county" ? "County Review" : "City Review"}
+                  </h3>
+                  <p className="text-sm text-neutral-600 mt-1">
+                    {cityContact.typicalTimeline}
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 4: After Approval */}
+              <div className="flex gap-4">
+                <div className="flex-none flex items-start">
+                  <span className="h-7 w-7 rounded-full bg-forest text-white text-sm font-semibold flex items-center justify-center">
+                    4
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-medium text-neutral-900 text-sm">
+                    After Approval
+                  </h3>
+                  <p className="text-sm text-neutral-600 mt-1">
+                    {cityContact.mitigationSummary}
+                  </p>
+                </div>
+              </div>
+
+              {/* Contact Info Card */}
               <div className="bg-white rounded-lg border p-4 space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">
                   {property.city} {cityContact.department}
@@ -692,7 +937,7 @@ export default async function SharedPropertyPage({
           </section>
         )}
 
-        {/* Removal permit with unsupported city */}
+        {/* F4: Removal permit with unsupported city — generic fallback */}
         {isCertified &&
           report?.reportType === "removal_permit" &&
           !cityContact && (
@@ -716,7 +961,7 @@ export default async function SharedPropertyPage({
             </section>
           )}
 
-        {/* Non-removal report type next steps */}
+        {/* F5: Non-removal report type next steps (generic) */}
         {isCertified && nextSteps && (
           <section>
             <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3">
@@ -758,7 +1003,16 @@ export default async function SharedPropertyPage({
           <section>
             <div className="bg-white rounded-lg border p-6 shadow-sm text-center">
               <FileText className="h-8 w-8 text-forest mx-auto mb-3" />
-              {report.reportType === "removal_permit" && cityContact ? (
+              {cityContact?.jurisdictionType === "no_permit" ? (
+                <p className="text-sm text-neutral-600 mb-4 max-w-md mx-auto">
+                  Download the full certified report for your records, insurance, or real estate documentation.
+                </p>
+              ) : cityContact?.jurisdictionType === "regional" ? (
+                <p className="text-sm text-neutral-600 mb-4 max-w-md mx-auto">
+                  Submit this PDF with your permit application to the{" "}
+                  {cityContact.department}.
+                </p>
+              ) : report.reportType === "removal_permit" && cityContact ? (
                 <p className="text-sm text-neutral-600 mb-4 max-w-md mx-auto">
                   Submit this PDF with your permit application to the{" "}
                   {property.city} {cityContact.department}.
