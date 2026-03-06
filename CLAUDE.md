@@ -196,5 +196,22 @@
 - All expansion city entries NEED VERIFICATION before GA — phone numbers, office hours, and thresholds are approximate. Marked with `// VERIFY` comments.
 - Note: Redwood City measures circumference at 24" above grade (non-standard); San Carlos on 4/10 schedule (closed Fridays) — both surfaced in tips.
 
+## Sample Report (Onboarding)
+- After onboarding step 2 (branding), a sample PDF is generated using the arborist's branding and the same Puppeteer pipeline as production PDFs.
+- Static ISA-quality content in `lib/sample-report-data.ts` — never AI-generated. 2-tree removal permit scenario (Coast Live Oak retain + Monterey Pine remove) for 742 Evergreen Terrace, Palo Alto.
+- API route: `app/api/sample-report/route.ts` — GET returns cached PDF, POST generates + caches. Cache at `uploads/sample-reports/sample-report-{arboristId}.pdf`.
+- Onboarding shows the PDF in an iframe with download button before continuing to step 3.
+
+## Analytics Events
+- `AnalyticsEvent` model in `prisma/schema.prisma` — `id`, `arboristId?`, `eventType`, `metadata` (JSON string), `createdAt`. Indexed on arboristId, eventType, createdAt.
+- Fire-and-forget helper: `logEvent()` in `lib/analytics.ts`. Never blocks the main request. Errors are caught and logged to console.
+- Instrumented routes: property_created, tree_added, tree_saved, report_generated, report_edited (with editWordDelta), report_certified (with treeCount, minutesToCertify), pdf_downloaded (with source detection), share_link_opened (rate-limited to 1 per token per hour).
+
+## Admin Dashboard
+- Route: `app/(app)/admin/page.tsx` — server-rendered RSC, no client-side polling.
+- Access gated by `ADMIN_ARBORIST_ID` env var (comma-separated IDs). Non-admin users redirected to `/dashboard`.
+- Sections: 7-day + all-time summary stats (4 cards), per-arborist activity table (30d), report type distribution, AI edit rate (avg distance, heavy/minimal counts), share link performance (open rate, download rate), recent 50 events feed.
+- Sidebar shows "Admin" link (Shield icon) only for admin users. `isAdmin` prop passed from `app/(app)/layout.tsx`.
+
 ## Session Completion
 - When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.

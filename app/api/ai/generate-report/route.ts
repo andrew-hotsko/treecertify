@@ -19,6 +19,7 @@ import { getOrdinanceByCity } from "@/lib/ordinances";
 import { getReportTemplate, MASTER_VOICE_INSTRUCTIONS } from "@/lib/report-templates";
 import Anthropic from "@anthropic-ai/sdk";
 import { logApiUsage } from "@/lib/api-usage";
+import { logEvent } from "@/lib/analytics";
 
 interface TreeRecordData {
   treeNumber: number;
@@ -658,6 +659,12 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
               outputTokens: usageOutput,
             });
 
+            logEvent("report_generated", arboristId, {
+              reportId: report.id,
+              reportType: body.reportType,
+              treeCount: property.trees.length,
+            });
+
             controller.enqueue(
               encoder.encode(
                 `data: ${JSON.stringify({ type: "done", reportId: report.id })}\n\n`
@@ -703,6 +710,12 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
         content: aiDraftContent,
         label: "AI Draft",
       },
+    });
+
+    logEvent("report_generated", arboristId, {
+      reportId: report.id,
+      reportType: body.reportType,
+      treeCount: property.trees.length,
     });
 
     return NextResponse.json(report, { status: 201 });

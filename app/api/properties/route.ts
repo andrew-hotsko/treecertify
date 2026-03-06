@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logEvent } from "@/lib/analytics";
 
 function defaultScope(reportType: string, address: string, city: string): string {
   const location = `${address}, ${city}`;
@@ -119,6 +120,11 @@ export async function POST(request: NextRequest) {
         trees: true,
         reports: true,
       },
+    });
+
+    logEvent("property_created", arborist.id, {
+      city: property.city,
+      reportType: property.reportType,
     });
 
     return NextResponse.json(property, { status: 201 });

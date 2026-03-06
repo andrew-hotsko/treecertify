@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { logEvent } from "@/lib/analytics";
 
 export async function GET(
   request: NextRequest,
@@ -85,6 +86,11 @@ export async function POST(
         tagNumber: body.tagNumber ?? null,
         typeSpecificData: body.typeSpecificData ?? null,
       },
+    });
+
+    logEvent("tree_added", property.arboristId, {
+      propertyId: id,
+      species: tree.speciesCommon,
     });
 
     return NextResponse.json(tree, { status: 201 });

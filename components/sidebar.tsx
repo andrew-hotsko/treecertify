@@ -9,6 +9,7 @@ import {
   Plus,
   User,
   Settings,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useConnectivity } from "@/lib/connectivity";
@@ -40,9 +41,10 @@ interface SidebarProps {
   arboristName: string;
   isaCertNum: string;
   profilePhotoUrl?: string;
+  isAdmin?: boolean;
 }
 
-export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl }: SidebarProps) {
+export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl, isAdmin }: SidebarProps) {
   const pathname = usePathname();
   const { isOnline, pendingCount } = useConnectivity();
 
@@ -74,7 +76,7 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl }: SidebarPr
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-3">
-        {navItems.map((item) => {
+        {[...navItems, ...(isAdmin ? [{ label: "Admin", href: "/admin", icon: Shield }] : [])].map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
           return (

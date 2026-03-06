@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { PermitStatusPipeline } from "@/components/permit-status-pipeline";
 import { getCityContact, getNextStepsText } from "@/lib/city-contacts";
+import { logEvent } from "@/lib/analytics";
 
 export const metadata = {
   title: "Tree Assessment Report | TreeCertify",
@@ -238,6 +239,26 @@ export default async function SharedPropertyPage({
   const report = property.reports[0] ?? null;
   const arborist = report?.arborist ?? null;
   const isCertified = report?.status === "certified";
+
+  // Log share link opened (rate-limited: 1 per token per hour)
+  try {
+    const lastOpen = await prisma.analyticsEvent.findFirst({
+      where: {
+        eventType: "share_link_opened",
+        metadata: { contains: property.id },
+        createdAt: { gte: new Date(Date.now() - 3600000) },
+      },
+    });
+    if (!lastOpen) {
+      logEvent("share_link_opened", null, {
+        propertyId: property.id,
+        reportType: report?.reportType,
+        isCertified,
+      });
+    }
+  } catch {
+    // Never let analytics break the share page
+  }
 
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   const hasCoords = property.lat != null && property.lng != null;

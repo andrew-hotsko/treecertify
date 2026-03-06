@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { logEvent } from "@/lib/analytics";
 
 export async function GET(
   request: NextRequest,
@@ -76,6 +77,11 @@ export async function PUT(
         ...(body.tagNumber !== undefined && { tagNumber: body.tagNumber }),
         ...(body.typeSpecificData !== undefined && { typeSpecificData: body.typeSpecificData }),
       },
+    });
+
+    logEvent("tree_saved", null, {
+      propertyId: id,
+      treeId: tree.id,
     });
 
     return NextResponse.json(tree);

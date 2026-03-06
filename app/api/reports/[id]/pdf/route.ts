@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { renderMarkdownToHtml } from "@/lib/markdown";
+import { logEvent } from "@/lib/analytics";
 import puppeteer from "puppeteer";
 import fs from "fs";
 import path from "path";
@@ -1985,6 +1986,12 @@ export async function GET(
 
     await browser.close();
     browser = undefined;
+
+    logEvent("pdf_downloaded", shareToken ? null : report.arboristId, {
+      reportId: report.id,
+      reportType: report.reportType,
+      ...(shareToken ? { source: "share_page" } : {}),
+    });
 
     const filename = `Arborist_Report_${property.address.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
 

@@ -46,11 +46,12 @@ model Arborist {
 
   createdAt DateTime @default(now())
 
-  properties   Property[]
-  reports      Report[]
-  apiUsageLogs ApiUsageLog[]
-  feedbacks    Feedback[]
-  invoices     Invoice[]
+  properties      Property[]
+  reports         Report[]
+  apiUsageLogs    ApiUsageLog[]
+  feedbacks       Feedback[]
+  invoices        Invoice[]
+  analyticsEvents AnalyticsEvent[]
 }
 
 model Property {
@@ -291,6 +292,20 @@ model Feedback {
   metadata      String?  // JSON: { userAgent, propertyId, viewport, timestamp }
   status        String   @default("new") // new, reviewed, resolved
   createdAt     DateTime @default(now())
+}
+
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  arboristId String?
+  eventType  String
+  metadata   String?
+  createdAt  DateTime @default(now())
+
+  arborist Arborist? @relation(fields: [arboristId], references: [id])
+
+  @@index([arboristId])
+  @@index([eventType])
+  @@index([createdAt])
 }
 
 model Invoice {

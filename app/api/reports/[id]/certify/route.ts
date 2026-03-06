@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { validateReportForCertification } from "@/lib/report-validation";
 import { NextRequest, NextResponse } from "next/server";
+import { logEvent } from "@/lib/analytics";
 
 export async function POST(
   request: NextRequest,
@@ -66,6 +67,22 @@ export async function POST(
     await prisma.treeRecord.updateMany({
       where: { propertyId: report.propertyId },
       data: { status: "certified" },
+    });
+
+    const treeCount = await prisma.treeRecord.count({
+      where: { propertyId: report.propertyId },
+    });
+    const property = await prisma.property.findUnique({
+      where: { id: report.propertyId },
+      select: { createdAt: true },
+    });
+    logEvent("report_certified", existing.arboristId, {
+      reportId: id,
+      reportType: existing.reportType,
+      treeCount,
+      minutesToCertify: property
+        ? Math.round((Date.now() - new Date(property.createdAt).getTime()) / 60000)
+        : null,
     });
 
     return NextResponse.json(report);
