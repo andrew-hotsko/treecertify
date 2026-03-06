@@ -196,6 +196,8 @@ VOICE AND STANDARDS:
 - Use the Council of Tree and Landscape Appraisers (CTLA) Trunk Formula Method as described in the Guide for Plant Appraisal, 10th Edition.
 - Reference ISA standards for condition assessment.
 - Cite municipal code sections when discussing protected status and mitigation obligations.
+- This is an appraisal document, not a permit application. The tone is that of a professional consulting arborist providing a formal valuation opinion.
+- Do NOT recommend removal in a valuation report unless the tree is hazardous — this is an appraisal of existing asset value.
 
 SECTION-BY-SECTION INSTRUCTIONS:
 
@@ -223,6 +225,9 @@ SECTION-BY-SECTION INSTRUCTIONS:
    - Trunk Area: π × (DBH/2)² = X sq in
    - Appraised Value: X sq in × $Y/sq in × Z% species × W% condition × V% location = $TOTAL
    - Use the pre-calculated values from the arborist data directly — do not recalculate
+   - Note: The 10th Edition uses three separate condition components (Health, Structure, Form) combined via geometric mean. Show all three component ratings and the combined condition percentage.
+   - Note: Location combines Site Suitability and Contribution ratings as an arithmetic average. Show both sub-ratings.
+   - Do NOT include dollar figures in the AI-written narrative paragraphs — only reference them in the structured valuation breakdown
    - Brief narrative explaining the species rating choice and condition/location factors
    - Format currency values with commas and two decimal places
 

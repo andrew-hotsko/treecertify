@@ -117,6 +117,8 @@ function formatTypeSpecificBlock(
           .join("\n");
 
       case "tree_valuation":
+        // For tree_valuation, the data is on dedicated TreeRecord columns, not typeSpecificData
+        // This case handles any legacy data in typeSpecificData
         return [
           d.valuationMethod
             ? `    - Valuation Method: ${d.valuationMethod}`
@@ -472,7 +474,9 @@ export async function POST(request: NextRequest) {
     - Photos on File: ${t.treePhotos.length > 0 ? `${t.treePhotos.length} photo(s)` : "None"}
 ${t.treePhotos.length > 0 ? photoLines : ""}
     - Field Audio Notes:
-${audioLines}${typeBlock ? `\n    - Type-Specific Assessment:\n${typeBlock}` : ""}`;
+${audioLines}${typeBlock ? `\n    - Type-Specific Assessment:\n${typeBlock}` : ""}${body.reportType === "tree_valuation" ? `
+    - CTLA Valuation — Unit Price: $${t.valuationUnitPrice ?? "N/A"}/sq in, Health: ${t.valuationHealthRating ?? "N/A"}%, Structure: ${t.valuationStructureRating ?? "N/A"}%, Form: ${t.valuationFormRating ?? "N/A"}%, Condition (geometric mean): ${t.valuationConditionRating ?? "N/A"}%, Species: ${t.valuationSpeciesRating ?? "N/A"}%, Site: ${t.valuationSiteRating ?? "N/A"}%, Contribution: ${t.valuationContributionRating ?? "N/A"}%, Location: ${t.valuationLocationRating ?? "N/A"}%, Basic Value: $${t.valuationBasicValue ?? "N/A"}, Appraised Value: $${t.valuationAppraisedValue ?? "N/A"}
+    - Valuation Notes: ${t.valuationNotes || "None"}` : ""}`;
           }
         )
         .join("\n\n");
@@ -551,7 +555,7 @@ PROPERTY DATA:
   body.reportType === "construction_encroachment"
     ? `\n- Project Description: ${(property as Record<string, unknown>).projectDescription || "N/A"}\n- Permit Number: ${(property as Record<string, unknown>).permitNumber || "N/A"}\n- Developer/Contractor: ${(property as Record<string, unknown>).developerName || "N/A"}\n- Architect: ${(property as Record<string, unknown>).architectName || "N/A"}`
     : ""
-}
+}${body.reportType === "tree_valuation" ? `\nVALUATION CONTEXT:\n- Purpose: ${body.valuationPurpose || "Not specified"}\n- Basis Statement: ${body.valuationBasisStatement || "CTLA Trunk Formula Method, 10th Edition"}\n- Total Appraised Value: $${property.trees.reduce((sum: number, t: { valuationAppraisedValue?: number | null }) => sum + (t.valuationAppraisedValue ?? 0), 0).toLocaleString()}` : ""}
 
 TREE ASSESSMENT DATA:
 ${treeDataBlock}
