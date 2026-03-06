@@ -18,9 +18,9 @@
 - Do not break existing authentication — all routes under /(app)/ are protected by Clerk middleware.
 
 ## Ordinance Data
-- Ordinance data for 5 Peninsula cities is in `prisma/seed.ts` and stored in the `MunicipalOrdinance` table.
+- Ordinance data for 14 Peninsula cities/jurisdictions is in `prisma/seed.ts` and stored in the `MunicipalOrdinance` table. Original 5 + 9 expansion cities added 2026-03-06.
 - **Verified against municipal code text (March 2026):** Palo Alto (PAMC §8.10.020), Menlo Park (MPMC §13.24.020), Atherton (AMC §8.10.020), Portola Valley (PVMC §15.12.060).
-- **NEEDS_VERIFICATION:** Woodside species-specific DBH thresholds (WMC §153.005 table is in a PDF that couldn't be fully extracted — native threshold ~9.5" DBH confirmed by Almanac reporting but per-species breakdown unverified). Woodside replanting ratios not found in code text. Portola Valley replanting ratios not found in code text. Menlo Park in-lieu fee schedule amounts may be outdated.
+- **NEEDS_VERIFICATION:** Woodside species-specific DBH thresholds (WMC §153.005 table is in a PDF that couldn't be fully extracted — native threshold ~9.5" DBH confirmed by Almanac reporting but per-species breakdown unverified). Woodside replanting ratios not found in code text. Portola Valley replanting ratios not found in code text. Menlo Park in-lieu fee schedule amounts may be outdated. All 9 expansion city thresholds are approximate — phone numbers and office hours unverified. Redwood City measures circumference at 24" above grade (non-standard) — tip included in contacts.
 - The check logic is in `lib/ordinances.ts` — `checkTreeProtection()` evaluates species-specific thresholds first, then falls back to default native/non-native thresholds. Heritage status is checked separately.
 - City name matching is case-insensitive: `getOrdinanceByCity()` normalizes input to title case and uses Prisma `mode: "insensitive"`. Property creation/update API routes also normalize city to title case on storage.
 - Test script at `scripts/test-ordinances.ts` validates 5 representative scenarios.
@@ -185,12 +185,16 @@
 - Billing fields saved via report PUT route (`/api/reports/[id]`), not separate API.
 
 ## City Submission Contacts
-- `lib/city-contacts.ts` — expanded from `lib/city-submission-guides.ts` with detailed department contact info for 5 Peninsula cities.
+- `lib/city-contacts.ts` — detailed department contact info for 14 Peninsula cities/jurisdictions: Palo Alto, Menlo Park, Atherton, Woodside, Portola Valley (original 5) + Redwood City, San Mateo, Los Altos, Los Altos Hills, Mountain View, Hillsborough, San Carlos, Burlingame, San Mateo County (expansion 9, added 2026-03-06).
 - `CityContact` interface: department, phone, email, address, hours, portalUrl, websiteUrl, submissionMethod, requiredDocuments[], typicalTimeline, applicationFee, mitigationSummary, tips[] (array, not string).
+- `CITY_ALIASES` map: "Unincorporated San Mateo County" → "San Mateo County". `getCityContact()` resolves aliases before lookup.
 - `getCityContact(city, reportType?)` — returns contact for removal_permit type only. Returns null for other report types.
 - `getNextStepsText(reportType)` — generic guidance for non-removal report types (health_assessment, tree_valuation, construction_encroachment).
 - Share page "What Happens Next" section: tap-to-call phone links, tap-to-email links, office address with MapPin icon, office hours, portal URL as CTA button, tips as bulleted list, required documents checklist.
+- Share page fallback for uncovered cities: 3-step generic guidance (contact city, get application, submit with PDF) instead of bare "contact your planning department" text. Only shows for removal_permit on cities not in the database.
 - `lib/city-submission-guides.ts` still exists (legacy, not imported anywhere). Can be removed in future cleanup.
+- All expansion city entries NEED VERIFICATION before GA — phone numbers, office hours, and thresholds are approximate. Marked with `// VERIFY` comments.
+- Note: Redwood City measures circumference at 24" above grade (non-standard); San Carlos on 4/10 schedule (closed Fridays) — both surfaced in tips.
 
 ## Session Completion
 - When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.
