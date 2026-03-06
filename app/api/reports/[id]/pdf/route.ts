@@ -83,6 +83,14 @@ export async function GET(
     });
     const protectedCount = trees.filter((t) => t.isProtected).length;
 
+    // Canopy total for real estate package cover page
+    const isRealEstate = report.reportType === "real_estate_package";
+    const canopyTotal = isRealEstate
+      ? trees.reduce((sum, t) => sum + ((t as Record<string, unknown>).valuationAppraisedValue as number ?? 0), 0)
+      : 0;
+    const fmtCoverMoney = (v: number) =>
+      new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v);
+
     // Parse report options
     let reportOpts: Record<string, boolean> = {};
     try {
@@ -1285,6 +1293,33 @@ export async function GET(
       margin: 24px auto 0 auto;
     }
 
+    /* Canopy value on cover (real estate package) */
+    .cover-canopy-value {
+      text-align: center;
+      margin: 16px 0 4px 0;
+    }
+    .cover-canopy-label {
+      font-size: 9pt;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #1D4E3E;
+      margin: 0 0 4px 0;
+    }
+    .cover-canopy-amount {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 36pt;
+      font-weight: 700;
+      color: #1D4E3E;
+      margin: 0;
+      line-height: 1.1;
+    }
+    .cover-canopy-subtitle {
+      font-size: 8pt;
+      color: #666;
+      margin: 4px 0 0 0;
+    }
+
     /* Prepared For block */
     .cover-prepared-block {
       display: flex;
@@ -1943,6 +1978,12 @@ export async function GET(
       <div class="cover-status-badge ${isCertified ? "badge-certified" : "badge-draft"}">
         ${isCertified ? "\u2713 Certified" : "Draft"}
       </div>
+      ${isRealEstate && canopyTotal > 0 ? `
+      <div class="cover-canopy-value">
+        <p class="cover-canopy-label">Total Canopy Value</p>
+        <p class="cover-canopy-amount">${fmtCoverMoney(canopyTotal)}</p>
+        <p class="cover-canopy-subtitle">CTLA Trunk Formula Method, 10th Edition</p>
+      </div>` : ""}
       <hr class="cover-rule-bottom" />
     </div>
 

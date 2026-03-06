@@ -534,7 +534,16 @@ PROMPT VERSION: 2.1
 ${template?.systemInstructions || `Write a professional arborist report following ISA standards and best practices.`}
 
 ${MASTER_VOICE_INSTRUCTIONS}
-
+${body.reportType === "real_estate_package" ? `
+REAL ESTATE PACKAGE — LANGUAGE OVERRIDES:
+This report is for a REAL ESTATE TRANSACTION, not a municipal permit application. Override the general voice instructions as follows:
+- The audience is homebuyers and realtors, NOT city planners or attorneys.
+- Frame trees as PROPERTY ASSETS and AMENITIES. Use words like "specimen," "asset," "amenity," "canopy," "mature landscaping."
+- AVOID alarming language: do NOT use "hazard," "hazardous," "failure," "risk of failure," "target zone," "mitigation." Instead use: "may benefit from structural pruning," "recommend professional evaluation," "routine maintenance will address."
+- For trees recommended for removal: frame diplomatically. Explain why, suggest replacement: "Replacement planting would restore canopy coverage in this area." Never say "removal recommended" as a standalone phrase — provide context.
+- Condition descriptions: "good health with a full canopy" (not "no defects observed"); "showing moderate stress that responds well to maintenance" (not "declining health, poor prognosis").
+- This report will NOT be submitted to city planners. Do NOT reference municipal code, permit requirements, or compliance language unless specifically relevant to the property.
+` : ""}
 ═══════════════════════════════════════════════════════════
 STRUCTURED DATA — Generate the report narrative from this data
 ═══════════════════════════════════════════════════════════

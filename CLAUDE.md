@@ -234,9 +234,10 @@
 - Report model has 7 RE listing fields: `reListingAddress`, `reRealtorName`, `reRealtorEmail`, `reRealtorPhone`, `reRealtorCompany`, `reListingPrice` (Float), `rePackageNotes`. All nullable.
 - Shares CTLA valuation columns with `tree_valuation` on TreeRecord (valuationUnitPrice, valuationAppraisedValue, etc.) — NOT typeSpecificData JSON.
 - Report page: violet-themed "Listing Information" card (certified view) for realtor contact and listing details. Saves via existing report PUT API.
-- Share page: realtor contact card with violet styling, canopy value highlight in summary stats, "Share with Your Realtor" next-steps text.
-- PDF: "Certified Tree Canopy Report" title, "Prepared For" shows realtor info instead of city planning, valuation summary section included, purpose defaults to "Real Estate Transaction."
-- AI template in `lib/report-templates.ts`: buyer-friendly language, asset-oriented tone, 7 required sections (Introduction, Site Description, Executive Tree Summary, Individual Assessments, Canopy Valuation, Maintenance Outlook, Limitations).
+- Share page: buyer-friendly experience with `isRealEstatePackage` routing flag (skips city contact/next-steps lookup). Prominent canopy value highlight (large forest-green number), compact tree cards with `<details>/<summary>` for expandable valuation breakdowns, "About This Report" section, realtor contact card before arborist card, listing price in header. `RE_ACTION_FRIENDLY` map provides positive action text (no "removal" language).
+- PDF: "Certified Tree Canopy Report" title, prominent canopy total on cover page (36pt forest green), "Prepared For" shows realtor info instead of city planning, valuation summary section included, purpose defaults to "Real Estate Transaction."
+- AI template in `lib/report-templates.ts`: buyer-friendly language, asset-oriented tone, 7 required sections (Introduction, Site Description, Executive Tree Summary, Individual Assessments, Canopy Valuation, Maintenance Outlook, Limitations). AI generation route adds RE-specific language overrides: avoid "hazard"/"failure"/"mitigation", use "asset"/"specimen"/"amenity", frame removals diplomatically.
+- Dashboard: green `bg-forest/10` badge for RE properties, Home icon instead of MapPin on property rows.
 - Icon: Home (lucide), color: violet. Appears in new property page, onboarding, and report type selectors.
 - Tree side panel and property-map-view show CTLA valuation fields for `real_estate_package` (same as `tree_valuation`).
 

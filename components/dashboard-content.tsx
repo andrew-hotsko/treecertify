@@ -21,6 +21,7 @@ import {
   ClipboardList,
   FileText,
   Award,
+  Home,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -552,7 +553,11 @@ export function DashboardContent({
                   >
                     <div className="flex items-center gap-4 min-w-0">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-forest/5">
-                        <MapPin className="h-4 w-4 text-forest" />
+                        {property.reportType === "real_estate_package" ? (
+                          <Home className="h-4 w-4 text-forest" />
+                        ) : (
+                          <MapPin className="h-4 w-4 text-forest" />
+                        )}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
@@ -567,8 +572,13 @@ export function DashboardContent({
                               Sample
                             </Badge>
                           )}
-                          <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-neutral-200 text-neutral-600 hidden sm:inline">
-                            {formatReportType(property.reportType)}
+                          <span className={cn(
+                            "shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded hidden sm:inline",
+                            property.reportType === "real_estate_package"
+                              ? "bg-forest/10 text-forest"
+                              : "bg-neutral-200 text-neutral-600"
+                          )}>
+                            {property.reportType === "real_estate_package" ? "Real Estate" : formatReportType(property.reportType)}
                           </span>
                         </div>
                         <p className="truncate text-xs text-neutral-500">

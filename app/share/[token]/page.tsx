@@ -51,6 +51,14 @@ const ACTION_FRIENDLY: Record<string, string> = {
   monitor: "This tree will be monitored over time",
 };
 
+// Buyer-friendly action text for real estate packages — no "removal" language
+const RE_ACTION_FRIENDLY: Record<string, string> = {
+  retain: "Healthy — no action needed",
+  remove: "This tree's condition warrants further professional evaluation",
+  prune: "Minor maintenance pruning recommended",
+  monitor: "Routine monitoring recommended",
+};
+
 const REPORT_TYPE_LABELS: Record<string, string> = {
   removal_permit: "Tree Removal Permit Report",
   health_assessment: "Tree Health Assessment",
@@ -300,17 +308,29 @@ export default async function SharedPropertyPage({
       ? buildSummaryStats(property.trees, report.reportType)
       : null;
 
+  // Real estate packages have their own distinct path — skip city lookup entirely
+  const isRealEstatePackage = report?.reportType === "real_estate_package";
+
   // City contact — now supports all report types and jurisdiction types
+  // Skip for real_estate_package — no city submission needed
   const cityContact =
-    isCertified && report
+    isCertified && report && !isRealEstatePackage
       ? getCityContact(property.city, report.reportType)
       : null;
 
   // Next steps text for non-removal types (only used when no city-specific contact exists)
+  // Skip for real_estate_package — has its own "About This Report" section
   const nextSteps =
-    isCertified && report && !cityContact && report.reportType !== "removal_permit"
+    isCertified && report && !cityContact && !isRealEstatePackage && report.reportType !== "removal_permit"
       ? getNextStepsText(report.reportType)
       : null;
+
+  // Compute canopy value for real_estate_package
+  const canopyTotal = isRealEstatePackage
+    ? property.trees.reduce((sum, t) => sum + (t.valuationAppraisedValue ?? 0), 0)
+    : 0;
+  const fmtCurrency = (v: number) =>
+    v >= 1000 ? `$${Math.round(v).toLocaleString()}` : `$${Math.round(v)}`;
 
   // Billing data from report
   const hasBilling =
@@ -346,7 +366,9 @@ export default async function SharedPropertyPage({
 
           {/* Report type label */}
           <p className="text-xs font-semibold uppercase tracking-wider text-forest mb-1">
-            {isCertified ? "Certified Arborist Report" : "Draft — Pending Certification"}
+            {isRealEstatePackage
+              ? (isCertified ? "Certified Tree Canopy Report" : "Draft — Pending Certification")
+              : (isCertified ? "Certified Arborist Report" : "Draft — Pending Certification")}
           </p>
 
           {/* Property address */}
@@ -357,6 +379,13 @@ export default async function SharedPropertyPage({
             {property.city}, {property.state}
             {property.zip ? ` ${property.zip}` : ""}
           </p>
+
+          {/* Listing price (real estate package only) */}
+          {isRealEstatePackage && report?.reListingPrice != null && report.reListingPrice > 0 && (
+            <p className="text-sm text-neutral-600 mt-1 font-medium">
+              Listed at {fmtCurrency(report.reListingPrice)}
+            </p>
+          )}
 
           {/* Arborist line */}
           {arborist && (
@@ -451,6 +480,30 @@ export default async function SharedPropertyPage({
           </section>
         )}
 
+        {/* ==== D2. Prominent Canopy Value (real_estate_package only) ==== */}
+        {isCertified && isRealEstatePackage && canopyTotal > 0 && (
+          <section>
+            <div className="bg-forest/5 border border-forest/20 rounded-xl p-8 text-center">
+              <p className="text-xs font-semibold uppercase tracking-wider text-forest/70 mb-2">
+                Total Certified Tree Canopy Value
+              </p>
+              <p className="text-4xl sm:text-5xl font-bold font-mono text-forest tracking-tight">
+                {fmtCurrency(canopyTotal)}
+              </p>
+              <p className="text-sm text-neutral-500 mt-3">
+                {property.trees.length} tree{property.trees.length !== 1 ? "s" : ""} · Certified{" "}
+                {report?.certifiedAt
+                  ? new Date(report.certifiedAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })
+                  : ""}
+              </p>
+            </div>
+          </section>
+        )}
+
         {/* ==== E. Tree Overview Cards ==== */}
         {isCertified && property.trees.length > 0 && (
           <section>
@@ -471,6 +524,76 @@ export default async function SharedPropertyPage({
                   measurements.push(`${tree.canopySpreadFt} ft spread`);
                 }
 
+                const actionText = isRealEstatePackage
+                  ? (RE_ACTION_FRIENDLY[tree.recommendedAction] ?? tree.recommendedAction ?? "")
+                  : (ACTION_FRIENDLY[tree.recommendedAction] ?? tree.recommendedAction ?? "No recommendation yet");
+
+                // Real estate package: compact card with expandable detail
+                if (isRealEstatePackage) {
+                  return (
+                    <details
+                      key={tree.id}
+                      className="bg-white rounded-lg border shadow-sm group"
+                    >
+                      <summary className="p-4 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className={`h-2.5 w-2.5 rounded-full shrink-0 ${
+                                CONDITION_DOT_BG[tree.conditionRating] ?? "bg-neutral-400"
+                              }`}
+                            />
+                            <span className="text-xs font-mono text-neutral-500">
+                              #{tree.treeNumber}
+                            </span>
+                            <h3 className="font-medium text-neutral-900 font-display truncate">
+                              {tree.speciesCommon || "Unidentified Species"}
+                            </h3>
+                          </div>
+                          {tree.valuationAppraisedValue != null && tree.valuationAppraisedValue > 0 && (
+                            <span className="font-mono font-semibold text-forest text-sm shrink-0 ml-3">
+                              {fmtCurrency(tree.valuationAppraisedValue)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 ml-5 text-xs text-neutral-500">
+                          {measurements.length > 0 && (
+                            <span className="font-mono">{measurements.join(" · ")}</span>
+                          )}
+                          <span className="text-neutral-400">·</span>
+                          <span>{CONDITION_FRIENDLY[tree.conditionRating] ?? "Not assessed"}</span>
+                        </div>
+                        <p className="text-xs text-forest mt-1.5 ml-5 group-open:hidden">
+                          View details ▸
+                        </p>
+                      </summary>
+                      <div className="px-4 pb-4 pt-2 border-t space-y-2">
+                        {tree.speciesScientific && (
+                          <p className="text-xs text-neutral-400 italic">
+                            {tree.speciesScientific}
+                          </p>
+                        )}
+                        <p className="text-sm text-neutral-600">{actionText}</p>
+                        {tree.valuationAppraisedValue != null && tree.valuationAppraisedValue > 0 && (
+                          <div className="bg-neutral-50 rounded-md p-3 text-xs font-mono text-neutral-600 space-y-0.5">
+                            <p>Appraised Value: <span className="font-semibold text-neutral-900">{fmtCurrency(tree.valuationAppraisedValue)}</span></p>
+                            {tree.valuationConditionRating != null && (
+                              <p>Condition: {tree.valuationConditionRating.toFixed(1)}% · Species: {tree.valuationSpeciesRating ?? 0}% · Location: {(tree.valuationLocationRating ?? 0).toFixed(1)}%</p>
+                            )}
+                          </div>
+                        )}
+                        {tree.isProtected && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
+                            <ShieldCheck className="h-3 w-3" />
+                            Protected Tree
+                          </span>
+                        )}
+                      </div>
+                    </details>
+                  );
+                }
+
+                // Standard tree card for other report types
                 return (
                   <div
                     key={tree.id}
@@ -512,9 +635,7 @@ export default async function SharedPropertyPage({
                         {CONDITION_FRIENDLY[tree.conditionRating] ?? "Not assessed"}
                       </p>
                       <p className="text-sm text-neutral-600">
-                        {ACTION_FRIENDLY[tree.recommendedAction] ??
-                          tree.recommendedAction ??
-                          "No recommendation yet"}
+                        {actionText}
                       </p>
                     </div>
 
@@ -1013,6 +1134,28 @@ export default async function SharedPropertyPage({
           </section>
         )}
 
+        {/* ==== F6. About This Report (real_estate_package only) ==== */}
+        {isCertified && isRealEstatePackage && (
+          <section>
+            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3">
+              About This Report
+            </p>
+            <div className="bg-white rounded-lg border p-5 space-y-3">
+              <p className="text-sm text-neutral-600 leading-relaxed">
+                This Certified Tree Canopy Report documents the health and appraised
+                value of the trees at this property. It was prepared by a licensed
+                ISA Certified Arborist in accordance with ISA standards and the CTLA
+                Guide for Plant Appraisal, 10th Edition (2019).
+              </p>
+              <p className="text-sm text-neutral-600 leading-relaxed">
+                Tree valuations are based on the Trunk Formula Technique, the
+                industry standard for tree appraisal used in insurance claims,
+                real estate transactions, and municipal assessments.
+              </p>
+            </div>
+          </section>
+        )}
+
         {/* ==== G. Permit Status Pipeline ==== */}
         {isCertified && report?.permitStatus && (
           <section>
@@ -1151,6 +1294,45 @@ export default async function SharedPropertyPage({
           </section>
         )}
 
+        {/* ==== J0. Realtor Contact Card (real_estate_package only) ==== */}
+        {isCertified && isRealEstatePackage && report?.reRealtorName && (
+          <section>
+            <div className="bg-violet-50 border border-violet-200 rounded-lg p-6 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-violet-600 mb-4">
+                Listing Agent
+              </p>
+              <div className="text-sm space-y-1 mb-4">
+                <p className="font-medium text-neutral-900">{report.reRealtorName}</p>
+                {report.reRealtorCompany && (
+                  <p className="text-neutral-600">{report.reRealtorCompany}</p>
+                )}
+              </div>
+              {(report.reRealtorPhone || report.reRealtorEmail) && (
+                <div className="grid grid-cols-2 gap-3">
+                  {report.reRealtorPhone && (
+                    <a
+                      href={`tel:${report.reRealtorPhone}`}
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-100 hover:bg-violet-200 text-violet-800 rounded-lg text-sm font-medium transition-colors border border-violet-200"
+                    >
+                      <Phone className="h-4 w-4" />
+                      Call
+                    </a>
+                  )}
+                  {report.reRealtorEmail && (
+                    <a
+                      href={`mailto:${report.reRealtorEmail}`}
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-100 hover:bg-violet-200 text-violet-800 rounded-lg text-sm font-medium transition-colors border border-violet-200"
+                    >
+                      <Mail className="h-4 w-4" />
+                      Email
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
         {/* ==== J. Arborist Contact Card ==== */}
         {arborist && (
           <section>
@@ -1221,44 +1403,7 @@ export default async function SharedPropertyPage({
           </section>
         )}
 
-        {/* ==== J2. Realtor Contact Card (real_estate_package only) ==== */}
-        {isCertified && report?.reportType === "real_estate_package" && report.reRealtorName && (
-          <section>
-            <div className="bg-violet-50 border border-violet-200 rounded-lg p-6 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wider text-violet-600 mb-4">
-                Listing Agent
-              </p>
-              <div className="text-sm space-y-1 mb-4">
-                <p className="font-medium text-neutral-900">{report.reRealtorName}</p>
-                {report.reRealtorCompany && (
-                  <p className="text-neutral-600">{report.reRealtorCompany}</p>
-                )}
-              </div>
-              {(report.reRealtorPhone || report.reRealtorEmail) && (
-                <div className="grid grid-cols-2 gap-3">
-                  {report.reRealtorPhone && (
-                    <a
-                      href={`tel:${report.reRealtorPhone}`}
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-100 hover:bg-violet-200 text-violet-800 rounded-lg text-sm font-medium transition-colors border border-violet-200"
-                    >
-                      <Phone className="h-4 w-4" />
-                      Call
-                    </a>
-                  )}
-                  {report.reRealtorEmail && (
-                    <a
-                      href={`mailto:${report.reRealtorEmail}`}
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-100 hover:bg-violet-200 text-violet-800 rounded-lg text-sm font-medium transition-colors border border-violet-200"
-                    >
-                      <Mail className="h-4 w-4" />
-                      Email
-                    </a>
-                  )}
-                </div>
-              )}
-            </div>
-          </section>
-        )}
+        {/* Realtor contact card moved to J0 above arborist card */}
       </main>
 
       {/* ==== K. Footer ==== */}
