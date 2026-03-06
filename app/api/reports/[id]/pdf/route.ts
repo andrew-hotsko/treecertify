@@ -869,6 +869,36 @@ export async function GET(
     }
 
     // =========================================================================
+    // VALUATION LIMITING CONDITIONS
+    // =========================================================================
+    let valuationLimitingHtml = "";
+    if (isRealEstate || report.reportType === "tree_valuation") {
+      let conditions: string[] = [];
+      try {
+        conditions = JSON.parse(arborist.valuationLimitingConditions || "[]");
+      } catch { /* use defaults */ }
+      if (!Array.isArray(conditions) || conditions.length === 0) {
+        // Use hardcoded defaults
+        conditions = [
+          "The appraiser has no present or prospective interest in the subject property and has no personal interest with respect to the parties involved.",
+          "The appraisal assumes the trees and site conditions as observed on the date of assessment. Conditions may change due to growth, disease, weather events, or human activity.",
+          "No invasive or subsurface investigation was performed. Root condition and internal wood condition were assessed only from external, ground-level indicators.",
+          "Values represent the replacement cost of the assessed trees using the Trunk Formula Technique. They do not represent the market value of the property or the contribution of trees to property market value.",
+          "The unit cost values used in this appraisal are based on current wholesale nursery pricing for the largest commonly available replacement specimen of the same species and are subject to change.",
+          "This appraisal is not a guarantee of tree health, structural integrity, or remaining useful life.",
+        ];
+      }
+      valuationLimitingHtml = `
+        <div class="page-break"></div>
+        <h2 class="section-title">Limiting Conditions and Assumptions</h2>
+        <div class="limitations-box">
+          <ol style="margin:0;padding-left:20pt;font-size:9.5pt;line-height:1.6;">
+            ${conditions.map(c => `<li style="margin-bottom:6pt;">${esc(c)}</li>`).join("\n")}
+          </ol>
+        </div>`;
+    }
+
+    // =========================================================================
     // ADDITIONAL CERTS
     // =========================================================================
     let additionalCertsArr: string[] = [];
@@ -2078,6 +2108,9 @@ export async function GET(
 
   <!-- ========== VALUATION SUMMARY ========== -->
   ${valuationSummaryHtml}
+
+  <!-- ========== VALUATION LIMITING CONDITIONS ========== -->
+  ${valuationLimitingHtml}
 
   <!-- ========== SIGNATURE BLOCK ========== -->
   ${signatureBlock}

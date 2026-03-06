@@ -18,7 +18,8 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json();
 
-    const updateData: Record<string, number | null> = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: Record<string, any> = {};
 
     if ("defaultValuationUnitPrice" in body) {
       const price = body.defaultValuationUnitPrice != null ? parseFloat(body.defaultValuationUnitPrice) : null;
@@ -26,6 +27,15 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ error: "Invalid unit price" }, { status: 400 });
       }
       updateData.defaultValuationUnitPrice = price;
+    }
+
+    if ("valuationLimitingConditions" in body) {
+      // Expect an array of strings; store as JSON string
+      if (Array.isArray(body.valuationLimitingConditions)) {
+        updateData.valuationLimitingConditions = JSON.stringify(body.valuationLimitingConditions);
+      } else if (body.valuationLimitingConditions === null) {
+        updateData.valuationLimitingConditions = null;
+      }
     }
 
     const updated = await prisma.arborist.update({

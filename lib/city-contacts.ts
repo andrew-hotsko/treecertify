@@ -54,6 +54,7 @@ export interface CityContact {
 // ---------------------------------------------------------------------------
 
 const CITY_ALIASES: Record<string, string> = {
+  "Napa": "City Of Napa",
   "South Lake Tahoe": "Tahoe Basin",
   "Incline Village": "Tahoe Basin",
   "Tahoe City": "Tahoe Basin",
@@ -62,6 +63,8 @@ const CITY_ALIASES: Record<string, string> = {
   "Zephyr Cove": "Tahoe Basin",
   "Tahoe Vista": "Tahoe Basin",
   "Crystal Bay": "Tahoe Basin",
+  // NOTE: Truckee is OUTSIDE the TRPA boundary. Do NOT alias to "Tahoe Basin".
+  // Truckee is under Town of Truckee / Nevada County jurisdiction.
 };
 
 // ---------------------------------------------------------------------------
@@ -252,9 +255,9 @@ const CITY_CONTACTS: Record<string, Record<string, CityContact>> = {
       mitigationSummary:
         "Tree replacement is required. Mitigation must be provided through tree replacement planting or in-lieu payment. For in-lieu fees on large trees, the fee amount is determined using the CTLA Guide for Plant Appraisal methodology. Annual monitoring reports are required for 7 years if replacement planting is used.",
       tips: [
+        "CRITICAL THRESHOLDS: Hardwood trees over 36 inches DBH and redwoods over 48 inches DBH require a Use Permit (public hearing, 60–90 days). All other protected trees (31 native species at 6+ inches DBH) require a Zoning Permit (15–30 days). Confirm your tree's measurements against these thresholds before selecting an application type.",
         "Sonoma County's 2024 ordinance is new — staff is still processing their first wave of applications under it. Allow extra time and call ahead.",
         "The Oak Woodland Ordinance is separate from the Tree Protection Ordinance. If your property is zoned OAK, you may need to comply with both.",
-        "Large tree removal (hardwoods > 36 DBH) requires a Use Permit, which typically involves a public hearing — plan 60–90 days minimum.",
         "Defensible space, fire safety, and routine agricultural maintenance are exempt — document the reason for removal carefully if claiming an exemption.",
       ],
     },

@@ -59,7 +59,8 @@ model Arborist {
   photoRequiredCount          Int       @default(2)
 
   // Valuation defaults
-  defaultValuationUnitPrice  Float?    // arborist's preferred default unit price
+  defaultValuationUnitPrice      Float?    // arborist's preferred default unit price
+  valuationLimitingConditions    String?   // JSON array of strings, customizable per arborist
 
   createdAt DateTime @default(now())
 

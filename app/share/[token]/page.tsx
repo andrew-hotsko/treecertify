@@ -17,10 +17,59 @@ import {
 } from "lucide-react";
 import { PermitStatusPipeline } from "@/components/permit-status-pipeline";
 import { getCityContact, getNextStepsText } from "@/lib/city-contacts";
+import type { Metadata } from "next";
 
-export const metadata = {
-  title: "Tree Assessment Report | TreeCertify",
+const REPORT_TYPE_META: Record<string, string> = {
+  removal_permit: "Tree Removal Permit Report",
+  health_assessment: "Tree Health Assessment",
+  tree_valuation: "Certified Tree Appraisal",
+  construction_encroachment: "Construction Encroachment Assessment",
+  real_estate_package: "Certified Tree Canopy Report",
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { token: string };
+}): Promise<Metadata> {
+  const property = await prisma.property.findUnique({
+    where: { shareToken: params.token },
+    select: {
+      address: true,
+      city: true,
+      reports: {
+        orderBy: { updatedAt: "desc" },
+        take: 1,
+        select: {
+          reportType: true,
+          status: true,
+          arborist: { select: { companyName: true, name: true } },
+        },
+      },
+    },
+  });
+
+  if (!property) {
+    return { title: "Report Not Found | TreeCertify" };
+  }
+
+  const report = property.reports[0];
+  const reportLabel = REPORT_TYPE_META[report?.reportType ?? ""] ?? "Arborist Report";
+  const companyName = report?.arborist?.companyName ?? report?.arborist?.name ?? "TreeCertify";
+  const title = `${reportLabel} — ${property.address}`;
+  const description = `${reportLabel} for ${property.address}, ${property.city}. Prepared by ${companyName}.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      siteName: "TreeCertify",
+    },
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -59,6 +108,14 @@ const RE_ACTION_FRIENDLY: Record<string, string> = {
   monitor: "Routine monitoring recommended",
 };
 
+// Formal appraisal action text for standalone valuation reports
+const VALUATION_ACTION_FRIENDLY: Record<string, string> = {
+  retain: "Retainable — no action required",
+  remove: "Condition warrants removal consideration",
+  prune: "Corrective pruning recommended",
+  monitor: "Periodic monitoring recommended",
+};
+
 const REPORT_TYPE_LABELS: Record<string, string> = {
   removal_permit: "Tree Removal Permit Report",
   health_assessment: "Tree Health Assessment",
@@ -70,10 +127,6 @@ const REPORT_TYPE_LABELS: Record<string, string> = {
 // ---------------------------------------------------------------------------
 // Summary helpers
 // ---------------------------------------------------------------------------
-
-interface TreeValuationData {
-  appraisedValue?: number;
-}
 
 function buildSummaryStats(
   trees: Array<{
@@ -131,19 +184,11 @@ function buildSummaryStats(
       let highestValue = 0;
       let valueCount = 0;
       for (const tree of trees) {
-        try {
-          if (tree.typeSpecificData) {
-            const data = JSON.parse(tree.typeSpecificData) as TreeValuationData;
-            if (data.appraisedValue != null && data.appraisedValue > 0) {
-              totalValue += data.appraisedValue;
-              if (data.appraisedValue > highestValue) {
-                highestValue = data.appraisedValue;
-              }
-              valueCount++;
-            }
-          }
-        } catch {
-          // skip malformed data
+        const val = tree.valuationAppraisedValue ?? 0;
+        if (val > 0) {
+          totalValue += val;
+          if (val > highestValue) highestValue = val;
+          valueCount++;
         }
       }
       const fmt = (v: number) =>
@@ -308,25 +353,26 @@ export default async function SharedPropertyPage({
       ? buildSummaryStats(property.trees, report.reportType)
       : null;
 
-  // Real estate packages have their own distinct path — skip city lookup entirely
+  // Real estate packages and standalone valuations have their own distinct paths
   const isRealEstatePackage = report?.reportType === "real_estate_package";
+  const isValuation = report?.reportType === "tree_valuation";
+  const isValuationType = isRealEstatePackage || isValuation;
 
-  // City contact — now supports all report types and jurisdiction types
-  // Skip for real_estate_package — no city submission needed
+  // City contact — skip for valuation types (no city submission needed)
   const cityContact =
-    isCertified && report && !isRealEstatePackage
+    isCertified && report && !isValuationType
       ? getCityContact(property.city, report.reportType)
       : null;
 
   // Next steps text for non-removal types (only used when no city-specific contact exists)
-  // Skip for real_estate_package — has its own "About This Report" section
+  // Skip for valuation types — they have their own "About" sections
   const nextSteps =
-    isCertified && report && !cityContact && !isRealEstatePackage && report.reportType !== "removal_permit"
+    isCertified && report && !cityContact && !isValuationType && report.reportType !== "removal_permit"
       ? getNextStepsText(report.reportType)
       : null;
 
-  // Compute canopy value for real_estate_package
-  const canopyTotal = isRealEstatePackage
+  // Compute canopy/valuation total for valuation types
+  const canopyTotal = isValuationType
     ? property.trees.reduce((sum, t) => sum + (t.valuationAppraisedValue ?? 0), 0)
     : 0;
   const fmtCurrency = (v: number) =>
@@ -368,7 +414,9 @@ export default async function SharedPropertyPage({
           <p className="text-xs font-semibold uppercase tracking-wider text-forest mb-1">
             {isRealEstatePackage
               ? (isCertified ? "Certified Tree Canopy Report" : "Draft — Pending Certification")
-              : (isCertified ? "Certified Arborist Report" : "Draft — Pending Certification")}
+              : isValuation
+                ? (isCertified ? "Certified Tree Appraisal" : "Draft — Pending Certification")
+                : (isCertified ? "Certified Arborist Report" : "Draft — Pending Certification")}
           </p>
 
           {/* Property address */}
@@ -504,6 +552,35 @@ export default async function SharedPropertyPage({
           </section>
         )}
 
+        {/* ==== D3. Prominent Total Appraised Value (standalone tree_valuation only) ==== */}
+        {isCertified && isValuation && canopyTotal > 0 && (
+          <section>
+            <div className="bg-forest/5 border border-forest/20 rounded-xl p-8 text-center">
+              <p className="text-xs font-semibold uppercase tracking-wider text-forest/70 mb-2">
+                Total Appraised Value
+              </p>
+              <p className="text-4xl sm:text-5xl font-bold font-mono text-forest tracking-tight">
+                {fmtCurrency(canopyTotal)}
+              </p>
+              <p className="text-sm text-neutral-500 mt-3">
+                {property.trees.length} tree{property.trees.length !== 1 ? "s" : ""} · CTLA Trunk Formula Technique · Certified{" "}
+                {report?.certifiedAt
+                  ? new Date(report.certifiedAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })
+                  : ""}
+              </p>
+              {report?.valuationPurpose && (
+                <p className="text-xs text-neutral-400 mt-2">
+                  Purpose: {report.valuationPurpose}
+                </p>
+              )}
+            </div>
+          </section>
+        )}
+
         {/* ==== E. Tree Overview Cards ==== */}
         {isCertified && property.trees.length > 0 && (
           <section>
@@ -526,10 +603,12 @@ export default async function SharedPropertyPage({
 
                 const actionText = isRealEstatePackage
                   ? (RE_ACTION_FRIENDLY[tree.recommendedAction] ?? tree.recommendedAction ?? "")
-                  : (ACTION_FRIENDLY[tree.recommendedAction] ?? tree.recommendedAction ?? "No recommendation yet");
+                  : isValuation
+                    ? (VALUATION_ACTION_FRIENDLY[tree.recommendedAction] ?? tree.recommendedAction ?? "")
+                    : (ACTION_FRIENDLY[tree.recommendedAction] ?? tree.recommendedAction ?? "No recommendation yet");
 
-                // Real estate package: compact card with expandable detail
-                if (isRealEstatePackage) {
+                // Valuation types (RE + standalone): compact card with expandable detail
+                if (isRealEstatePackage || isValuation) {
                   return (
                     <details
                       key={tree.id}
@@ -1156,6 +1235,32 @@ export default async function SharedPropertyPage({
           </section>
         )}
 
+        {/* ==== F7. About This Appraisal (standalone tree_valuation only) ==== */}
+        {isCertified && isValuation && (
+          <section>
+            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3">
+              About This Appraisal
+            </p>
+            <div className="bg-white rounded-lg border p-5 space-y-3">
+              <p className="text-sm text-neutral-600 leading-relaxed">
+                This certified tree appraisal was prepared by a licensed ISA Certified
+                Arborist in accordance with the Council of Tree and Landscape Appraisers
+                (CTLA) Guide for Plant Appraisal, 10th Edition (2019), using the Trunk
+                Formula Technique.
+              </p>
+              {report?.valuationPurpose && (
+                <p className="text-sm text-neutral-600 leading-relaxed">
+                  <span className="font-medium">Purpose:</span> {report.valuationPurpose}
+                </p>
+              )}
+              <p className="text-sm text-neutral-500 leading-relaxed">
+                Provide this report to your insurance company, attorney, estate planner,
+                or other requesting party as needed.
+              </p>
+            </div>
+          </section>
+        )}
+
         {/* ==== G. Permit Status Pipeline ==== */}
         {isCertified && report?.permitStatus && (
           <section>
@@ -1204,6 +1309,10 @@ export default async function SharedPropertyPage({
                 <p className="text-sm text-neutral-600 mb-4 max-w-md mx-auto">
                   Download the Certified Tree Canopy Report for your real estate transaction records, lender, or buyer.
                 </p>
+              ) : report.reportType === "tree_valuation" ? (
+                <p className="text-sm text-neutral-600 mb-4 max-w-md mx-auto">
+                  Download the full certified tree appraisal for your insurance claim, legal matter, estate planning, or other needs.
+                </p>
               ) : (
                 <p className="text-sm text-neutral-600 mb-4 max-w-md mx-auto">
                   Download the full certified report for your records.
@@ -1221,8 +1330,8 @@ export default async function SharedPropertyPage({
           </section>
         )}
 
-        {/* ==== H2. Billing Section ==== */}
-        {hasBilling && report && (
+        {/* ==== H2. Billing Section (non-RE/valuation types — RE billing goes after arborist contact) ==== */}
+        {hasBilling && report && !isValuationType && (
           <section>
             <div className="bg-white rounded-lg border p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-4">
@@ -1404,6 +1513,65 @@ export default async function SharedPropertyPage({
         )}
 
         {/* Realtor contact card moved to J0 above arborist card */}
+
+        {/* ==== K. Billing Section for RE/Valuation types (positioned last) ==== */}
+        {hasBilling && report && isValuationType && (
+          <section>
+            <div className="bg-white rounded-lg border p-6 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <DollarSign className="h-5 w-5 text-forest" />
+                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                  Amount Due
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  {report.billingPaidAt ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-sm font-medium">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Paid
+                    </span>
+                  ) : (
+                    <p className="text-sm text-neutral-500">Payment requested</p>
+                  )}
+                </div>
+                <p className="text-2xl font-bold font-mono text-neutral-900">
+                  ${report.billingAmount!.toFixed(2)}
+                </p>
+              </div>
+
+              {billingLineItems.length > 0 && (
+                <div className="border-t pt-3 mb-4 space-y-1">
+                  {billingLineItems.map(
+                    (item: { description: string; amount: string }, i: number) =>
+                      item.description && (
+                        <div key={i} className="flex justify-between text-sm">
+                          <span className="text-neutral-600">{item.description}</span>
+                          {item.amount && (
+                            <span className="font-mono text-neutral-700">
+                              ${parseFloat(item.amount).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      )
+                  )}
+                </div>
+              )}
+
+              {report.billingPaymentInstructions && (
+                <div className="bg-neutral-50 rounded-lg p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-1">
+                    Payment Instructions
+                  </p>
+                  <p className="text-sm text-neutral-700 whitespace-pre-wrap">
+                    {report.billingPaymentInstructions}
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
       </main>
 
       {/* ==== K. Footer ==== */}

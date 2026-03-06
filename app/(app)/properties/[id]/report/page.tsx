@@ -54,6 +54,7 @@ import {
   ChevronDown,
   ChevronUp,
   Home,
+  Mail,
 } from "lucide-react";
 import {
   Sheet,
@@ -1501,35 +1502,38 @@ export default function PropertyReportPage() {
               )}
               {pdfLoading ? "Generating..." : "PDF"}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                try {
-                  const res = await fetch(`/api/reports/${report.id}/word`);
-                  if (!res.ok) throw new Error(`Word export failed (${res.status})`);
-                  const blob = await res.blob();
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `report-${report.id}.docx`;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
-                } catch (err) {
-                  console.error("Word download failed:", err);
-                  toast({
-                    title: "Word download failed",
-                    description: "Could not generate Word document. Please try again.",
-                    variant: "destructive",
-                  });
-                }
-              }}
-            >
-              <FileDown className="h-3.5 w-3.5 mr-1.5" />
-              Word
-            </Button>
+            {/* Word export — not available for valuation types (formatting doesn't support valuation tables) */}
+            {reportType !== "tree_valuation" && reportType !== "real_estate_package" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`/api/reports/${report.id}/word`);
+                    if (!res.ok) throw new Error(`Word export failed (${res.status})`);
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `report-${report.id}.docx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                  } catch (err) {
+                    console.error("Word download failed:", err);
+                    toast({
+                      title: "Word download failed",
+                      description: "Could not generate Word document. Please try again.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                <FileDown className="h-3.5 w-3.5 mr-1.5" />
+                Word
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -1578,6 +1582,25 @@ export default function PropertyReportPage() {
               <Share2 className="h-3.5 w-3.5 mr-1.5" />
               Share
             </Button>
+            {/* Share with Realtor — RE only, when realtor email is set */}
+            {reportType === "real_estate_package" && reRealtorEmail && (
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+              >
+                <a
+                  href={`mailto:${reRealtorEmail}?subject=${encodeURIComponent(
+                    `Tree Canopy Report — ${property?.address ?? ""}`
+                  )}&body=${encodeURIComponent(
+                    `Hi ${reRealtorName || ""},\n\nPlease find the Certified Tree Canopy Report for ${property?.address ?? "the property"} attached.\n\nBest regards`
+                  )}`}
+                >
+                  <Mail className="h-3.5 w-3.5 mr-1.5" />
+                  Email Realtor
+                </a>
+              </Button>
+            )}
           </div>
         </div>
       </div>

@@ -26,6 +26,7 @@ import {
   type RemovalPermitData,
   type ConstructionEncroachmentData,
 } from "@/lib/report-types";
+import { ctlaConditionTo15Scale } from "@/lib/valuation";
 import {
   HEALTH_OBSERVATIONS,
   STRUCTURAL_OBSERVATIONS,
@@ -262,6 +263,10 @@ export function TreeSidePanel({
     tree?.recommendedAction ?? ""
   );
 
+  // ---- Multi-trunk DBH calculator ----
+  const [showMultiTrunk, setShowMultiTrunk] = useState(false);
+  const [trunkDiameters, setTrunkDiameters] = useState<string[]>(["", ""]);
+
   // ---- Type-specific data state ----
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [typeData, setTypeData] = useState<any>(() => {
@@ -305,6 +310,22 @@ export function TreeSidePanel({
         .catch(() => setPhotos([]));
     }
   }, [isExisting, tree?.id, propertyId]);
+
+  // ---- Auto-derive conditionRating from CTLA sliders for valuation types ----
+  const isValuationType = reportType === "tree_valuation" || reportType === "real_estate_package";
+  useEffect(() => {
+    if (!isValuationType) return;
+    const ctla = valuationData.valuationConditionRating;
+    if (ctla != null && ctla > 0) {
+      const derived = ctlaConditionTo15Scale(ctla);
+      setConditionRating(derived);
+      // Also auto-select recommended action from arborist's map
+      if (arboristRecommendationMap) {
+        const action = arboristRecommendationMap[String(derived)];
+        if (action) setRecommendedAction(action);
+      }
+    }
+  }, [isValuationType, valuationData.valuationConditionRating, arboristRecommendationMap]);
 
   // ---- Protection check state ----
   const [protectionResult, setProtectionResult] =
@@ -850,22 +871,110 @@ export function TreeSidePanel({
           </div>
         </div>
 
-        {/* Condition Rating */}
-        <div className="space-y-2">
-          <Label>Condition Rating</Label>
-          <ConditionRating
-            value={conditionRating}
-            onChange={(rating) => {
-              setConditionRating(rating);
-              // Auto-select recommended action from arborist's map
-              if (arboristRecommendationMap) {
-                const action = arboristRecommendationMap[String(rating)];
-                if (action) setRecommendedAction(action);
-              }
-            }}
-            size="sm"
-          />
-        </div>
+        {/* Multi-trunk DBH calculator */}
+        {isValuationType && (
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowMultiTrunk(!showMultiTrunk)}
+              className="text-xs text-forest hover:text-forest-light font-medium flex items-center gap-1 transition-colors"
+            >
+              {showMultiTrunk ? "▾" : "▸"} Multi-trunk calculator
+            </button>
+            {showMultiTrunk && (
+              <div className="mt-2 p-3 bg-neutral-50 rounded-md border space-y-2">
+                <p className="text-[10px] text-muted-foreground">
+                  Enter each trunk diameter. Equivalent DBH = √(d₁² + d₂² + … + dₙ²)
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {trunkDiameters.map((d, i) => (
+                    <div key={i} className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        placeholder={`T${i + 1}`}
+                        value={d}
+                        onChange={(e) => {
+                          const next = [...trunkDiameters];
+                          next[i] = e.target.value;
+                          setTrunkDiameters(next);
+                        }}
+                        className="h-7 w-16 font-mono text-xs"
+                      />
+                      {trunkDiameters.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => setTrunkDiameters(trunkDiameters.filter((_, j) => j !== i))}
+                          className="text-neutral-400 hover:text-red-500 text-xs"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setTrunkDiameters([...trunkDiameters, ""])}
+                    className="h-7 px-2 text-xs text-forest hover:text-forest-light border border-dashed border-forest/30 rounded-md"
+                  >
+                    + Trunk
+                  </button>
+                </div>
+                {trunkDiameters.some((d) => Number(d) > 0) && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-muted-foreground">
+                      Equivalent DBH:{" "}
+                      <span className="font-mono font-semibold text-neutral-900">
+                        {Math.round(
+                          Math.sqrt(
+                            trunkDiameters.reduce((sum, d) => sum + Math.pow(Number(d) || 0, 2), 0)
+                          ) * 10
+                        ) / 10}
+                        &quot;
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const eq = Math.round(
+                          Math.sqrt(
+                            trunkDiameters.reduce((sum, d) => sum + Math.pow(Number(d) || 0, 2), 0)
+                          ) * 10
+                        ) / 10;
+                        setDbhInches(String(eq));
+                        setProtectionResult(null);
+                        toast({ title: `DBH set to ${eq}"` });
+                      }}
+                      className="text-xs px-2 py-0.5 bg-forest text-white rounded font-medium hover:bg-forest-light transition-colors"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Condition Rating — hidden for valuation types (derived from CTLA sliders) */}
+        {!isValuationType && (
+          <div className="space-y-2">
+            <Label>Condition Rating</Label>
+            <ConditionRating
+              value={conditionRating}
+              onChange={(rating) => {
+                setConditionRating(rating);
+                // Auto-select recommended action from arborist's map
+                if (arboristRecommendationMap) {
+                  const action = arboristRecommendationMap[String(rating)];
+                  if (action) setRecommendedAction(action);
+                }
+              }}
+              size="sm"
+            />
+          </div>
+        )}
 
         {/* Health Observations + Notes */}
         <div className="space-y-3">
@@ -1229,13 +1338,38 @@ export function TreeSidePanel({
             )}
 
             {(reportType === "tree_valuation" || reportType === "real_estate_package") && (
-              <TreeValuationFields
-                values={valuationData}
-                onChange={setValuationData}
-                dbhInches={Number(dbhInches) || 0}
-                speciesCommon={speciesCommon}
-                defaultUnitPrice={arboristDefaultUnitPrice}
-              />
+              <div className="space-y-3">
+                {/* Copy from previous tree — only show for new trees when a previous tree exists */}
+                {lastSavedTree && !tree?.id && (
+                  lastSavedTree.valuationUnitPrice != null ||
+                  lastSavedTree.valuationSiteRating != null ||
+                  lastSavedTree.valuationContributionRating != null
+                ) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setValuationData((prev) => ({
+                        ...prev,
+                        valuationUnitPrice: lastSavedTree.valuationUnitPrice ?? prev.valuationUnitPrice,
+                        valuationSiteRating: lastSavedTree.valuationSiteRating ?? prev.valuationSiteRating,
+                        valuationContributionRating: lastSavedTree.valuationContributionRating ?? prev.valuationContributionRating,
+                      }));
+                      toast({ title: "Copied valuation settings from previous tree" });
+                    }}
+                    className="flex items-center gap-1.5 text-xs text-forest hover:text-forest-light font-medium transition-colors"
+                  >
+                    <Copy className="h-3 w-3" />
+                    Copy unit price &amp; location ratings from Tree #{lastSavedTree.treeNumber}
+                  </button>
+                )}
+                <TreeValuationFields
+                  values={valuationData}
+                  onChange={setValuationData}
+                  dbhInches={Number(dbhInches) || 0}
+                  speciesCommon={speciesCommon}
+                  defaultUnitPrice={arboristDefaultUnitPrice}
+                />
+              </div>
             )}
 
             {reportType === "construction_encroachment" && (

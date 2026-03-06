@@ -1480,14 +1480,51 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               )}
             </div>
 
-            <Button
-              size="sm"
-              onClick={saveValuationReportSettings}
-              className="bg-forest hover:bg-forest-light"
-            >
-              <Save className="h-3.5 w-3.5 mr-1.5" />
-              Save Valuation Settings
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={saveValuationReportSettings}
+                className="bg-forest hover:bg-forest-light"
+              >
+                <Save className="h-3.5 w-3.5 mr-1.5" />
+                Save Valuation Settings
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(
+                      `/api/properties/${property.id}/trees/apply-valuation-defaults`,
+                      {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({}),
+                      }
+                    );
+                    if (!res.ok) throw new Error("Failed");
+                    const data = await res.json();
+                    toast({
+                      title: `Defaults applied to ${data.updated} tree${data.updated !== 1 ? "s" : ""}`,
+                    });
+                    // Refresh tree list to pick up new values
+                    const treesRes = await fetch(`/api/properties/${property.id}/trees`);
+                    if (treesRes.ok) {
+                      const updatedTrees = await treesRes.json();
+                      setTrees(updatedTrees);
+                    }
+                  } catch {
+                    toast({
+                      title: "Failed to apply defaults",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                <Zap className="h-3.5 w-3.5 mr-1.5" />
+                Apply Defaults to All Trees
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}

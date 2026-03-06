@@ -31,16 +31,19 @@ export const PHOTO_CATEGORIES: Record<string, PhotoCategory[]> = {
   ],
   tree_valuation: [
     { value: "full_tree", label: "Full Tree", required: true },
-    { value: "trunk_dbh", label: "Trunk at DBH Height", required: false },
-    { value: "crown_spread", label: "Crown Spread Reference", required: false },
-    { value: "site_landscape", label: "Site / Landscape Context", required: false },
+    { value: "trunk_dbh", label: "Trunk at DBH", required: true },
+    { value: "crown_form", label: "Crown Form & Structure", required: false },
+    { value: "root_flare", label: "Root Flare / Base", required: false },
+    { value: "notable_defects", label: "Notable Defects", required: false },
+    { value: "site_context", label: "Site Context", required: false },
   ],
   real_estate_package: [
     { value: "full_tree", label: "Full Tree", required: true },
-    { value: "trunk_dbh", label: "Trunk at DBH Height", required: false },
-    { value: "crown_detail", label: "Crown Detail", required: false },
-    { value: "site_landscape", label: "Site / Landscape Context", required: false },
-    { value: "defects_noted", label: "Any Defects Noted", required: false },
+    { value: "canopy_coverage", label: "Canopy & Shade", required: false },
+    { value: "landscape_context", label: "Tree in Landscape", required: false },
+    { value: "notable_features", label: "Notable Features", required: false },
+    { value: "trunk_dbh", label: "Trunk at DBH", required: false },
+    { value: "concerns", label: "Condition Concerns", required: false },
   ],
 };
 

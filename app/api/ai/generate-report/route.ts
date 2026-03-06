@@ -543,6 +543,19 @@ This report is for a REAL ESTATE TRANSACTION, not a municipal permit application
 - For trees recommended for removal: frame diplomatically. Explain why, suggest replacement: "Replacement planting would restore canopy coverage in this area." Never say "removal recommended" as a standalone phrase — provide context.
 - Condition descriptions: "good health with a full canopy" (not "no defects observed"); "showing moderate stress that responds well to maintenance" (not "declining health, poor prognosis").
 - This report will NOT be submitted to city planners. Do NOT reference municipal code, permit requirements, or compliance language unless specifically relevant to the property.
+` : ""}${(body.reportType === "tree_valuation" || body.reportType === "real_estate_package") ? `
+VALUATION NARRATIVE CALIBRATION (MANDATORY):
+Calibrate your language to match the numeric CTLA ratings provided for each tree.
+- 90–100%: "excellent", "exceptional", "outstanding specimen"
+- 70–89%: "good overall condition", "sound", "well-maintained"
+- 50–69%: "moderate condition", "functional but showing signs of decline"
+- 25–49%: "poor condition", "significant concerns", "declining"
+- Below 25%: "severely compromised", "critical condition"
+
+Do NOT describe a tree as "excellent" if its condition ratings are below 90%.
+Do NOT describe a tree as "poor" if its condition ratings are above 70%.
+The narrative must be consistent with the numeric data — reviewers will check.
+Do NOT include dollar figures in narrative paragraphs — values belong in the valuation table only.
 ` : ""}
 ═══════════════════════════════════════════════════════════
 STRUCTURED DATA — Generate the report narrative from this data

@@ -241,5 +241,15 @@
 - Icon: Home (lucide), color: violet. Appears in new property page, onboarding, and report type selectors.
 - Tree side panel and property-map-view show CTLA valuation fields for `real_estate_package` (same as `tree_valuation`).
 
+## Session 25 Hardening
+- **Dual condition rating**: Valuation types (`tree_valuation`, `real_estate_package`) hide the standalone 1-5 condition picker. Condition auto-derives from CTLA geometric mean via `ctlaConditionTo15Scale()` in `lib/valuation.ts`. The derived 1-5 rating feeds into tree inventory dots, share page labels, and recommendation map lookups.
+- **City contact aliases**: `CITY_ALIASES` in `lib/city-contacts.ts` maps "Napa" → "City Of Napa". Truckee is NOT aliased to Tahoe Basin (separate jurisdiction). Sonoma County tips include critical DBH threshold guidance.
+- **Certification validation for valuation**: 5 blocking checks (appraised value, unit price, condition components, purpose, basis) and 3 advisory checks (low condition, low total, missing realtor). Reads from dedicated `TreeRecord` columns, not stale `typeSpecificData` JSON.
+- **Limiting conditions (USPAP)**: `DEFAULT_LIMITING_CONDITIONS` in `lib/valuation.ts` — 6 standard CTLA/USPAP conditions. Stored per-arborist as `valuationLimitingConditions` JSON string. Rendered in PDF between valuation summary and signature block. Customizable in Settings > Valuation Defaults.
+- **AI valuation narrative calibration**: Prompt includes CTLA percentage → language mapping (90+ = "excellent/exceptional", 70-89 = "good/sound", 50-69 = "moderate/declining", etc.).
+- **Valuation share page**: Standalone `tree_valuation` gets "CERTIFIED TREE APPRAISAL" header, prominent total with CTLA attribution, expandable tree cards with appraised values, "About This Appraisal" section with purpose, formal download text. Routing flags: `isValuation`, `isValuationType` (combines RE + valuation).
+- **Workflow accelerators**: `POST /api/properties/[id]/trees/apply-valuation-defaults` fills null valuation fields with defaults. "Copy from previous tree" button in tree side panel copies unit price + location ratings. Multi-trunk DBH calculator: `√(d₁² + d₂² + … + dₙ²)` inline in tree form for valuation types.
+- **UX polish**: Observation library mobile arrow buttons (sm:hidden, replaces drag handle). Billing card positioned after arborist contact for RE/valuation types. Word export hidden for valuation types (formatting doesn't support valuation tables). "Email Realtor" mailto button on report page for RE. OG meta tags via `generateMetadata` on share page. Photo categories updated for tree_valuation (trunk_dbh required) and real_estate_package.
+
 ## Session Completion
 - When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.

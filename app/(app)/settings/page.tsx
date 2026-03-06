@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Loader2,
   Save,
@@ -28,6 +29,8 @@ import {
   GripVertical,
   Plus,
   RotateCcw,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import {
   DndContext,
@@ -95,6 +98,7 @@ interface ArboristProfile {
   shareThankYouMessage?: string | null;
   photoRequiredCount?: number;
   defaultValuationUnitPrice?: number | null;
+  valuationLimitingConditions?: string | null;
 }
 
 interface ReportDefaults {
@@ -114,12 +118,16 @@ function SortableObservationItem({
   onToggle,
   onRename,
   onDelete,
+  onMoveUp,
+  onMoveDown,
 }: {
   obs: Observation;
   index: number;
   onToggle: () => void;
   onRename: (newLabel: string) => void;
   onDelete: (() => void) | null;
+  onMoveUp: (() => void) | null;
+  onMoveDown: (() => void) | null;
 }) {
   const {
     attributes,
@@ -147,14 +155,35 @@ function SortableObservationItem({
         obs.enabled ? "bg-white border-neutral-200" : "bg-neutral-50 border-neutral-100 opacity-60"
       }`}
     >
+      {/* Drag handle — hidden on mobile */}
       <button
         type="button"
-        className="cursor-grab active:cursor-grabbing text-neutral-400 hover:text-neutral-600 touch-none"
+        className="cursor-grab active:cursor-grabbing text-neutral-400 hover:text-neutral-600 touch-none hidden sm:block"
         {...attributes}
         {...listeners}
       >
         <GripVertical className="h-4 w-4" />
       </button>
+
+      {/* Mobile arrow buttons — visible only on small screens */}
+      <div className="flex flex-col gap-0 sm:hidden">
+        <button
+          type="button"
+          disabled={!onMoveUp}
+          onClick={onMoveUp ?? undefined}
+          className="text-neutral-400 hover:text-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed p-0"
+        >
+          <ChevronUp className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          disabled={!onMoveDown}
+          onClick={onMoveDown ?? undefined}
+          className="text-neutral-400 hover:text-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed p-0"
+        >
+          <ChevronDown className="h-3.5 w-3.5" />
+        </button>
+      </div>
 
       <button
         type="button"
@@ -314,6 +343,7 @@ export default function SettingsPage() {
 
   // Valuation defaults state
   const [valuationUnitPrice, setValuationUnitPrice] = useState<string>("");
+  const [valuationLimitingConditions, setValuationLimitingConditions] = useState<string>("");
   const [savingValuation, setSavingValuation] = useState(false);
 
   // DnD sensors
@@ -350,6 +380,13 @@ export default function SettingsPage() {
           billingPaymentInstructions: data.billingPaymentInstructions || "",
         });
         setValuationUnitPrice(data.defaultValuationUnitPrice ? String(data.defaultValuationUnitPrice) : "");
+        // Parse valuation limiting conditions
+        try {
+          const lc = JSON.parse(data.valuationLimitingConditions || "[]");
+          if (Array.isArray(lc) && lc.length > 0) {
+            setValuationLimitingConditions(lc.join("\n\n"));
+          }
+        } catch { /* use empty */ }
         // Parse report defaults
         try {
           const parsed = JSON.parse(data.reportDefaults || "{}");
@@ -534,6 +571,9 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           defaultValuationUnitPrice: valuationUnitPrice ? parseFloat(valuationUnitPrice) : null,
+          valuationLimitingConditions: valuationLimitingConditions.trim()
+            ? valuationLimitingConditions.split(/\n\n+/).map(s => s.trim()).filter(Boolean)
+            : null,
         }),
       });
       if (!res.ok) throw new Error();
@@ -1208,6 +1248,22 @@ export default function SettingsPage() {
                             }
                           : null
                       }
+                      onMoveUp={
+                        idx > 0
+                          ? () => {
+                              setHealthObs((prev) => arrayMove(prev, idx, idx - 1));
+                              setObsChanged(true);
+                            }
+                          : null
+                      }
+                      onMoveDown={
+                        idx < healthObs.length - 1
+                          ? () => {
+                              setHealthObs((prev) => arrayMove(prev, idx, idx + 1));
+                              setObsChanged(true);
+                            }
+                          : null
+                      }
                     />
                   ))}
                 </div>
@@ -1298,6 +1354,22 @@ export default function SettingsPage() {
                         !obs.builtIn
                           ? () => {
                               setStructuralObs((prev) => prev.filter((o) => o.id !== obs.id));
+                              setObsChanged(true);
+                            }
+                          : null
+                      }
+                      onMoveUp={
+                        idx > 0
+                          ? () => {
+                              setStructuralObs((prev) => arrayMove(prev, idx, idx - 1));
+                              setObsChanged(true);
+                            }
+                          : null
+                      }
+                      onMoveDown={
+                        idx < structuralObs.length - 1
+                          ? () => {
+                              setStructuralObs((prev) => arrayMove(prev, idx, idx + 1));
                               setObsChanged(true);
                             }
                           : null
@@ -1587,6 +1659,23 @@ export default function SettingsPage() {
             </div>
             <p className="text-xs text-muted-foreground">
               Used as the starting value when creating valuation assessments. Update annually when CTLA publishes new regional price tables. Current suggested range for Bay Area / North Bay: $32–$45/sq in.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="val-limiting-conditions" className="text-sm">
+              Limiting Conditions & Assumptions
+            </Label>
+            <Textarea
+              id="val-limiting-conditions"
+              rows={6}
+              placeholder="Each condition separated by a blank line. Leave empty to use defaults."
+              value={valuationLimitingConditions}
+              onChange={(e) => setValuationLimitingConditions(e.target.value)}
+              className="text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              Included in valuation PDFs. Separate each condition with a blank line. Leave empty for the 6 standard CTLA/USPAP defaults.
             </p>
           </div>
 

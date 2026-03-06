@@ -253,57 +253,121 @@ export async function validateReportForCertification(
     }
   }
 
-  if (reportType === "tree_valuation") {
-    const incompleteValuation = trees.filter((t) => {
-      if (!t.typeSpecificData) return true;
-      try {
-        const data = JSON.parse(t.typeSpecificData);
-        return !data.speciesRating || !data.conditionRating;
-      } catch {
-        return true;
-      }
-    });
-    if (incompleteValuation.length > 0) {
-      const nums = incompleteValuation.map((t) => `#${t.treeNumber}`).join(", ");
+  // --- Valuation-specific checks (tree_valuation and real_estate_package) ---
+  if (reportType === "tree_valuation" || reportType === "real_estate_package") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ta = trees as any[];
+
+    // BLOCKING: Every tree must have an appraised value > $0
+    const treesNoValue = ta.filter((t) => !t.valuationAppraisedValue || t.valuationAppraisedValue <= 0);
+    if (treesNoValue.length > 0) {
       checks.push({
-        id: "valuation_data",
-        label: "Valuation data",
-        status: "warning",
-        message: `${incompleteValuation.length} tree${incompleteValuation.length === 1 ? " is" : "s are"} missing species rating or condition percentage (${nums})`,
+        id: "valuation_appraised",
+        label: "Tree appraised values",
+        status: "fail",
+        message: `All trees must have an appraised value greater than $0. Check that unit price and condition ratings are set for every tree. (${treesNoValue.map((t: { treeNumber: number }) => `#${t.treeNumber}`).join(", ")})`,
         fixPath: `/properties/${property.id}`,
       });
     } else {
+      checks.push({ id: "valuation_appraised", label: "Tree appraised values", status: "pass", message: "All trees have appraised values" });
+    }
+
+    // BLOCKING: Every tree must have unit price
+    const treesNoPrice = ta.filter((t) => !t.valuationUnitPrice || t.valuationUnitPrice <= 0);
+    if (treesNoPrice.length > 0) {
       checks.push({
-        id: "valuation_data",
-        label: "Valuation data",
-        status: "pass",
-        message: "All trees have valuation data",
+        id: "valuation_unit_price",
+        label: "Unit price",
+        status: "fail",
+        message: `Unit price must be set for all trees. (${treesNoPrice.map((t: { treeNumber: number }) => `#${t.treeNumber}`).join(", ")})`,
+        fixPath: `/properties/${property.id}`,
+      });
+    } else {
+      checks.push({ id: "valuation_unit_price", label: "Unit price", status: "pass", message: "All trees have unit price set" });
+    }
+
+    // BLOCKING: All three condition components > 0
+    const treesNoCondition = ta.filter((t) =>
+      !t.valuationHealthRating || !t.valuationStructureRating || !t.valuationFormRating
+    );
+    if (treesNoCondition.length > 0) {
+      checks.push({
+        id: "valuation_condition_components",
+        label: "Condition ratings",
+        status: "fail",
+        message: `Health, Structure, and Form condition ratings must all be set for every tree. (${treesNoCondition.map((t: { treeNumber: number }) => `#${t.treeNumber}`).join(", ")})`,
+        fixPath: `/properties/${property.id}`,
+      });
+    } else {
+      checks.push({ id: "valuation_condition_components", label: "Condition ratings", status: "pass", message: "All trees have condition component ratings" });
+    }
+
+    // BLOCKING: Report must have valuation purpose
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (!(report as any).valuationPurpose) {
+      checks.push({
+        id: "valuation_purpose",
+        label: "Purpose of appraisal",
+        status: "fail",
+        message: "Purpose of Appraisal must be set before certifying.",
+        fixPath: `/properties/${property.id}`,
+      });
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      checks.push({ id: "valuation_purpose", label: "Purpose of appraisal", status: "pass", message: `Purpose: ${(report as any).valuationPurpose}` });
+    }
+
+    // BLOCKING: Report must have basis statement
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const basis = (report as any).valuationBasisStatement;
+    if (!basis || (typeof basis === "string" && basis.trim().length === 0)) {
+      checks.push({
+        id: "valuation_basis",
+        label: "Valuation basis statement",
+        status: "fail",
+        message: "Valuation Basis Statement must be set before certifying.",
+        fixPath: `/properties/${property.id}`,
+      });
+    } else {
+      checks.push({ id: "valuation_basis", label: "Valuation basis statement", status: "pass", message: "Basis statement set" });
+    }
+
+    // ADVISORY: Very low condition rating
+    const lowConditionTrees = ta.filter((t) =>
+      t.valuationConditionRating != null && t.valuationConditionRating < 25
+    );
+    if (lowConditionTrees.length > 0) {
+      checks.push({
+        id: "valuation_low_condition",
+        label: "Low condition rating",
+        status: "warning",
+        message: `${lowConditionTrees.length} tree(s) have condition ratings below 25%. This is very low — confirm this is intentional before certifying.`,
       });
     }
-  }
 
-  if (reportType === "real_estate_package") {
-    // Check that trees have valuation data (appraised value)
-    const treesWithoutValue = trees.filter(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (t) => !(t as any).valuationAppraisedValue
-    );
-    if (treesWithoutValue.length > 0) {
-      const nums = treesWithoutValue.map((t) => `#${t.treeNumber}`).join(", ");
+    // ADVISORY: Very low total valuation
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const totalVal = (report as any).valuationTotalValue;
+    if (totalVal != null && totalVal < 500) {
       checks.push({
-        id: "re_valuation_data",
-        label: "Tree valuation data",
+        id: "valuation_low_total",
+        label: "Low total valuation",
         status: "warning",
-        message: `${treesWithoutValue.length} tree${treesWithoutValue.length === 1 ? " is" : "s are"} missing appraised value (${nums})`,
-        fixPath: `/properties/${property.id}`,
+        message: "Total appraised value is below $500. This is unusually low — confirm before certifying.",
       });
-    } else {
-      checks.push({
-        id: "re_valuation_data",
-        label: "Tree valuation data",
-        status: "pass",
-        message: "All trees have valuation data",
-      });
+    }
+
+    // ADVISORY: real_estate_package — missing realtor info
+    if (reportType === "real_estate_package") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (!(report as any).reRealtorName) {
+        checks.push({
+          id: "re_realtor_info",
+          label: "Realtor information",
+          status: "warning",
+          message: "No realtor information entered. The share page and PDF will not include realtor contact details.",
+        });
+      }
     }
   }
 
