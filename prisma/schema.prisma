@@ -44,6 +44,13 @@ model Arborist {
   defaultReportFee           Float?
   billingPaymentInstructions String?
 
+  // AI writing preferences
+  aiPreferredTerms    String?  // JSON array: ["canopy", "root zone", etc.]
+  aiAvoidTerms        String?  // JSON array: ["specimen", "deficiency", etc.]
+  aiStandardDisclaimer String? // Appended verbatim after AI generation
+  aiTonePreference    String?  // "formal" | "conversational" | "technical"
+  aiCustomInstructions String? // Free text instructions for AI
+
   createdAt DateTime @default(now())
 
   properties      Property[]
@@ -243,7 +250,12 @@ model Report {
   approvedAt           DateTime?
   permitExpiresAt      DateTime?
 
-  status String @default("draft") // draft, review, certified, filed
+  // Amendment tracking
+  amendmentReason     String?
+  amendmentNumber     Int       @default(0) // 0 = original, 1 = first amendment, etc.
+  originalCertifiedAt DateTime? // preserved from first certification
+
+  status String @default("draft") // draft, review, certified, filed, amendment_in_progress
 
   property Property @relation(fields: [propertyId], references: [id])
   arborist Arborist @relation(fields: [arboristId], references: [id])

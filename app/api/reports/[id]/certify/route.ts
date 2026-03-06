@@ -43,12 +43,15 @@ export async function POST(
 
     // Snapshot content before certification
     const certContent = existing.finalContent || existing.aiDraftContent;
+    const isAmendment = existing.status === "amendment_in_progress";
     if (certContent) {
       await prisma.reportVersion.create({
         data: {
           reportId: id,
           content: certContent,
-          label: "Pre-certification",
+          label: isAmendment
+            ? `Amendment #${existing.amendmentNumber} — Certified`
+            : "Pre-certification",
         },
       });
     }

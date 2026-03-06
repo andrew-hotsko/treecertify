@@ -213,5 +213,27 @@
 - Sections: 7-day + all-time summary stats (4 cards), per-arborist activity table (30d), report type distribution, AI edit rate (avg distance, heavy/minimal counts), share link performance (open rate, download rate), recent 50 events feed.
 - Sidebar shows "Admin" link (Shield icon) only for admin users. `isAdmin` prop passed from `app/(app)/layout.tsx`.
 
+## Per-Tree AI Regeneration
+- POST `/api/ai/regenerate-tree-section` — regenerates one tree's narrative without touching the rest of the report. Body: `{ reportId, treeId, treeNumber }`. Returns `{ content: string }`.
+- `parseReportSections()` and `replaceTreeSection()` in `lib/report-sections.ts` — split and reassemble report markdown by tree section (`### Tree #N` boundaries).
+- Regenerate dropdown in the report editor toolbar lists all trees by number/species. Confirmation dialog warns edits to that section will be replaced.
+- Per-tree regeneration uses the same prompt style as full generation but scoped to one tree. Not streaming (JSON response).
+
+## Report Amendment Flow
+- Certified reports can be amended via POST `/api/reports/[id]/amend` — reopens for editing, preserves share link and version history.
+- `amendment_in_progress` status added to report status flow: `certified → amendment_in_progress → certified (amended)`.
+- Schema fields on Report: `amendmentReason` (String?), `amendmentNumber` (Int, default 0), `originalCertifiedAt` (DateTime?).
+- During amendment, share page shows the last certified version (based on `originalCertifiedAt`).
+- Re-certification after amendment works through the normal certification flow. Version snapshot label: `"Amendment #N — Certified"`.
+- Amended PDFs show amendment disclosure on cover page: original cert date, amendment date, reason.
+- "Issue Amendment" button (amber) appears in the certified toolbar. Amendment dialog requires a reason.
+
+## AI Writing Preferences
+- Schema fields on Arborist: `aiTonePreference` (formal/conversational/technical), `aiPreferredTerms` (JSON array), `aiAvoidTerms` (JSON array), `aiStandardDisclaimer` (String), `aiCustomInstructions` (String).
+- Settings page "Report Writing Style" card: tone radio, tag inputs for preferred/avoid terms (avoid capped at 20), disclaimer textarea, custom instructions textarea.
+- `buildArboristStyleInstructions()` in `lib/ai-writing-preferences.ts` — builds prompt instructions from arborist preferences.
+- Writing preferences applied to both full report generation and per-tree regeneration prompts.
+- `aiStandardDisclaimer` is appended verbatim after AI generation (not sent to Claude) — ensures exact arborist text.
+
 ## Session Completion
 - When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.

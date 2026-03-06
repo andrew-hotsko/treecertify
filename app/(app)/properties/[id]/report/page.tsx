@@ -53,7 +53,9 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronUp,
+  FileEdit,
 } from "lucide-react";
+import { parseReportSections, replaceTreeSection } from "@/lib/report-sections";
 import {
   Sheet,
   SheetContent,
@@ -135,6 +137,10 @@ interface Report {
   approvedAt: string | null;
   permitExpiresAt: string | null;
   clientNote: string | null;
+  // Amendment tracking
+  amendmentReason: string | null;
+  amendmentNumber: number;
+  originalCertifiedAt: string | null;
 }
 
 interface ReportOptions {
@@ -294,6 +300,15 @@ export default function PropertyReportPage() {
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
 
+  // Per-tree regeneration state
+  const [regeneratingTree, setRegeneratingTree] = useState<number | null>(null);
+  const [showRegenerateConfirm, setShowRegenerateConfirm] = useState<number | null>(null);
+
+  // Amendment state
+  const [showAmendDialog, setShowAmendDialog] = useState(false);
+  const [amendmentReason, setAmendmentReason] = useState("");
+  const [issuingAmendment, setIssuingAmendment] = useState(false);
+
   // Pre-certification validation state
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [validationLoading, setValidationLoading] = useState(false);
@@ -318,8 +333,10 @@ export default function PropertyReportPage() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   // Derived state
-  const isCertified = report?.status === "certified";
+  const isCertified = report?.status === "certified" || report?.status === "filed";
+  const isAmending = report?.status === "amendment_in_progress";
   const sections = useMemo(() => extractSections(content), [content]);
+  const parsedTreeSections = useMemo(() => parseReportSections(content), [content]);
 
   // -------------------------------------------------------------------------
   // Load data
@@ -351,7 +368,7 @@ export default function PropertyReportPage() {
           savedContentRef.current = c;
           setPreviewHtml(renderMarkdownToHtml(c));
           setReportType(r.reportType);
-          setViewMode(r.status === "certified" ? "preview" : "split");
+          setViewMode(r.status === "certified" || r.status === "filed" ? "preview" : "split");
           // Parse report options
           try {
             setReportOptions(JSON.parse(r.reportOptions || "{}"));
@@ -408,7 +425,7 @@ export default function PropertyReportPage() {
 
   // Run validation when report is loaded and not yet certified
   useEffect(() => {
-    if (report && report.status !== "certified") {
+    if (report && report.status !== "certified" && report.status !== "filed") {
       fetchValidation(report.id);
     }
   }, [report?.id, report?.status, fetchValidation]);
@@ -443,7 +460,7 @@ export default function PropertyReportPage() {
 
   const saveReport = useCallback(
     async (silent = false) => {
-      if (!report || isCertified) return;
+      if (!report || (isCertified && !isAmending)) return;
       if (!silent) setSaving(true);
       try {
         const res = await fetch(`/api/reports/${report.id}`, {
@@ -525,7 +542,7 @@ export default function PropertyReportPage() {
   // -------------------------------------------------------------------------
 
   useEffect(() => {
-    if (!report || isCertified) return;
+    if (!report || (isCertified && !isAmending)) return;
 
     autoSaveRef.current = setInterval(() => {
       if (savedContentRef.current !== content) {
@@ -536,7 +553,7 @@ export default function PropertyReportPage() {
     return () => {
       if (autoSaveRef.current) clearInterval(autoSaveRef.current);
     };
-  }, [report, isCertified, content, saveReport]);
+  }, [report, isCertified, isAmending, content, saveReport]);
 
   // Warn before leaving with unsaved changes
   useEffect(() => {
@@ -688,6 +705,9 @@ export default function PropertyReportPage() {
                   denialReason: null,
                   approvedAt: null,
                   permitExpiresAt: null,
+                  amendmentReason: null,
+                  amendmentNumber: 0,
+                  originalCertifiedAt: null,
                 });
                 setContent(accumulated);
                 savedContentRef.current = accumulated;
@@ -729,6 +749,88 @@ export default function PropertyReportPage() {
     )
       return;
     generateReport();
+  };
+
+  // -------------------------------------------------------------------------
+  // Per-tree regeneration
+  // -------------------------------------------------------------------------
+
+  const handleRegenerateTree = async (treeNumber: number) => {
+    if (!report || !property) return;
+    const tree = property.trees.find((t) => t.treeNumber === treeNumber);
+    if (!tree) return;
+
+    setRegeneratingTree(treeNumber);
+    setShowRegenerateConfirm(null);
+    try {
+      const res = await fetch("/api/ai/regenerate-tree-section", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reportId: report.id,
+          treeId: tree.id,
+          treeNumber,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Failed" }));
+        throw new Error(data.error || "Failed to regenerate tree section");
+      }
+      const data = await res.json();
+      try {
+        const newContent = replaceTreeSection(content, treeNumber, data.content);
+        handleContentChange(newContent);
+        toast({ title: `Tree #${treeNumber} section regenerated` });
+      } catch (parseErr) {
+        toast({
+          title: "Unable to identify tree sections",
+          description: "Use full report regeneration instead.",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Regeneration failed",
+        description: err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setRegeneratingTree(null);
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Issue amendment
+  // -------------------------------------------------------------------------
+
+  const issueAmendment = async () => {
+    if (!report || !amendmentReason.trim()) return;
+    setIssuingAmendment(true);
+    try {
+      const res = await fetch(`/api/reports/${report.id}/amend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: amendmentReason.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Failed" }));
+        throw new Error(data.error || "Failed to issue amendment");
+      }
+      const updated = await res.json();
+      setReport(updated);
+      setShowAmendDialog(false);
+      setAmendmentReason("");
+      setViewMode("split");
+      toast({ title: `Amendment #${updated.amendmentNumber} issued`, description: "The report is now open for editing." });
+    } catch (err) {
+      toast({
+        title: "Amendment failed",
+        description: err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIssuingAmendment(false);
+    }
   };
 
   // -------------------------------------------------------------------------
@@ -1183,7 +1285,7 @@ export default function PropertyReportPage() {
 
           <div className="flex items-center gap-2">
             {/* Edit actions */}
-            {!isCertified && (
+            {(!isCertified || isAmending) && (
               <>
                 {/* View mode toggle: Edit / Split / Preview */}
                 <div className="flex rounded-lg border bg-muted p-0.5">
@@ -1280,18 +1382,60 @@ export default function PropertyReportPage() {
                   </Popover>
                 )}
 
-                {/* Regenerate */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={regenerateReport}
-                  disabled={generating}
-                >
-                  <RefreshCw
-                    className={`h-3.5 w-3.5 mr-1.5 ${generating ? "animate-spin" : ""}`}
-                  />
-                  Regenerate
-                </Button>
+                {/* Regenerate — full report + per-tree dropdown */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={generating || regeneratingTree !== null}
+                    >
+                      <RefreshCw
+                        className={`h-3.5 w-3.5 mr-1.5 ${generating || regeneratingTree !== null ? "animate-spin" : ""}`}
+                      />
+                      Regenerate
+                      <ChevronDown className="h-3 w-3 ml-1" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-2" align="end">
+                    <button
+                      onClick={() => regenerateReport()}
+                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                    >
+                      <span className="font-medium">Full Report</span>
+                      <p className="text-xs text-muted-foreground">Regenerate the entire report</p>
+                    </button>
+                    {parsedTreeSections.treeSections.length > 0 && (
+                      <>
+                        <div className="border-t my-1" />
+                        <p className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                          Per Tree
+                        </p>
+                        {parsedTreeSections.treeSections.map((ts) => {
+                          const tree = property?.trees.find((t) => t.treeNumber === ts.treeNumber);
+                          return (
+                            <button
+                              key={ts.treeNumber}
+                              onClick={() => setShowRegenerateConfirm(ts.treeNumber)}
+                              disabled={regeneratingTree !== null}
+                              className="w-full text-left px-3 py-1.5 text-sm rounded-md hover:bg-accent transition-colors flex items-center gap-2"
+                            >
+                              {regeneratingTree === ts.treeNumber ? (
+                                <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                              ) : (
+                                <RefreshCw className="h-3 w-3 shrink-0 text-muted-foreground" />
+                              )}
+                              <span>
+                                Tree #{ts.treeNumber}
+                                {tree ? ` — ${tree.speciesCommon}` : ""}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </>
+                    )}
+                  </PopoverContent>
+                </Popover>
 
                 {/* Save */}
                 {(viewMode === "edit" || viewMode === "split") && (
@@ -1356,7 +1500,7 @@ export default function PropertyReportPage() {
             )}
 
             {/* Certified actions */}
-            {isCertified && (
+            {isCertified && !isAmending && (
               <>
                 <Button
                   size="sm"
@@ -1365,6 +1509,16 @@ export default function PropertyReportPage() {
                 >
                   <Send className="h-3.5 w-3.5 mr-1.5" />
                   Send Report
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAmendDialog(true)}
+                  className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                >
+                  <FileEdit className="h-3.5 w-3.5 mr-1.5" />
+                  Issue Amendment
                 </Button>
 
                 <Button
@@ -1540,7 +1694,7 @@ export default function PropertyReportPage() {
       {/* ---- Main Content ---- */}
       <div className="flex-1 flex overflow-hidden">
         {/* Section Navigation Sidebar */}
-        {sections.length > 0 && showSectionNav && (viewMode === "edit" || viewMode === "split") && (
+        {sections.length > 0 && showSectionNav && (viewMode === "edit" || viewMode === "split") && (!isCertified || isAmending) && (
           <div className="flex-none w-48 border-r bg-muted/30 overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-3 py-2 border-b">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -1577,7 +1731,7 @@ export default function PropertyReportPage() {
         )}
 
         {/* Toggle section nav when hidden */}
-        {!showSectionNav && (viewMode === "edit" || viewMode === "split") && sections.length > 0 && (
+        {!showSectionNav && (viewMode === "edit" || viewMode === "split") && (!isCertified || isAmending) && sections.length > 0 && (
           <button
             onClick={() => setShowSectionNav(true)}
             className="flex-none w-8 border-r bg-muted/30 flex items-center justify-center hover:bg-muted transition-colors"
@@ -1587,8 +1741,22 @@ export default function PropertyReportPage() {
           </button>
         )}
 
+        {/* Amendment banner */}
+        {isAmending && report && (
+          <div className="flex-none border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 flex items-center gap-2">
+            <FileEdit className="h-4 w-4 shrink-0" />
+            <span>
+              <span className="font-medium">Amendment #{report.amendmentNumber} in progress</span>
+              {report.amendmentReason && <span className="text-amber-600"> — {report.amendmentReason}</span>}
+            </span>
+            <span className="ml-auto text-xs text-amber-600">
+              Share page shows the previously certified version
+            </span>
+          </div>
+        )}
+
         {/* Editor + Preview layout based on viewMode */}
-        {(viewMode === "edit" || viewMode === "split") && !isCertified ? (
+        {(viewMode === "edit" || viewMode === "split") && (!isCertified || isAmending) ? (
           <div className="flex-1 flex overflow-hidden">
             {/* Markdown Editor — full width in edit mode, 35% in split */}
             {(viewMode === "edit" || viewMode === "split") && (
@@ -1962,8 +2130,96 @@ export default function PropertyReportPage() {
         )}
       </div>
 
+      {/* ---- Per-tree regeneration confirm dialog ---- */}
+      {showRegenerateConfirm !== null && (
+        <AlertDialog open={true} onOpenChange={() => setShowRegenerateConfirm(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Regenerate Tree #{showRegenerateConfirm}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                The AI will regenerate the narrative for Tree #{showRegenerateConfirm}. Your edits to this tree&apos;s section will be replaced. Other sections will not be affected.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => handleRegenerateTree(showRegenerateConfirm)}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                Regenerate
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {/* ---- Amendment Dialog ---- */}
+      <Dialog open={showAmendDialog} onOpenChange={setShowAmendDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileEdit className="h-5 w-5 text-amber-600" />
+              Issue Report Amendment
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              This report was certified on{" "}
+              <span className="font-medium text-foreground">
+                {report?.certifiedAt
+                  ? new Date(report.certifiedAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })
+                  : "N/A"}
+              </span>
+              . Issuing an amendment will reopen the report for editing. The current share link will continue to show the certified version until you re-certify.
+            </p>
+            <div>
+              <Label className="text-sm font-medium">
+                Reason for Amendment <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                value={amendmentReason}
+                onChange={(e) => setAmendmentReason(e.target.value)}
+                placeholder='e.g., "Corrected DBH measurement for Tree #3 from 18 inches to 22 inches."'
+                rows={3}
+                className="mt-1.5 resize-none"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                This will be recorded in the version history and shown on the amended PDF cover page.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAmendDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={issueAmendment}
+              disabled={!amendmentReason.trim() || issuingAmendment}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {issuingAmendment ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Issuing...
+                </>
+              ) : (
+                <>
+                  <FileEdit className="h-4 w-4 mr-2" />
+                  Issue Amendment
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ---- Certification Ceremony Dialog ---- */}
-      {showCertifyPanel && !isCertified && (
+      {showCertifyPanel && (!isCertified || isAmending) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <Card className="w-full max-w-lg mx-4">
             <CardContent className="p-6 space-y-4">
@@ -2280,12 +2536,12 @@ export default function PropertyReportPage() {
       )}
 
       {/* ---- Certified details bar ---- */}
-      {isCertified && report && (
+      {isCertified && !isAmending && report && (
         <div className="flex-none border-t bg-forest/5 px-6 py-3">
           <div className="flex items-center gap-4 text-sm">
             <CheckCircle2 className="h-5 w-5 text-forest" />
             <span className="font-medium text-forest">
-              Certified
+              {report.amendmentNumber > 0 ? `Certified (Amended #${report.amendmentNumber})` : "Certified"}
             </span>
             <span className="text-muted-foreground">
               Signed by {report.eSignatureText}
@@ -2300,6 +2556,11 @@ export default function PropertyReportPage() {
                   hour: "2-digit",
                   minute: "2-digit",
                 })}
+              </span>
+            )}
+            {report.originalCertifiedAt && report.amendmentNumber > 0 && (
+              <span className="text-xs text-muted-foreground">
+                (Originally certified {new Date(report.originalCertifiedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })})
               </span>
             )}
           </div>
@@ -2539,7 +2800,7 @@ export default function PropertyReportPage() {
             >
               Close
             </Button>
-            {!isCertified && (
+            {(!isCertified || isAmending) && (
               <Button
                 onClick={() => {
                   if (

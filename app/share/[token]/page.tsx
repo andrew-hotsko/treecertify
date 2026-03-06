@@ -238,7 +238,10 @@ export default async function SharedPropertyPage({
 
   const report = property.reports[0] ?? null;
   const arborist = report?.arborist ?? null;
-  const isCertified = report?.status === "certified";
+  const isAmending = report?.status === "amendment_in_progress";
+  // Show certified view for both certified AND amendment_in_progress
+  // During amendment, display the pre-amendment version snapshot
+  const isCertified = report?.status === "certified" || report?.status === "filed" || isAmending;
 
   // Log share link opened (rate-limited: 1 per token per hour)
   try {
@@ -353,15 +356,20 @@ export default async function SharedPropertyPage({
           )}
 
           {/* Certification date */}
-          {isCertified && report?.certifiedAt && (
+          {isCertified && (report?.certifiedAt || report?.originalCertifiedAt) && (
             <p className="flex items-center gap-1.5 text-sm text-green-700 mt-2">
               <CheckCircle2 className="h-4 w-4" />
               Certified{" "}
-              {new Date(report.certifiedAt).toLocaleDateString("en-US", {
+              {new Date(
+                (isAmending ? report?.originalCertifiedAt : report?.certifiedAt) ?? report?.certifiedAt ?? ""
+              ).toLocaleDateString("en-US", {
                 year: "numeric",
                 month: "long",
                 day: "numeric",
               })}
+              {report?.amendmentNumber != null && report.amendmentNumber > 0 && !isAmending && (
+                <span className="text-green-600 text-xs ml-1">(Amended)</span>
+              )}
             </p>
           )}
         </div>

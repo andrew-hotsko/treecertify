@@ -68,6 +68,12 @@ export async function PUT(request: NextRequest) {
       "invoicePrefix",
       "invoiceNetTerms",
       "billingPaymentInstructions",
+      // AI writing preferences
+      "aiPreferredTerms",
+      "aiAvoidTerms",
+      "aiStandardDisclaimer",
+      "aiTonePreference",
+      "aiCustomInstructions",
     ];
 
     const updateData: Record<string, string | boolean | number | null> = {};

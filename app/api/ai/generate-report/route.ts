@@ -17,6 +17,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getOrdinanceByCity } from "@/lib/ordinances";
 import { getReportTemplate, MASTER_VOICE_INSTRUCTIONS } from "@/lib/report-templates";
+import { buildArboristStyleInstructions } from "@/lib/ai-writing-preferences";
 import Anthropic from "@anthropic-ai/sdk";
 import { logApiUsage } from "@/lib/api-usage";
 import { logEvent } from "@/lib/analytics";
@@ -517,6 +518,7 @@ PROMPT VERSION: 2.1
 ${template?.systemInstructions || `Write a professional arborist report following ISA standards and best practices.`}
 
 ${MASTER_VOICE_INSTRUCTIONS}
+${buildArboristStyleInstructions(arborist)}
 
 ═══════════════════════════════════════════════════════════
 STRUCTURED DATA — Generate the report narrative from this data
@@ -626,6 +628,11 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
               } else if (event.type === "message_start") {
                 usageInput = (event as unknown as { message?: { usage?: { input_tokens?: number } } }).message?.usage?.input_tokens ?? 0;
               }
+            }
+
+            // Append standard disclaimer if the arborist has one set
+            if (arborist.aiStandardDisclaimer) {
+              fullText += `\n\n---\n\n${arborist.aiStandardDisclaimer}`;
             }
 
             // Save to database after streaming completes
