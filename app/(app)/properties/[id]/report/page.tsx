@@ -2132,7 +2132,7 @@ export default function PropertyReportPage() {
       </div>
 
       {/* ---- Certification Ceremony Dialog ---- */}
-      {showCertifyPanel && !isCertified && (
+      {showCertifyPanel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <Card className="w-full max-w-lg mx-4">
             <CardContent className="p-6 space-y-4">
