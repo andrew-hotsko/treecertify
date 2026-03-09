@@ -401,7 +401,7 @@ export default function SettingsPage() {
           if (Array.isArray(lc) && lc.length > 0) {
             setValuationLimitingConditions(lc.join("\n\n"));
           }
-        } catch { /* use empty */ }
+        } catch (err) { console.warn("Failed to parse valuationLimitingConditions from settings, using defaults:", err); }
         // Parse report defaults
         try {
           const parsed = JSON.parse(data.reportDefaults || "{}");
@@ -413,8 +413,8 @@ export default function SettingsPage() {
             defaultReportType: parsed.defaultReportType || "health_assessment",
             companyDisclaimer: parsed.companyDisclaimer || "",
           });
-        } catch {
-          // Use defaults if parsing fails
+        } catch (err) {
+          console.warn("Failed to parse reportDefaults from settings, using defaults:", err);
         }
 
         // Load observation library
@@ -423,7 +423,8 @@ export default function SettingsPage() {
           const sObs = data.structuralObservations ? JSON.parse(data.structuralObservations) : null;
           setHealthObs(hObs || getDefaultHealthObservations());
           setStructuralObs(sObs || getDefaultStructuralObservations());
-        } catch {
+        } catch (err) {
+          console.warn("Failed to parse healthObservations/structuralObservations from settings, using defaults:", err);
           setHealthObs(getDefaultHealthObservations());
           setStructuralObs(getDefaultStructuralObservations());
         }
@@ -432,7 +433,8 @@ export default function SettingsPage() {
         try {
           const species = data.commonSpecies ? JSON.parse(data.commonSpecies) : [];
           setCommonSpecies(species);
-        } catch {
+        } catch (err) {
+          console.warn("Failed to parse commonSpecies from settings, using defaults:", err);
           setCommonSpecies([]);
         }
 
@@ -444,8 +446,8 @@ export default function SettingsPage() {
             recommendationMap: parsed.recommendationMap || getDefaultRecommendationMap(),
             scopeTemplates: parsed.scopeTemplates || {},
           }));
-        } catch {
-          // Use defaults
+        } catch (err) {
+          console.warn("Failed to parse reportDefaults (recommendationMap) from settings, using defaults:", err);
         }
 
         // Load PDF & Share preferences
@@ -459,8 +461,8 @@ export default function SettingsPage() {
 
         // Initialize AI writing preferences
         setAiTonePreference(data.aiTonePreference || "formal");
-        try { setAiPreferredTerms(JSON.parse(data.aiPreferredTerms || "[]")); } catch { setAiPreferredTerms([]); }
-        try { setAiAvoidTerms(JSON.parse(data.aiAvoidTerms || "[]")); } catch { setAiAvoidTerms([]); }
+        try { setAiPreferredTerms(JSON.parse(data.aiPreferredTerms || "[]")); } catch (err) { console.warn("Failed to parse aiPreferredTerms from settings, using defaults:", err); setAiPreferredTerms([]); }
+        try { setAiAvoidTerms(JSON.parse(data.aiAvoidTerms || "[]")); } catch (err) { console.warn("Failed to parse aiAvoidTerms from settings, using defaults:", err); setAiAvoidTerms([]); }
         setAiStandardDisclaimer(data.aiStandardDisclaimer || "");
         setAiCustomInstructions(data.aiCustomInstructions || "");
       } catch (err) {
@@ -484,8 +486,8 @@ export default function SettingsPage() {
         if (res.ok) {
           setUsageData(await res.json());
         }
-      } catch {
-        // Non-critical — silently fail
+      } catch (err) {
+        console.error("Usage stats fetch failed:", err);
       } finally {
         setUsageLoading(false);
       }

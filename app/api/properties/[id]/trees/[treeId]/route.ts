@@ -72,7 +72,7 @@ export async function PUT(
         ...(body.protectionReason !== undefined && { protectionReason: body.protectionReason }),
         ...(body.recommendedAction !== undefined && { recommendedAction: body.recommendedAction }),
         ...(body.mitigationRequired !== undefined && { mitigationRequired: body.mitigationRequired }),
-        ...(body.photos !== undefined && { photos: body.photos }),
+        // NOTE: photos String field is DEPRECATED. All photo writes use TreePhoto model.
         ...(body.status !== undefined && { status: body.status }),
         ...(body.tagNumber !== undefined && { tagNumber: body.tagNumber }),
         ...(body.typeSpecificData !== undefined && { typeSpecificData: body.typeSpecificData }),

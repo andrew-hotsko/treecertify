@@ -294,5 +294,13 @@
 - **Workflow accelerators**: `POST /api/properties/[id]/trees/apply-valuation-defaults` fills null valuation fields with defaults. "Copy from previous tree" button in tree side panel copies unit price + location ratings. Multi-trunk DBH calculator: `√(d₁² + d₂² + … + dₙ²)` inline in tree form for valuation types.
 - **UX polish**: Observation library mobile arrow buttons (sm:hidden, replaces drag handle). Billing card positioned after arborist contact for RE/valuation types. Word export hidden for valuation types (formatting doesn't support valuation tables). "Email Realtor" mailto button on report page for RE. OG meta tags via `generateMetadata` on share page. Photo categories updated for tree_valuation (trunk_dbh required) and real_estate_package.
 
+## Cleanup Session (Session 26)
+- **Critical fix**: 4 broken tree save routes in `property-map-view.tsx` — `/api/trees/${id}` → `/api/properties/${property.id}/trees/${id}`. Tree pin moves and saves were silently 404ing.
+- **Dead code removed**: `lib/city-submission-guides.ts` (159 lines, replaced by `lib/city-contacts.ts`) and `components/invoice-dialog.tsx` (621 lines, no imports).
+- **Legacy photos field**: `TreeRecord.photos` annotated as DEPRECATED in schema, dead write removed from tree PUT route. All photo writes use `TreePhoto` model.
+- **Error logging**: 11 silent catch blocks now log errors — 4 `console.error` for fetch failures (report usage, validation, usage stats, arborist settings), 7 `console.warn` for JSON parse fallbacks in settings (valuationLimitingConditions, reportDefaults, observations, commonSpecies, recommendationMap, aiPreferredTerms, aiAvoidTerms).
+- **Noisy logging cleaned**: Removed API key prefix logging from transcribe route; audio blob logging gated behind `NODE_ENV === 'development'`.
+- **Dormant invoice fields**: 5 Arborist invoice settings fields annotated as DORMANT in Prisma schema.
+
 ## Session Completion
 - When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.

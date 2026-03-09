@@ -429,7 +429,7 @@ export default function PropertyReportPage() {
       .then((data) => {
         if (data?.totalCost != null) setReportCost(data.totalCost);
       })
-      .catch(() => {});
+      .catch((err) => { console.error("Report usage fetch failed:", err); });
   }, [report?.id]);
 
   // -------------------------------------------------------------------------
@@ -444,8 +444,8 @@ export default function PropertyReportPage() {
         const data = await res.json();
         setValidationResult(data);
       }
-    } catch {
-      // Validation fetch is best-effort
+    } catch (err) {
+      console.error("Validation fetch failed:", err);
     } finally {
       setValidationLoading(false);
     }

@@ -318,8 +318,8 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         if (data.defaultValuationUnitPrice) {
           setArboristDefaultUnitPrice(data.defaultValuationUnitPrice);
         }
-      } catch {
-        // Non-critical — arborist settings are optional
+      } catch (err) {
+        console.error("Arborist settings fetch failed:", err);
       }
     }
     loadArboristSettings();
@@ -520,7 +520,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
       );
 
       try {
-        const res = await fetch(`/api/trees/${id}`, {
+        const res = await fetch(`/api/properties/${property.id}/trees/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pinLat: lat, pinLng: lng }),
@@ -530,7 +530,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         // Queue for offline sync
         enqueueRequest(
           {
-            endpoint: `/api/trees/${id}`,
+            endpoint: `/api/properties/${property.id}/trees/${id}`,
             method: "PUT",
             body: JSON.stringify({ pinLat: lat, pinLng: lng }),
             propertyId: property.id,
@@ -598,7 +598,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           }
         } else if (selectedTreeId) {
           // Update existing tree
-          const res = await fetch(`/api/trees/${selectedTreeId}`, {
+          const res = await fetch(`/api/properties/${property.id}/trees/${selectedTreeId}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
@@ -704,7 +704,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         } else if (selectedTreeId) {
           enqueueRequest(
             {
-              endpoint: `/api/trees/${selectedTreeId}`,
+              endpoint: `/api/properties/${property.id}/trees/${selectedTreeId}`,
               method: "PUT",
               body: JSON.stringify(data),
               propertyId: property.id,

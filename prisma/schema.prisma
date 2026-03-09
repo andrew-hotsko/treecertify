@@ -32,7 +32,7 @@ model Arborist {
   reportDefaults   String?  // JSON string for report template defaults
   onboardingStep   Int      @default(0) // 0=not started, 1=credentials, 2=branding, 3=complete
 
-  // Invoice settings
+  // Invoice settings — DORMANT: Saved via API but no UI. Invoice feature paused.
   invoiceHourlyRate          Float?
   invoiceDefaultFee          Float?
   invoicePaymentInstructions String?
@@ -166,7 +166,7 @@ model TreeRecord {
   valuationAppraisedValue    Float?    // final appraised value
   valuationNotes             String?   // arborist notes on this tree's valuation
 
-  photos String @default("[]") // DEPRECATED - use treePhotos relation instead
+  photos String @default("[]") // DEPRECATED: Legacy field. All new photo writes use TreePhoto model. Safe to remove once migration confirms no orphaned data.
   status String @default("draft") // draft, assessed, certified
 
   createdAt DateTime @default(now())

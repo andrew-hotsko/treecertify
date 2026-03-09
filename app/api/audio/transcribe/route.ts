@@ -21,8 +21,9 @@ export async function POST(req: Request) {
     const OpenAI = (await import("openai")).default;
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    console.log(`[transcribe] API key starts with: ${process.env.OPENAI_API_KEY.substring(0, 10)}...`);
-    console.log(`[transcribe] Audio blob type: ${audio.type}, size: ${audio.size} bytes`);
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[transcribe] Audio blob type: ${audio.type}, size: ${audio.size} bytes`);
+    }
 
     const file = new File([audio], "recording.webm", { type: audio.type || "audio/webm" });
 
