@@ -413,11 +413,23 @@ export function getReportTemplate(
  * These instructions ensure raw voice dictation and casual field notes are
  * transformed into professional ISA arborist report language suitable for
  * municipal submission, legal review, and permanent filing.
+ *
+ * The "city planners / attorneys / public record" framing only applies to
+ * report types that are actually submitted to municipalities (removal_permit,
+ * construction_encroachment). Other types (health_assessment, tree_valuation,
+ * real_estate_package) get a neutral professional framing.
  */
-export const MASTER_VOICE_INSTRUCTIONS = `
+export function getMasterVoiceInstructions(reportType: string): string {
+  const isMunicipalSubmission = reportType === "removal_permit" || reportType === "construction_encroachment";
+
+  const audienceFrame = isMunicipalSubmission
+    ? "This report will be submitted to city planners, reviewed by attorneys, and filed as permanent public record. Every word must reflect the highest standard of professional arborist communication."
+    : "This report is a professional deliverable that may be reviewed by clients, attorneys, and other professionals. Every word must reflect the highest standard of professional arborist communication.";
+
+  return `
 PROFESSIONAL LANGUAGE TRANSFORMATION (MANDATORY):
 
-This report will be submitted to city planners, reviewed by attorneys, and filed as permanent public record. Every word must reflect the highest standard of professional arborist communication.
+${audienceFrame}
 
 TONE AND VOICE:
 - Write exclusively in formal third person. Use "the consulting arborist," "this arborist," or passive constructions. NEVER use "I," "we," "my," or any first-person language.
@@ -449,3 +461,7 @@ REPORT DEPTH SCALING:
 SITE OBSERVATIONS TRANSFORMATION:
 Site observations may also contain raw dictation fragments. Transform into proper descriptive paragraphs describing the property setting, topography, soil conditions, surrounding land use, and proximity to structures. Even rough notes like "flat lot, clay soil, house is close to the oak" should become: "The subject property is situated on level terrain with clay-dominant soils. The primary residence is located in close proximity to the mature Coast Live Oak, with the structure approximately within the tree's drip line."
 `;
+}
+
+/** @deprecated Use getMasterVoiceInstructions(reportType) instead */
+export const MASTER_VOICE_INSTRUCTIONS = getMasterVoiceInstructions("removal_permit");

@@ -32,12 +32,12 @@
 ## AI Report Generation
 - Report prompts are in `lib/report-templates.ts` (prompt v2.1). Each report type has versioned `systemInstructions` with section-by-section writing guidance.
 - The generation route is `app/api/ai/generate-report/route.ts` (prompt v2.1). It sends STRUCTURED DATA + DETAILED SYSTEM PROMPT — Claude generates the narrative from data, not from pre-written text.
-- `MASTER_VOICE_INSTRUCTIONS` constant in `lib/report-templates.ts` — injected into ALL report prompts to transform raw voice dictation into professional ISA arborist language. Covers tone, banned casual words, observation checkbox weaving, report depth scaling, and site observations transformation.
+- `getMasterVoiceInstructions(reportType)` function in `lib/report-templates.ts` — injected into ALL report prompts to transform raw voice dictation into professional ISA arborist language. Covers tone, banned casual words, observation checkbox weaving, report depth scaling, and site observations transformation. **Audience-scoped**: municipal types (removal_permit, construction_encroachment) get "submitted to city planners, reviewed by attorneys" framing; other types (health_assessment, tree_valuation, real_estate_package) get neutral "professional deliverable" framing. Deprecated `MASTER_VOICE_INSTRUCTIONS` constant still exported for backward compat.
 - Raw health/structural notes and site observations are labeled as "(raw field dictation — transform to professional language)" in the data block sent to Claude.
 - Report depth scales to assessment complexity: removal/critical trees get 2-3 detailed paragraphs; healthy retained trees get 2-4 concise sentences.
 - Scope of Assignment auto-generates per report type on property creation (server-side) and on page load (client-side). AI uses scope as foundation for Section 1.
 - Standards referenced: ISA BMP, ISA TRAQ, ANSI A300, CTLA Trunk Formula Method (10th Edition), ANSI A300 Part 5 (construction).
-- Mock fallback (no ANTHROPIC_API_KEY) does not fabricate observations — uses "No concerns noted" language when arborist left fields blank.
+- Mock fallback (no ANTHROPIC_API_KEY) does not fabricate observations — uses "No concerns noted" language when arborist left fields blank. `real_estate_package` has a dedicated `generateMockRealEstateReport()` with correct RE sections (Introduction and Scope, Executive Tree Summary, Canopy Valuation Summary, Maintenance Outlook, etc.) and buyer-friendly language.
 - Streaming via SSE to the report editor UI. Excluded sections: "Tree Inventory" and "Arborist Certification Statement" (handled by PDF template).
 
 ## Brand Guide

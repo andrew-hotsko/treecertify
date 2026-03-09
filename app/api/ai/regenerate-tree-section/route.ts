@@ -10,7 +10,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getOrdinanceByCity } from "@/lib/ordinances";
-import { getReportTemplate, MASTER_VOICE_INSTRUCTIONS } from "@/lib/report-templates";
+import { getReportTemplate, getMasterVoiceInstructions } from "@/lib/report-templates";
 import { buildArboristStyleInstructions } from "@/lib/ai-writing-preferences";
 import Anthropic from "@anthropic-ai/sdk";
 import { logApiUsage } from "@/lib/api-usage";
@@ -193,7 +193,7 @@ ${audioLines}${typeBlock ? `\n- Type-Specific Assessment:\n${typeBlock}` : ""}`;
 
 ${template?.systemInstructions || "Write a professional arborist assessment following ISA standards and best practices."}
 
-${MASTER_VOICE_INSTRUCTIONS}
+${getMasterVoiceInstructions(report.reportType)}
 ${styleInstructions}
 
 MUNICIPAL ORDINANCE CONTEXT:

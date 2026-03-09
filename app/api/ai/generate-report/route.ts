@@ -16,7 +16,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getOrdinanceByCity } from "@/lib/ordinances";
-import { getReportTemplate, MASTER_VOICE_INSTRUCTIONS } from "@/lib/report-templates";
+import { getReportTemplate, getMasterVoiceInstructions } from "@/lib/report-templates";
 import { buildArboristStyleInstructions } from "@/lib/ai-writing-preferences";
 import Anthropic from "@anthropic-ai/sdk";
 import { logApiUsage } from "@/lib/api-usage";
@@ -200,6 +200,135 @@ function formatTypeSpecificBlock(
   } catch {
     return "";
   }
+}
+
+/**
+ * Generate a mock real estate package report with the correct section structure.
+ */
+function generateMockRealEstateReport(
+  property: PropertyData,
+  trees: TreeRecordData[]
+): string {
+  const date = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const state = property.state || "CA";
+  const treeCount = trees.length;
+
+  const conditionLabels: Record<number, string> = {
+    0: "Dead", 1: "Critical", 2: "Poor", 3: "Fair", 4: "Good", 5: "Excellent",
+  };
+
+  const conditionCategories = {
+    excellent: trees.filter((t) => t.conditionRating >= 4).length,
+    fair: trees.filter((t) => t.conditionRating === 3).length,
+    needsAttention: trees.filter((t) => t.conditionRating <= 2 && t.conditionRating > 0).length,
+  };
+
+  const actionCounts = {
+    retain: trees.filter((t) => t.recommendedAction === "retain").length,
+    prune: trees.filter((t) => t.recommendedAction === "prune").length,
+    monitor: trees.filter((t) => t.recommendedAction === "monitor").length,
+    remove: trees.filter((t) => t.recommendedAction === "remove").length,
+  };
+
+  const reActionLabels: Record<string, string> = {
+    retain: "This tree is a healthy asset that enhances property value and should be preserved.",
+    remove: "Replacement planting is recommended to restore canopy coverage in this area.",
+    prune: "Routine maintenance pruning will maintain this tree's health and appearance.",
+    monitor: "This tree should be periodically inspected to ensure continued vigor.",
+  };
+
+  const individualAssessments = trees
+    .map((t) => {
+      const conditionDesc = conditionLabels[t.conditionRating] || `${t.conditionRating}/5`;
+      const dims = [
+        `${t.dbhInches}-inch DBH`,
+        t.heightFt ? `approximately ${t.heightFt} feet in height` : null,
+        t.canopySpreadFt ? `with a canopy spread of ${t.canopySpreadFt} feet` : null,
+      ].filter(Boolean).join(", ");
+
+      const healthLine = t.healthNotes
+        ? t.healthNotes
+        : t.conditionRating >= 4
+        ? "The specimen presented in good overall health with a full, well-distributed canopy."
+        : t.conditionRating >= 3
+        ? "The tree shows moderate stress that can be addressed with routine maintenance."
+        : "The tree requires professional attention to address current condition concerns.";
+
+      const action = reActionLabels[t.recommendedAction] || reActionLabels.monitor;
+
+      return `### Tree #${t.treeNumber} — ${t.speciesCommon}${t.speciesScientific ? ` (*${t.speciesScientific}*)` : ""}
+
+The ${t.speciesCommon} is a ${dims} specimen located on the subject property.
+
+**Condition: ${conditionDesc}** — ${healthLine}
+
+${action}`;
+    })
+    .join("\n\n");
+
+  return `# Certified Tree Canopy Report
+
+**Date:** ${date}
+**Property Address:** ${property.address}
+**City:** ${property.city}, ${state}
+**County:** ${property.county || "N/A"}
+**Report Type:** Real Estate Package — Tree Canopy Assessment
+
+---
+
+## 1. Introduction and Scope
+
+This Certified Tree Canopy Report has been prepared for a real estate transaction involving the property at ${property.address}, ${property.city}, ${state}. The assessment evaluates the health, structural condition, and contributory value of the tree canopy assets on the subject property. All ${treeCount} tree${treeCount !== 1 ? "s were" : " was"} assessed from ground level using a Level 2 Basic visual assessment per ISA Best Management Practices.
+
+---
+
+## 2. Site Description
+
+The subject property is located at ${property.address}, ${property.city}, ${state}.${property.siteObservations ? ` ${property.siteObservations}` : ""} The mature tree canopy contributes to the established character of the property and surrounding neighborhood.
+
+---
+
+## 3. Executive Tree Summary
+
+**Total Trees Assessed:** ${treeCount}
+**Condition Overview:** ${conditionCategories.excellent} in Good/Excellent condition, ${conditionCategories.fair} Fair, ${conditionCategories.needsAttention} requiring attention
+**Actions:** ${actionCounts.retain} retain, ${actionCounts.prune} prune, ${actionCounts.monitor} monitor, ${actionCounts.remove} remove
+**Total Canopy Value:** *Formal CTLA valuation pending — complete tree assessment data to calculate appraised values.*
+
+---
+
+## 4. Individual Tree Assessments
+
+${individualAssessments}
+
+---
+
+## 5. Canopy Valuation Summary
+
+Tree values represent the contributory landscape value calculated using the Council of Tree and Landscape Appraisers (CTLA) Trunk Formula Method, 10th Edition. Values are based on trunk area, species rating, condition assessment, and location factors.
+
+*Formal valuation calculations will be completed once all assessment data has been entered for each tree.*
+
+---
+
+## 6. Maintenance Outlook
+
+${actionCounts.prune > 0 ? `${actionCounts.prune} tree${actionCounts.prune !== 1 ? "s require" : " requires"} routine maintenance pruning per ANSI A300 standards. ` : ""}${actionCounts.monitor > 0 ? `${actionCounts.monitor} tree${actionCounts.monitor !== 1 ? "s should" : " should"} be periodically inspected by a certified arborist. ` : ""}The diverse species composition on this property provides resilient canopy coverage that should continue to enhance property value with routine care.
+
+---
+
+## 7. Limitations and Assumptions
+
+This assessment was conducted as a Level 2 Basic visual assessment from ground level per ISA Best Management Practices. No below-ground examination, aerial inspection, or invasive testing was performed. This report is intended to inform real estate transaction decisions and does not constitute a real estate appraisal. Tree values represent contributory landscape value calculated using the CTLA Trunk Formula Method, 10th Edition.
+
+---
+
+*This report was generated as a draft and requires review and certification by the assigned arborist.*
+`;
 }
 
 /**
@@ -535,7 +664,7 @@ PROMPT VERSION: 2.1
 
 ${template?.systemInstructions || `Write a professional arborist report following ISA standards and best practices.`}
 
-${MASTER_VOICE_INSTRUCTIONS}
+${getMasterVoiceInstructions(body.reportType)}
 ${buildArboristStyleInstructions(arborist)}
 ${body.reportType === "real_estate_package" ? `
 REAL ESTATE PACKAGE — LANGUAGE OVERRIDES:
@@ -592,7 +721,21 @@ PROPERTY DATA:
   body.reportType === "construction_encroachment"
     ? `\n- Project Description: ${(property as Record<string, unknown>).projectDescription || "N/A"}\n- Permit Number: ${(property as Record<string, unknown>).permitNumber || "N/A"}\n- Developer/Contractor: ${(property as Record<string, unknown>).developerName || "N/A"}\n- Architect: ${(property as Record<string, unknown>).architectName || "N/A"}`
     : ""
-}${(body.reportType === "tree_valuation" || body.reportType === "real_estate_package") ? `\nVALUATION CONTEXT:\n- Purpose: ${body.reportType === "real_estate_package" ? "Real Estate Transaction" : (body.valuationPurpose || "Not specified")}\n- Basis Statement: ${body.valuationBasisStatement || "CTLA Trunk Formula Method, 10th Edition"}\n- Total Appraised Value: $${property.trees.reduce((sum: number, t: { valuationAppraisedValue?: number | null }) => sum + (t.valuationAppraisedValue ?? 0), 0).toLocaleString()}` : ""}
+}${(body.reportType === "tree_valuation" || body.reportType === "real_estate_package") ? (() => {
+  const treesWithValues = property.trees.filter((t: { valuationAppraisedValue?: number | null }) => t.valuationAppraisedValue != null && t.valuationAppraisedValue > 0);
+  const treesWithoutValues = property.trees.filter((t: { valuationAppraisedValue?: number | null; treeNumber: number }) => !t.valuationAppraisedValue || t.valuationAppraisedValue <= 0);
+  const partialTotal = treesWithValues.reduce((sum: number, t: { valuationAppraisedValue?: number | null }) => sum + (t.valuationAppraisedValue ?? 0), 0);
+  let valuationLine: string;
+  if (treesWithValues.length === 0) {
+    valuationLine = "- Total Appraised Value: Valuations have not yet been calculated. The Canopy Valuation Summary section should note that formal CTLA valuation is pending completion of field data entry.";
+  } else if (treesWithoutValues.length > 0) {
+    const pendingNums = treesWithoutValues.map((t: { treeNumber: number }) => `#${t.treeNumber}`).join(", ");
+    valuationLine = `- Total Appraised Value (partial): $${partialTotal.toLocaleString()} (${treesWithValues.length} of ${property.trees.length} trees valued; trees ${pendingNums} pending valuation)`;
+  } else {
+    valuationLine = `- Total Appraised Value: $${partialTotal.toLocaleString()}`;
+  }
+  return `\nVALUATION CONTEXT:\n- Purpose: ${body.reportType === "real_estate_package" ? "Real Estate Transaction" : (body.valuationPurpose || "Not specified")}\n- Basis Statement: ${body.valuationBasisStatement || "CTLA Trunk Formula Method, 10th Edition"}\n${valuationLine}`;
+})() : ""}
 
 TREE ASSESSMENT DATA:
 ${treeDataBlock}
@@ -682,6 +825,16 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
                 arboristId,
                 reportType: body.reportType,
                 aiDraftContent: fullText,
+                // Auto-set valuation metadata for real_estate_package
+                ...(body.reportType === "real_estate_package" ? {
+                  valuationPurpose: "Real Estate Transaction",
+                  valuationBasisStatement: "This valuation is prepared for the purpose of real estate disclosure and is based on the CTLA Trunk Formula Method (10th Edition).",
+                  valuationTotalValue: property.trees.reduce(
+                    (sum: number, t: { valuationAppraisedValue?: number | null }) =>
+                      sum + (t.valuationAppraisedValue ?? 0),
+                    0
+                  ) || null,
+                } : {}),
               },
             });
 
@@ -737,7 +890,9 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
         },
       });
     } else {
-      aiDraftContent = generateMockReport(property, property.trees, body.reportType);
+      aiDraftContent = body.reportType === "real_estate_package"
+        ? generateMockRealEstateReport(property, property.trees)
+        : generateMockReport(property, property.trees, body.reportType);
     }
 
     // Mock path: non-streaming fallback
@@ -747,6 +902,16 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
         arboristId,
         reportType: body.reportType,
         aiDraftContent,
+        // Auto-set valuation metadata for real_estate_package
+        ...(body.reportType === "real_estate_package" ? {
+          valuationPurpose: "Real Estate Transaction",
+          valuationBasisStatement: "This valuation is prepared for the purpose of real estate disclosure and is based on the CTLA Trunk Formula Method (10th Edition).",
+          valuationTotalValue: property.trees.reduce(
+            (sum: number, t: { valuationAppraisedValue?: number | null }) =>
+              sum + (t.valuationAppraisedValue ?? 0),
+            0
+          ) || null,
+        } : {}),
       },
     });
 

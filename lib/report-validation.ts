@@ -261,11 +261,12 @@ export async function validateReportForCertification(
     // BLOCKING: Every tree must have an appraised value > $0
     const treesNoValue = ta.filter((t) => !t.valuationAppraisedValue || t.valuationAppraisedValue <= 0);
     if (treesNoValue.length > 0) {
+      const nums = treesNoValue.map((t: { treeNumber: number }) => `#${t.treeNumber}`).join(", ");
       checks.push({
         id: "valuation_appraised",
         label: "Tree appraised values",
         status: "fail",
-        message: `All trees must have an appraised value greater than $0. Check that unit price and condition ratings are set for every tree. (${treesNoValue.map((t: { treeNumber: number }) => `#${t.treeNumber}`).join(", ")})`,
+        message: `${treesNoValue.length === 1 ? "Tree" : "Trees"} ${nums} ${treesNoValue.length === 1 ? "has" : "have"} no appraised value. Open each tree's assessment, fill in all CTLA ratings (Health, Structure, Form, Species, Site, Contribution), and save to calculate the appraised value.`,
         fixPath: `/properties/${property.id}`,
       });
     } else {
@@ -291,11 +292,19 @@ export async function validateReportForCertification(
       !t.valuationHealthRating || !t.valuationStructureRating || !t.valuationFormRating
     );
     if (treesNoCondition.length > 0) {
+      // Build per-tree detail showing exactly which rating(s) are missing
+      const details = treesNoCondition.map((t: { treeNumber: number; valuationHealthRating?: number | null; valuationStructureRating?: number | null; valuationFormRating?: number | null }) => {
+        const missing: string[] = [];
+        if (!t.valuationHealthRating) missing.push("Health");
+        if (!t.valuationStructureRating) missing.push("Structure");
+        if (!t.valuationFormRating) missing.push("Form");
+        return `#${t.treeNumber} missing ${missing.join(", ")}`;
+      }).join("; ");
       checks.push({
         id: "valuation_condition_components",
         label: "Condition ratings",
         status: "fail",
-        message: `Health, Structure, and Form condition ratings must all be set for every tree. (${treesNoCondition.map((t: { treeNumber: number }) => `#${t.treeNumber}`).join(", ")})`,
+        message: `Health, Structure, and Form condition ratings must all be set for every tree. (${details})`,
         fixPath: `/properties/${property.id}`,
       });
     } else {
