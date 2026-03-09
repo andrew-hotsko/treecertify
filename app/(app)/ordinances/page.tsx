@@ -37,7 +37,7 @@ export default async function OrdinancesPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold font-display text-foreground">
+        <h1 className="text-2xl font-semibold tracking-tight font-display text-foreground">
           Municipal Ordinance Database
         </h1>
         <p className="text-sm text-muted-foreground mt-1">

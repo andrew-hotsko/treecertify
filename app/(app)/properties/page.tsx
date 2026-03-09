@@ -34,7 +34,7 @@ export default async function PropertiesPage({
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold font-display text-foreground">
+          <h1 className="text-2xl font-semibold tracking-tight font-display text-foreground">
             Properties
           </h1>
           <p className="text-sm text-muted-foreground mt-1">

@@ -1091,8 +1091,19 @@ export default function PropertyReportPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-forest" />
+      <div className="flex flex-col h-[calc(100vh-64px)]">
+        <div className="flex-none border-b bg-background px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="h-4 w-4 bg-neutral-200/70 rounded animate-pulse" />
+            <div className="space-y-1.5">
+              <div className="h-5 w-48 bg-neutral-200/70 rounded animate-pulse" />
+              <div className="h-3 w-32 bg-neutral-200/70 rounded animate-pulse" />
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
       </div>
     );
   }
@@ -1309,7 +1320,7 @@ export default function PropertyReportPage() {
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold font-display">Report Editor</h1>
+                <h1 className="text-lg font-semibold font-display">Report Editor</h1>
                 <StatusBadge status={report.status} />
                 <Badge variant="outline" className="text-xs">
                   {getReportTypeConfig(report.reportType)?.label ||
@@ -1930,7 +1941,7 @@ export default function PropertyReportPage() {
           /* Full Preview Mode (or certified read-only) */
           <div className="flex-1 overflow-hidden">
             <ScrollArea className="h-full">
-              <div className="max-w-4xl mx-auto py-6 px-4">
+              <div className="max-w-3xl mx-auto py-8 px-4 sm:px-6">
                 {isCertified && (
                   <div className="flex items-center gap-2 rounded-lg border border-forest/20 bg-forest/5 p-3 text-sm text-forest mb-4">
                     <Lock className="h-4 w-4 shrink-0" />

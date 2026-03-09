@@ -195,7 +195,7 @@ export default async function AdminDashboard() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-display font-bold text-neutral-900">
+        <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">
           TreeCertify Beta Dashboard
         </h1>
         <p className="text-sm text-neutral-500 mt-1">

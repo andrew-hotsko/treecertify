@@ -307,7 +307,7 @@ export function DashboardContent({
               )}
             >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-mono uppercase tracking-wider text-neutral-500">
+                <CardTitle className="text-xs font-medium text-muted-foreground">
                   {stat.title}
                 </CardTitle>
                 <div className={`rounded-md p-2 ${stat.bg}`}>
@@ -315,7 +315,7 @@ export function DashboardContent({
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold font-mono text-neutral-900">
+                <div className="text-3xl font-semibold font-mono text-foreground">
                   {stat.value.toLocaleString()}
                 </div>
                 {stat.title === "Trees Assessed" && treesThisWeek != null && (
@@ -351,7 +351,7 @@ export function DashboardContent({
       {nextActions && (nextActions.needTreeAssessment + nextActions.needReport + nextActions.readyToCertify > 0) && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg font-semibold font-display text-neutral-900">
+            <CardTitle className="text-lg font-semibold font-display text-foreground">
               Next Action Needed
             </CardTitle>
           </CardHeader>
@@ -408,7 +408,7 @@ export function DashboardContent({
       {permitStats && (permitStats.pendingSubmission + permitStats.submittedOrReview + permitStats.approved + permitStats.needingRevision > 0) && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg font-semibold font-display text-neutral-900">
+            <CardTitle className="text-lg font-semibold font-display text-foreground">
               Permit Pipeline
             </CardTitle>
           </CardHeader>
@@ -431,8 +431,8 @@ export function DashboardContent({
                   )}>
                     <Icon className={`h-4 w-4 ${item.iconColor}`} />
                     <div>
-                      <p className="text-2xl font-bold font-mono text-neutral-900">{item.count}</p>
-                      <p className="text-xs text-neutral-500">{item.label}</p>
+                      <p className="text-2xl font-semibold font-mono text-foreground">{item.count}</p>
+                      <p className="text-xs text-muted-foreground">{item.label}</p>
                     </div>
                   </div>
                 );
@@ -458,11 +458,11 @@ export function DashboardContent({
               <Clock className="h-5 w-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-neutral-900">
+              <p className="text-sm font-medium text-foreground">
                 {billingStats.count} outstanding{" "}
                 {billingStats.count === 1 ? "payment" : "payments"}
               </p>
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-muted-foreground">
                 ${billingStats.total.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} unpaid
               </p>
             </div>
@@ -473,7 +473,7 @@ export function DashboardContent({
       {/* Properties Card */}
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-lg font-semibold font-display text-neutral-900">
+          <CardTitle className="text-lg font-semibold font-display text-foreground">
             Properties
           </CardTitle>
           <Button variant="ghost" size="sm" asChild>
@@ -513,12 +513,12 @@ export function DashboardContent({
               <div className="rounded-full bg-neutral-100 p-3 mb-4">
                 <MapPin className="h-6 w-6 text-neutral-400" />
               </div>
-              <p className="text-sm font-medium text-neutral-900">
+              <p className="text-sm font-medium text-foreground">
                 {filter === "all" ? "No properties yet" : "No properties match this filter"}
               </p>
               {filter === "all" && (
                 <>
-                  <p className="mt-1 text-sm text-neutral-500">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     Start by adding your first property and pinning trees on the
                     map.
                   </p>
@@ -549,7 +549,7 @@ export function DashboardContent({
                   <Link
                     key={property.id}
                     href={`/properties/${property.id}`}
-                    className="flex items-center justify-between gap-4 py-3.5 px-1 rounded-lg transition-colors hover:bg-neutral-100 -mx-1 first:pt-0"
+                    className="flex items-center justify-between gap-4 py-4 px-1 rounded-lg transition-colors hover:bg-neutral-50 -mx-1 first:pt-0"
                   >
                     <div className="flex items-center gap-4 min-w-0">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-forest/5">
@@ -561,13 +561,13 @@ export function DashboardContent({
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-medium text-neutral-900">
+                          <p className="truncate text-sm font-medium text-foreground">
                             {property.address}
                           </p>
                           {property.address === "123 Sample Street" && (
                             <Badge
                               variant="outline"
-                              className="text-[10px] px-1.5 py-0 text-muted-foreground border-muted-foreground/30 shrink-0"
+                              className="text-xs px-1.5 py-0 text-muted-foreground border-muted-foreground/30 shrink-0"
                             >
                               Sample
                             </Badge>
@@ -614,7 +614,7 @@ export function DashboardContent({
                       </span>
                       <span
                         className={cn(
-                          "text-[10px] font-medium px-2 py-0.5 rounded-full",
+                          "text-xs font-medium px-2 py-0.5 rounded-full",
                           workflow.color
                         )}
                       >
@@ -633,7 +633,7 @@ export function DashboardContent({
       {activityFeed && activityFeed.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg font-semibold font-display text-neutral-900">
+            <CardTitle className="text-lg font-semibold font-display text-foreground">
               Recent Activity
             </CardTitle>
           </CardHeader>

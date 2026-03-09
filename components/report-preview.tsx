@@ -85,14 +85,14 @@ export function ReportPreview({
   const protectedCount = trees.filter((t) => t.isProtected).length;
 
   return (
-    <div className="report-preview-container bg-neutral-50 rounded-lg shadow-md border border-neutral-300 overflow-hidden">
+    <div className="report-preview-container bg-neutral-50 rounded-lg shadow-sm border border-neutral-300 overflow-hidden">
       {/* ---- Styles scoped to .report-preview ---- */}
       <style>{`
         .report-preview {
           font-family: 'Georgia', 'Times New Roman', serif;
           color: #1a1a1a;
           font-size: 11pt;
-          line-height: 1.6;
+          line-height: 1.7;
           padding: 24px 16px;
           max-width: 8.5in;
           margin: 0 auto;

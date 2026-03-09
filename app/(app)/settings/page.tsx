@@ -708,15 +708,33 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-forest" />
+      <div className="max-w-3xl mx-auto space-y-6">
+        <div>
+          <div className="h-8 w-32 bg-neutral-200/70 rounded-md animate-pulse" />
+          <div className="h-4 w-48 bg-neutral-200/70 rounded-md animate-pulse mt-2" />
+        </div>
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="rounded-xl border bg-card p-6 space-y-4">
+            <div className="h-5 w-40 bg-neutral-200/70 rounded-md animate-pulse" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="h-3 w-20 bg-neutral-200/70 rounded animate-pulse" />
+                <div className="h-9 w-full bg-neutral-200/70 rounded-md animate-pulse" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 w-24 bg-neutral-200/70 rounded animate-pulse" />
+                <div className="h-9 w-full bg-neutral-200/70 rounded-md animate-pulse" />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold font-display mb-1">Settings</h1>
+      <h1 className="text-2xl font-semibold tracking-tight font-display mb-1">Settings</h1>
       <p className="text-muted-foreground mb-6">
         Manage your arborist profile and company branding
       </p>
@@ -736,7 +754,7 @@ export default function SettingsPage() {
       {/* Profile Photo */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-base font-display">
             <Camera className="h-5 w-5 text-forest" />
             Profile Photo
           </CardTitle>
@@ -802,7 +820,7 @@ export default function SettingsPage() {
       {/* Company Logo */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-base font-display">
             <ImageIcon className="h-5 w-5 text-forest" />
             Company Logo
           </CardTitle>
@@ -870,7 +888,7 @@ export default function SettingsPage() {
       {/* Arborist Info */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-base font-display">
             <User className="h-5 w-5 text-forest" />
             Arborist Information
           </CardTitle>
@@ -957,7 +975,7 @@ export default function SettingsPage() {
       {/* Company Info */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-base font-display">
             <Globe className="h-5 w-5 text-forest" />
             Company Details
           </CardTitle>
@@ -1016,7 +1034,7 @@ export default function SettingsPage() {
       {/* Report Defaults */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-base font-display">
             <FileText className="h-5 w-5 text-forest" />
             Report Defaults
           </CardTitle>
@@ -1215,7 +1233,7 @@ export default function SettingsPage() {
       {/* ================================================================ */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-base font-display">
             <Stethoscope className="h-5 w-5 text-forest" />
             Observation Library
             {obsChanged && (
@@ -1467,7 +1485,7 @@ export default function SettingsPage() {
       {/* ================================================================ */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-base font-display">
             <TreePine className="h-5 w-5 text-forest" />
             Species Presets
           </CardTitle>
@@ -1559,7 +1577,7 @@ export default function SettingsPage() {
       {/* ================================================================ */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-base font-display">
             <FileText className="h-5 w-5 text-forest" />
             PDF &amp; Share Preferences
           </CardTitle>
@@ -1663,7 +1681,7 @@ export default function SettingsPage() {
       {/* ── Valuation Defaults ── */}
       <Card className="mb-6">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-base font-display">
             <DollarSign className="h-4 w-4 text-amber-600" />
             Valuation Defaults
           </CardTitle>
@@ -1727,7 +1745,7 @@ export default function SettingsPage() {
       {/* Client Billing */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-base font-display">
             <Receipt className="h-5 w-5 text-forest" />
             Client Billing
           </CardTitle>
@@ -1786,7 +1804,7 @@ export default function SettingsPage() {
       {/* Report Writing Style */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-base font-display">
             <Sparkles className="h-5 w-5 text-forest" />
             Report Writing Style
           </CardTitle>
@@ -1971,7 +1989,7 @@ export default function SettingsPage() {
       {/* Usage & Costs */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-base font-display">
             <DollarSign className="h-5 w-5 text-forest" />
             Usage &amp; Costs
           </CardTitle>

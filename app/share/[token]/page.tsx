@@ -423,7 +423,7 @@ export default async function SharedPropertyPage({
     <div className="min-h-screen bg-neutral-50">
       {/* ==== A. Branded Header ==== */}
       <header className="bg-white border-b">
-        <div className="max-w-2xl mx-auto px-5 py-6">
+        <div className="max-w-2xl mx-auto px-5 py-8">
           {/* Company logo */}
           {arborist?.companyLogoUrl && (
             /* eslint-disable-next-line @next/next/no-img-element */
@@ -444,10 +444,10 @@ export default async function SharedPropertyPage({
           </p>
 
           {/* Property address */}
-          <h1 className="text-2xl sm:text-3xl font-semibold text-neutral-900 font-display leading-tight">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground font-display leading-tight">
             {property.address}
           </h1>
-          <p className="text-sm text-neutral-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             {property.city}, {property.state}
             {property.zip ? ` ${property.zip}` : ""}
           </p>
@@ -1645,7 +1645,7 @@ export default async function SharedPropertyPage({
       {/* ==== K. Footer ==== */}
       <footer className="border-t mt-12">
         <div className="max-w-2xl mx-auto px-5 py-4 text-center text-xs text-neutral-400">
-          Shared via TreeCertify
+          Powered by TreeCertify
         </div>
       </footer>
     </div>

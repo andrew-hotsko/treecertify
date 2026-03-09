@@ -302,5 +302,15 @@
 - **Noisy logging cleaned**: Removed API key prefix logging from transcribe route; audio blob logging gated behind `NODE_ENV === 'development'`.
 - **Dormant invoice fields**: 5 Arborist invoice settings fields annotated as DORMANT in Prisma schema.
 
+## UX Polish (Session 27)
+- **Typography system**: All page titles standardized to `text-2xl font-semibold tracking-tight font-display text-foreground` across 6 pages (dashboard, properties, settings, ordinances, new property, admin).
+- **Card foundation**: Base card shadow reduced from `shadow` to `shadow-sm` in `components/ui/card.tsx`. Card background CSS variable lightened (`--card: 40 15% 98%`).
+- **Dashboard refinement**: Stat card labels changed from ALL-CAPS mono font to sentence-case (`text-xs font-medium text-muted-foreground`). Values `font-bold` → `font-semibold`. Property row spacing increased to `py-4`. Workflow badges sized up from `text-[10px]` to `text-xs`. Color tokens standardized to `text-foreground`/`text-muted-foreground`.
+- **Settings page**: All 12 card titles use `font-display` for Instrument Sans consistency. Loading spinner replaced with skeleton card layout matching settings structure.
+- **Report editor**: Toolbar title `font-bold` → `font-semibold`. Certified view content area narrowed from `max-w-4xl` to `max-w-3xl` with more padding for document-like feel. Loading spinner replaced with toolbar skeleton. Report preview line-height increased to 1.7, shadow reduced.
+- **Share page**: Header padding increased. Footer text changed from "Shared via" to "Powered by TreeCertify". Color tokens standardized.
+- **Skeleton component**: `components/ui/skeleton.tsx` created (standard shadcn pattern with `bg-neutral-200/70`).
+- **Skipped** (would take >30 min each): "Next Action Needed" with specific property addresses, dynamic summary sentence below greeting, full dashboard Suspense skeletons, comprehensive button loading audit, page fade-in transitions, certification "sealed" visual treatment.
+
 ## Session Completion
 - When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.

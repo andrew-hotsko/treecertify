@@ -212,7 +212,7 @@ export default function NewPropertyPage() {
       </Link>
 
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground">New Property</h1>
+        <h1 className="text-2xl font-semibold tracking-tight font-display text-foreground">New Property</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Select a report type and enter the property address to get started.
         </p>
