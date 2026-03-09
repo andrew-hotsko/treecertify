@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { logEvent } from "@/lib/analytics";
 
 export async function GET(
   request: NextRequest,
@@ -90,6 +91,11 @@ export async function PUT(
         ...(body.valuationAppraisedValue !== undefined && { valuationAppraisedValue: body.valuationAppraisedValue }),
         ...(body.valuationNotes !== undefined && { valuationNotes: body.valuationNotes }),
       },
+    });
+
+    logEvent("tree_saved", null, {
+      propertyId: id,
+      treeId: tree.id,
     });
 
     return NextResponse.json(tree);

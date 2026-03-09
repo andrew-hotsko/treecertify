@@ -18,9 +18,9 @@
 - Do not break existing authentication — all routes under /(app)/ are protected by Clerk middleware.
 
 ## Ordinance Data
-- Ordinance data for 5 Peninsula cities is in `prisma/seed.ts` and stored in the `MunicipalOrdinance` table.
+- Ordinance data for 14 Peninsula cities/jurisdictions is in `prisma/seed.ts` and stored in the `MunicipalOrdinance` table. Original 5 + 9 expansion cities added 2026-03-06.
 - **Verified against municipal code text (March 2026):** Palo Alto (PAMC §8.10.020), Menlo Park (MPMC §13.24.020), Atherton (AMC §8.10.020), Portola Valley (PVMC §15.12.060).
-- **NEEDS_VERIFICATION:** Woodside species-specific DBH thresholds (WMC §153.005 table is in a PDF that couldn't be fully extracted — native threshold ~9.5" DBH confirmed by Almanac reporting but per-species breakdown unverified). Woodside replanting ratios not found in code text. Portola Valley replanting ratios not found in code text. Menlo Park in-lieu fee schedule amounts may be outdated.
+- **NEEDS_VERIFICATION:** Woodside species-specific DBH thresholds (WMC §153.005 table is in a PDF that couldn't be fully extracted — native threshold ~9.5" DBH confirmed by Almanac reporting but per-species breakdown unverified). Woodside replanting ratios not found in code text. Portola Valley replanting ratios not found in code text. Menlo Park in-lieu fee schedule amounts may be outdated. All 9 expansion city thresholds are approximate — phone numbers and office hours unverified. Redwood City measures circumference at 24" above grade (non-standard) — tip included in contacts.
 - The check logic is in `lib/ordinances.ts` — `checkTreeProtection()` evaluates species-specific thresholds first, then falls back to default native/non-native thresholds. Heritage status is checked separately.
 - City name matching is case-insensitive: `getOrdinanceByCity()` normalizes input to title case and uses Prisma `mode: "insensitive"`. Property creation/update API routes also normalize city to title case on storage.
 - Test script at `scripts/test-ordinances.ts` validates 5 representative scenarios.
@@ -217,17 +217,60 @@
 
 ## City Submission Contacts
 - `lib/city-contacts.ts` — static city contact data for share page. No database queries.
-- **Coverage**: Peninsula (Palo Alto, Menlo Park, Atherton, Woodside, Portola Valley), North Bay (Sonoma County, Santa Rosa, City of Napa, Windsor, Healdsburg), Tahoe Basin (TRPA), Reno.
+- **Coverage**: Peninsula (Palo Alto, Menlo Park, Atherton, Woodside, Portola Valley + Redwood City, San Mateo, Los Altos, Los Altos Hills, Mountain View, Hillsborough, San Carlos, Burlingame, San Mateo County), North Bay (Sonoma County, Santa Rosa, City of Napa, Windsor, Healdsburg), Tahoe Basin (TRPA), Reno.
+- `CityContact` interface: department, phone, email, address, hours, portalUrl, websiteUrl, submissionMethod, requiredDocuments[], typicalTimeline, applicationFee, mitigationSummary, tips[] (array, not string).
 - **JurisdictionType** union: `"city"` | `"county"` | `"regional"` | `"no_permit"` — added to `CityContact` interface. Determines share page display logic.
 - **Tahoe Basin**: TRPA is a bi-state regional authority that overrides local city/county for tree permits. `CITY_ALIASES` map resolves South Lake Tahoe, Incline Village, Tahoe City, Kings Beach, Stateline, Zephyr Cove, Tahoe Vista, Crystal Bay → "Tahoe Basin". Share page shows amber warning callout explaining TRPA is the sole permit authority.
 - **Reno**: `no_permit` jurisdiction — no private-property tree removal permit required. Share page shows positive "good news" framing with emerald styling. Supports both `removal_permit` and `health_assessment` report types.
 - `getCityContact(city, reportType?)` — resolves city aliases, then looks up by city and report type. Returns null if no contact info exists.
 - `getNextStepsText(reportType)` — generic guidance for non-removal report types when no city-specific contact exists.
 - **Title-case normalization**: `toTitleCase()` extracted to `lib/utils.ts` — shared between `lib/city-contacts.ts` and `lib/ordinances.ts`. Single source of truth for city name normalization.
-- Share page "What Happens Next" section: handles 5 cases — no_permit (emerald card), regional (amber warning + standard steps), city/county (standard steps), unsupported city fallback, non-removal generic guidance.
-- **VERIFY**: All North Bay and Reno contact info marked `// VERIFY` — phone confirmation needed before beta launch.
+- Share page "What Happens Next" section: handles 5 cases — no_permit (emerald card), regional (amber warning + standard steps), city/county (standard steps), unsupported city fallback, non-removal generic guidance. Tap-to-call phone links, tap-to-email links, office address with MapPin icon, office hours, portal URL as CTA button, tips as bulleted list, required documents checklist.
+- Share page fallback for uncovered cities: 3-step generic guidance (contact city, get application, submit with PDF) instead of bare "contact your planning department" text.
+- **VERIFY**: All North Bay, Reno, and expansion city contact info marked `// VERIFY` — phone confirmation needed before beta launch.
 - **GAP**: No `MunicipalOrdinance` data seeded for North Bay, Tahoe, or Reno cities — `checkTreeProtection()` does not cover these regions yet. Future session needed to add ordinance data.
 - `lib/city-submission-guides.ts` still exists (legacy, not imported anywhere). Can be removed in future cleanup.
+- All expansion city entries NEED VERIFICATION before GA — phone numbers, office hours, and thresholds are approximate. Marked with `// VERIFY` comments.
+- Note: Redwood City measures circumference at 24" above grade (non-standard); San Carlos on 4/10 schedule (closed Fridays) — both surfaced in tips.
+
+## Sample Report (Onboarding)
+- After onboarding step 2 (branding), a sample PDF is generated using the arborist's branding and the same Puppeteer pipeline as production PDFs.
+- Static ISA-quality content in `lib/sample-report-data.ts` — never AI-generated. 2-tree removal permit scenario (Coast Live Oak retain + Monterey Pine remove) for 742 Evergreen Terrace, Palo Alto.
+- API route: `app/api/sample-report/route.ts` — GET returns cached PDF, POST generates + caches. Cache at `uploads/sample-reports/sample-report-{arboristId}.pdf`.
+- Onboarding shows the PDF in an iframe with download button before continuing to step 3.
+
+## Analytics Events
+- `AnalyticsEvent` model in `prisma/schema.prisma` — `id`, `arboristId?`, `eventType`, `metadata` (JSON string), `createdAt`. Indexed on arboristId, eventType, createdAt.
+- Fire-and-forget helper: `logEvent()` in `lib/analytics.ts`. Never blocks the main request. Errors are caught and logged to console.
+- Instrumented routes: property_created, tree_added, tree_saved, report_generated, report_edited (with editWordDelta), report_certified (with treeCount, minutesToCertify), pdf_downloaded (with source detection), share_link_opened (rate-limited to 1 per token per hour).
+
+## Admin Dashboard
+- Route: `app/(app)/admin/page.tsx` — server-rendered RSC, no client-side polling.
+- Access gated by `ADMIN_ARBORIST_ID` env var (comma-separated IDs). Non-admin users redirected to `/dashboard`.
+- Sections: 7-day + all-time summary stats (4 cards), per-arborist activity table (30d), report type distribution, AI edit rate (avg distance, heavy/minimal counts), share link performance (open rate, download rate), recent 50 events feed.
+- Sidebar shows "Admin" link (Shield icon) only for admin users. `isAdmin` prop passed from `app/(app)/layout.tsx`.
+
+## Per-Tree AI Regeneration
+- POST `/api/ai/regenerate-tree-section` — regenerates one tree's narrative without touching the rest of the report. Body: `{ reportId, treeId, treeNumber }`. Returns `{ content: string }`.
+- `parseReportSections()` and `replaceTreeSection()` in `lib/report-sections.ts` — split and reassemble report markdown by tree section (`### Tree #N` boundaries).
+- Regenerate dropdown in the report editor toolbar lists all trees by number/species. Confirmation dialog warns edits to that section will be replaced.
+- Per-tree regeneration uses the same prompt style as full generation but scoped to one tree. Not streaming (JSON response).
+
+## Report Amendment Flow
+- Certified reports can be amended via POST `/api/reports/[id]/amend` — reopens for editing, preserves share link and version history.
+- `amendment_in_progress` status added to report status flow: `certified → amendment_in_progress → certified (amended)`.
+- Schema fields on Report: `amendmentReason` (String?), `amendmentNumber` (Int, default 0), `originalCertifiedAt` (DateTime?).
+- During amendment, share page shows the last certified version (based on `originalCertifiedAt`).
+- Re-certification after amendment works through the normal certification flow. Version snapshot label: `"Amendment #N — Certified"`.
+- Amended PDFs show amendment disclosure on cover page: original cert date, amendment date, reason.
+- "Issue Amendment" button (amber) appears in the certified toolbar. Amendment dialog requires a reason.
+
+## AI Writing Preferences
+- Schema fields on Arborist: `aiTonePreference` (formal/conversational/technical), `aiPreferredTerms` (JSON array), `aiAvoidTerms` (JSON array), `aiStandardDisclaimer` (String), `aiCustomInstructions` (String).
+- Settings page "Report Writing Style" card: tone radio, tag inputs for preferred/avoid terms (avoid capped at 20), disclaimer textarea, custom instructions textarea.
+- `buildArboristStyleInstructions()` in `lib/ai-writing-preferences.ts` — builds prompt instructions from arborist preferences.
+- Writing preferences applied to both full report generation and per-tree regeneration prompts.
+- `aiStandardDisclaimer` is appended verbatim after AI generation (not sent to Claude) — ensures exact arborist text.
 
 ## Real Estate Package
 - `real_estate_package` report type bundles health assessment + CTLA valuation for real estate transactions. Generates a "Certified Tree Canopy Report."

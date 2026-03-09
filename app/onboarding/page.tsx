@@ -26,6 +26,8 @@ import {
   Home,
   CheckCircle2,
   AlertTriangle,
+  FileText,
+  Download,
 } from "lucide-react";
 import { REPORT_TYPES } from "@/lib/report-types";
 import { cn } from "@/lib/utils";
@@ -232,6 +234,11 @@ export default function OnboardingPage() {
   const [companyEmail, setCompanyEmail] = useState("");
   const [companyWebsite, setCompanyWebsite] = useState("");
 
+  // Sample report state
+  const [showSampleReport, setShowSampleReport] = useState(false);
+  const [generatingSample, setGeneratingSample] = useState(false);
+  const [samplePdfUrl, setSamplePdfUrl] = useState<string | null>(null);
+
   // Step 3 fields
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
@@ -394,10 +401,25 @@ export default function OnboardingPage() {
         throw new Error(data.error || "Failed to save company info");
       }
 
-      setCurrentStep(3);
+      // Show sample report preview
+      setShowSampleReport(true);
+      setGeneratingSample(true);
+      setLoading(false);
+
+      // Generate sample PDF in background
+      try {
+        const sampleRes = await fetch("/api/sample-report", { method: "POST" });
+        if (sampleRes.ok) {
+          const blob = await sampleRes.blob();
+          setSamplePdfUrl(URL.createObjectURL(blob));
+        }
+      } catch {
+        // Sample generation failed — not blocking, user can still continue
+      } finally {
+        setGeneratingSample(false);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
       setLoading(false);
     }
   }
@@ -661,7 +683,7 @@ export default function OnboardingPage() {
         {/* ================================================================ */}
         {/* STEP 2: Company Branding                                         */}
         {/* ================================================================ */}
-        {currentStep === 2 && (
+        {currentStep === 2 && !showSampleReport && (
           <div className="space-y-6">
             <Card>
               <CardContent className="pt-6">
@@ -832,6 +854,86 @@ export default function OnboardingPage() {
             >
               Skip &mdash; I&apos;ll add company details later
             </button>
+          </div>
+        )}
+
+        {/* ================================================================ */}
+        {/* SAMPLE REPORT PREVIEW (shown after step 2 save)                  */}
+        {/* ================================================================ */}
+        {currentStep === 2 && showSampleReport && (
+          <div className="space-y-6">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center space-y-4">
+                  <div className="mx-auto rounded-full bg-forest/10 p-3 w-fit">
+                    <FileText className="h-6 w-6 text-forest" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-neutral-900">
+                    Your TreeCertify Report
+                  </h2>
+                  <p className="text-sm text-neutral-500 max-w-md mx-auto">
+                    {generatingSample
+                      ? "Generating your sample report..."
+                      : "This is a sample report using your branding and credentials. Every report you create will have this professional quality."}
+                  </p>
+
+                  {generatingSample && (
+                    <div className="flex items-center justify-center gap-2 py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-forest" />
+                      <span className="text-sm text-neutral-500">
+                        Generating your sample report...
+                      </span>
+                    </div>
+                  )}
+
+                  {!generatingSample && samplePdfUrl && (
+                    <div className="space-y-4">
+                      {/* PDF embed preview */}
+                      <div className="border rounded-lg overflow-hidden bg-neutral-100">
+                        <iframe
+                          src={samplePdfUrl}
+                          className="w-full"
+                          style={{ height: "400px" }}
+                          title="Sample Report Preview"
+                        />
+                      </div>
+
+                      <a
+                        href={samplePdfUrl}
+                        download="TreeCertify_Sample_Report.pdf"
+                        className="inline-flex items-center gap-2 px-6 py-2.5 bg-white border border-neutral-300 rounded-lg text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download Sample PDF
+                      </a>
+                    </div>
+                  )}
+
+                  {!generatingSample && !samplePdfUrl && (
+                    <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                      Sample report preview could not be generated. You can still continue — your real reports will look great!
+                    </p>
+                  )}
+
+                  {!logoUrl && !generatingSample && (
+                    <p className="text-xs text-neutral-400">
+                      Upload your company logo to see it on the cover page.
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Button
+              onClick={() => {
+                setShowSampleReport(false);
+                setCurrentStep(3);
+              }}
+              className="w-full bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform h-12 text-base"
+            >
+              Continue to Create Your First Property
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
         )}
 

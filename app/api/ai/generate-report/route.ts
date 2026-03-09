@@ -17,8 +17,10 @@ import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getOrdinanceByCity } from "@/lib/ordinances";
 import { getReportTemplate, MASTER_VOICE_INSTRUCTIONS } from "@/lib/report-templates";
+import { buildArboristStyleInstructions } from "@/lib/ai-writing-preferences";
 import Anthropic from "@anthropic-ai/sdk";
 import { logApiUsage } from "@/lib/api-usage";
+import { logEvent } from "@/lib/analytics";
 
 interface TreeRecordData {
   treeNumber: number;
@@ -534,6 +536,7 @@ PROMPT VERSION: 2.1
 ${template?.systemInstructions || `Write a professional arborist report following ISA standards and best practices.`}
 
 ${MASTER_VOICE_INSTRUCTIONS}
+${buildArboristStyleInstructions(arborist)}
 ${body.reportType === "real_estate_package" ? `
 REAL ESTATE PACKAGE — LANGUAGE OVERRIDES:
 This report is for a REAL ESTATE TRANSACTION, not a municipal permit application. Override the general voice instructions as follows:
@@ -667,6 +670,11 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
               }
             }
 
+            // Append standard disclaimer if the arborist has one set
+            if (arborist.aiStandardDisclaimer) {
+              fullText += `\n\n---\n\n${arborist.aiStandardDisclaimer}`;
+            }
+
             // Save to database after streaming completes
             const report = await prisma.report.create({
               data: {
@@ -696,6 +704,12 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
               model: "claude-sonnet-4-20250514",
               inputTokens: usageInput,
               outputTokens: usageOutput,
+            });
+
+            logEvent("report_generated", arboristId, {
+              reportId: report.id,
+              reportType: body.reportType,
+              treeCount: property.trees.length,
             });
 
             controller.enqueue(
@@ -743,6 +757,12 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
         content: aiDraftContent,
         label: "AI Draft",
       },
+    });
+
+    logEvent("report_generated", arboristId, {
+      reportId: report.id,
+      reportType: body.reportType,
+      treeCount: property.trees.length,
     });
 
     return NextResponse.json(report, { status: 201 });

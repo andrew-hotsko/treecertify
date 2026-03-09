@@ -18,6 +18,7 @@ import {
 import { PermitStatusPipeline } from "@/components/permit-status-pipeline";
 import { getCityContact, getNextStepsText } from "@/lib/city-contacts";
 import type { Metadata } from "next";
+import { logEvent } from "@/lib/analytics";
 
 const REPORT_TYPE_META: Record<string, string> = {
   removal_permit: "Tree Removal Permit Report",
@@ -326,7 +327,30 @@ export default async function SharedPropertyPage({
 
   const report = property.reports[0] ?? null;
   const arborist = report?.arborist ?? null;
-  const isCertified = report?.status === "certified";
+  const isAmending = report?.status === "amendment_in_progress";
+  // Show certified view for both certified AND amendment_in_progress
+  // During amendment, display the pre-amendment version snapshot
+  const isCertified = report?.status === "certified" || report?.status === "filed" || isAmending;
+
+  // Log share link opened (rate-limited: 1 per token per hour)
+  try {
+    const lastOpen = await prisma.analyticsEvent.findFirst({
+      where: {
+        eventType: "share_link_opened",
+        metadata: { contains: property.id },
+        createdAt: { gte: new Date(Date.now() - 3600000) },
+      },
+    });
+    if (!lastOpen) {
+      logEvent("share_link_opened", null, {
+        propertyId: property.id,
+        reportType: report?.reportType,
+        isCertified,
+      });
+    }
+  } catch {
+    // Never let analytics break the share page
+  }
 
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   const hasCoords = property.lat != null && property.lng != null;
@@ -445,15 +469,20 @@ export default async function SharedPropertyPage({
           )}
 
           {/* Certification date */}
-          {isCertified && report?.certifiedAt && (
+          {isCertified && (report?.certifiedAt || report?.originalCertifiedAt) && (
             <p className="flex items-center gap-1.5 text-sm text-green-700 mt-2">
               <CheckCircle2 className="h-4 w-4" />
               Certified{" "}
-              {new Date(report.certifiedAt).toLocaleDateString("en-US", {
+              {new Date(
+                (isAmending ? report?.originalCertifiedAt : report?.certifiedAt) ?? report?.certifiedAt ?? ""
+              ).toLocaleDateString("en-US", {
                 year: "numeric",
                 month: "long",
                 day: "numeric",
               })}
+              {report?.amendmentNumber != null && report.amendmentNumber > 0 && !isAmending && (
+                <span className="text-green-600 text-xs ml-1">(Amended)</span>
+              )}
             </p>
           )}
         </div>
@@ -1172,26 +1201,65 @@ export default async function SharedPropertyPage({
           </section>
         )}
 
-        {/* F4: Removal permit with unsupported city — generic fallback */}
+        {/* Removal permit with unsupported city — generic 3-step guidance */}
         {isCertified &&
           report?.reportType === "removal_permit" &&
           !cityContact && (
             <section>
-              <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3">
-                What Happens Next
-              </p>
-              <div className="bg-white rounded-lg border p-5">
-                <p className="text-sm text-neutral-600">
-                  Contact your local planning department to submit this arborist
-                  report with your tree removal permit application.{" "}
-                  {arborist && (
-                    <>
-                      Your arborist,{" "}
-                      <span className="font-medium">{arborist.name}</span>, can
-                      help guide you through the process.
-                    </>
-                  )}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Submitting Your Report
+                </h3>
+                <p className="text-gray-700 text-sm">
+                  Your arborist report is ready to submit. Here&apos;s the general process
+                  for tree removal permits in California cities:
                 </p>
+                <div className="space-y-3">
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-forest/10 text-forest flex items-center justify-center text-sm font-semibold">
+                      1
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Contact your city&apos;s Planning Department</p>
+                      <p className="text-sm text-gray-600">
+                        Search for &ldquo;{property.city} tree removal permit&rdquo; or call your city hall to find the right department.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-forest/10 text-forest flex items-center justify-center text-sm font-semibold">
+                      2
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Request a Tree Removal Permit Application</p>
+                      <p className="text-sm text-gray-600">
+                        Most cities have a specific form. Ask what documents are required — your arborist report will be one of them.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-forest/10 text-forest flex items-center justify-center text-sm font-semibold">
+                      3
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Submit the application with this report</p>
+                      <p className="text-sm text-gray-600">
+                        Download the PDF below and include it with your permit application.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Arborist contact nudge */}
+                {arborist && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-600">
+                      Your arborist can help with the submission process.{" "}
+                      <span className="font-medium text-gray-700">{arborist.name}</span>{" "}
+                      is available to answer questions about your report and permit requirements.
+                    </p>
+                  </div>
+                )}
               </div>
             </section>
           )}

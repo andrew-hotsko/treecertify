@@ -230,6 +230,214 @@ async function main() {
       ordinanceUrl: "https://library.municode.com/ca/portola_valley/codes/code_of_ordinances?nodeId=TIT15BUCO_CH15.12SIDETRPR",
       codeReference: "PVMC §15.12.060 (definitions), §15.12.070 (permit required), §15.12.275 (tree protection standards)",
     },
+
+    // =====================================================================
+    // PENINSULA EXPANSION — Added 2026-03-06
+    // Thresholds are approximate / NEEDS_VERIFICATION before GA.
+    // All should be confirmed against actual municipal code text.
+    // =====================================================================
+
+    // ----- REDWOOD CITY -----
+    // Circumference-based: 48" circ ≈ 15.3" DBH (Significant), 72" circ ≈ 22.9" DBH (Heritage)
+    // NOTE: Redwood City measures circumference at 24" above grade, not standard DBH at 4.5 ft
+    {
+      cityName: "Redwood City",
+      protectedSpecies: JSON.stringify([]),
+      defaultDbhThresholdNative: 15, // 48" circumference ÷ π ≈ 15.3", rounded down for safety
+      defaultDbhThresholdNonnative: 15,
+      certifierRequirement: "ISA Certified Arborist",
+      mitigationRules: JSON.stringify({
+        replantingRatio: "Replacement planting may be required",
+        inLieuFee: "Contact Community Development",
+        notes: "Replacement planting species, size, and location specified by city. Circumference measured at 24\" above grade (non-standard).",
+      }),
+      heritageTreeRules: JSON.stringify({
+        dbhThreshold: 23, // 72" circumference ÷ π ≈ 22.9", rounded up
+        description: "Heritage Tree: 72\"+ circumference at 24\" above grade. May require Planning Commission hearing.",
+      }),
+      permitProcessNotes: "Submit Tree Removal Permit to Community Development — Planning Division. Significant Trees (48\"+ circ) get administrative review. Heritage Trees (72\"+ circ) may require Planning Commission hearing.",
+      ordinanceUrl: "https://www.redwoodcity.org/departments/community-development-department/planning-housing",
+      codeReference: "Redwood City Municipal Code Chapter 35",
+    },
+
+    // ----- SAN MATEO -----
+    // 16" DBH (50.25" circumference at 4.5 feet) — Heritage Tree threshold
+    {
+      cityName: "San Mateo",
+      protectedSpecies: JSON.stringify([]),
+      defaultDbhThresholdNative: 16,
+      defaultDbhThresholdNonnative: 16,
+      certifierRequirement: "ISA Certified Arborist",
+      mitigationRules: JSON.stringify({
+        replantingRatio: "Replacement planting typically required",
+        inLieuFee: "Contact Parks and Recreation",
+        notes: "Parks Department specifies replacement species, size, and maintenance requirements.",
+      }),
+      heritageTreeRules: JSON.stringify({
+        dbhThreshold: null,
+        description: "Designated Heritage Trees have special considerations — contact Parks Department.",
+      }),
+      permitProcessNotes: "Submit Heritage Tree Removal Application to Parks and Recreation — Urban Forestry. Significant pruning (>1/3 canopy) also requires permit.",
+      ordinanceUrl: "https://www.cityofsanmateo.org/3074/Tree-Removal",
+      codeReference: "San Mateo Municipal Code Chapter 13.40",
+    },
+
+    // ----- LOS ALTOS -----
+    // 12" DBH (all species), Heritage Oaks 24" DBH
+    {
+      cityName: "Los Altos",
+      protectedSpecies: JSON.stringify([]),
+      defaultDbhThresholdNative: 12,
+      defaultDbhThresholdNonnative: 12,
+      certifierRequirement: "ISA Certified Arborist",
+      mitigationRules: JSON.stringify({
+        replantingRatio: "Minimum 24-inch box replacement tree per removal",
+        inLieuFee: "In-lieu fees may apply if on-site replanting not feasible",
+        notes: "Multi-trunk trees measured as aggregate diameter (sum of all trunks).",
+      }),
+      heritageTreeRules: JSON.stringify({
+        dbhThreshold: 24,
+        species: ["oak"],
+        description: "Heritage Oak: any oak 24\"+ DBH. Longer review, stricter mitigation.",
+      }),
+      permitProcessNotes: "Submit Tree Removal Permit to Community Development. Heritage Oaks may require public hearing (30–60 days).",
+      ordinanceUrl: "https://www.losaltosca.gov/communitydevelopment/page/tree-removal-permits",
+      codeReference: "Los Altos Municipal Code Chapter 11.08",
+    },
+
+    // ----- LOS ALTOS HILLS -----
+    // 12" DBH (native species only) — non-native not protected
+    {
+      cityName: "Los Altos Hills",
+      protectedSpecies: JSON.stringify([]),
+      defaultDbhThresholdNative: 12,
+      defaultDbhThresholdNonnative: null, // non-native trees are not protected
+      certifierRequirement: "ISA Certified Arborist",
+      mitigationRules: JSON.stringify({
+        replantingRatio: "May be required",
+        inLieuFee: "Contact Planning Department",
+        notes: "Only native trees are protected. Non-native trees not regulated.",
+      }),
+      heritageTreeRules: JSON.stringify({}),
+      permitProcessNotes: "Submit Tree Removal Application to Planning Department.",
+      ordinanceUrl: null,
+      codeReference: "Los Altos Hills Municipal Code",
+    },
+
+    // ----- MOUNTAIN VIEW -----
+    // 48" circumference at 4.5 ft ≈ 15.3" DBH (Heritage Tree)
+    {
+      cityName: "Mountain View",
+      protectedSpecies: JSON.stringify([]),
+      defaultDbhThresholdNative: 15, // 48" circumference ÷ π ≈ 15.3"
+      defaultDbhThresholdNonnative: 15,
+      certifierRequirement: "ISA Certified Arborist",
+      mitigationRules: JSON.stringify({
+        replantingRatio: "May be required as condition of approval",
+        inLieuFee: "Contact Parks Division",
+        notes: "Permits go through Public Works (Parks Division), not Community Development.",
+      }),
+      heritageTreeRules: JSON.stringify({}),
+      permitProcessNotes: "Submit Heritage Tree Removal Application to Public Works — Parks Division. Street trees handled separately by city arborist.",
+      ordinanceUrl: "https://www.mountainview.gov/depts/pw/parks/trees/default.asp",
+      codeReference: "Mountain View City Code Chapter 32",
+    },
+
+    // ----- HILLSBOROUGH -----
+    // 10" DBH (all species), Heritage Oaks 18" DBH (native oaks)
+    {
+      cityName: "Hillsborough",
+      protectedSpecies: JSON.stringify([]),
+      defaultDbhThresholdNative: 10,
+      defaultDbhThresholdNonnative: 10,
+      certifierRequirement: "ISA Certified Arborist",
+      mitigationRules: JSON.stringify({
+        replantingRatio: "Ratio determined by size of removed tree",
+        inLieuFee: "Contact Building and Planning",
+        notes: "One of the lowest thresholds on the Peninsula — nearly every mature tree is protected.",
+      }),
+      heritageTreeRules: JSON.stringify({
+        dbhThreshold: 18,
+        species: ["oak"],
+        description: "Heritage Oak: native oak 18\"+ DBH. Strictest protection.",
+      }),
+      permitProcessNotes: "Submit Tree Removal Permit to Building and Planning Department.",
+      ordinanceUrl: null,
+      codeReference: "Hillsborough Municipal Code Chapter 14.04",
+    },
+
+    // ----- SAN CARLOS -----
+    // 48" circumference ≈ 15.3" DBH general, ALL oaks regardless of size
+    {
+      cityName: "San Carlos",
+      protectedSpecies: JSON.stringify([
+        { species: "Coast Live Oak", scientific: "Quercus agrifolia", dbhThreshold: 1, category: "oak" },
+        { species: "Valley Oak", scientific: "Quercus lobata", dbhThreshold: 1, category: "oak" },
+        { species: "Blue Oak", scientific: "Quercus douglasii", dbhThreshold: 1, category: "oak" },
+        { species: "Oregon Oak", scientific: "Quercus garryana", dbhThreshold: 1, category: "oak" },
+        { species: "Interior Live Oak", scientific: "Quercus wislizeni", dbhThreshold: 1, category: "oak" },
+        { species: "Black Oak", scientific: "Quercus kelloggii", dbhThreshold: 1, category: "oak" },
+      ]),
+      defaultDbhThresholdNative: 15, // 48" circumference ÷ π ≈ 15.3"
+      defaultDbhThresholdNonnative: 15,
+      certifierRequirement: "ISA Certified Arborist",
+      mitigationRules: JSON.stringify({
+        replantingRatio: "May be required",
+        inLieuFee: "Contact Community Development",
+        notes: "ALL oaks protected regardless of size. Non-oak species at 48\" circumference (≈15.3\" DBH). City on 4/10 schedule — closed Fridays.",
+      }),
+      heritageTreeRules: JSON.stringify({}),
+      permitProcessNotes: "Submit Tree Removal Permit to Community Development — Planning Division. City on 4/10 schedule (closed Fridays).",
+      ordinanceUrl: "https://www.cityofsancarlos.org/government/departments/community-development",
+      codeReference: "San Carlos Municipal Code",
+    },
+
+    // ----- BURLINGAME -----
+    // 12" DBH general, oaks 6" DBH
+    {
+      cityName: "Burlingame",
+      protectedSpecies: JSON.stringify([
+        { species: "Coast Live Oak", scientific: "Quercus agrifolia", dbhThreshold: 6, category: "oak" },
+        { species: "Valley Oak", scientific: "Quercus lobata", dbhThreshold: 6, category: "oak" },
+        { species: "Blue Oak", scientific: "Quercus douglasii", dbhThreshold: 6, category: "oak" },
+        { species: "Oregon Oak", scientific: "Quercus garryana", dbhThreshold: 6, category: "oak" },
+        { species: "Interior Live Oak", scientific: "Quercus wislizeni", dbhThreshold: 6, category: "oak" },
+        { species: "Black Oak", scientific: "Quercus kelloggii", dbhThreshold: 6, category: "oak" },
+      ]),
+      defaultDbhThresholdNative: 12,
+      defaultDbhThresholdNonnative: 12,
+      certifierRequirement: "ISA Certified Arborist",
+      mitigationRules: JSON.stringify({
+        replantingRatio: "May be required",
+        inLieuFee: "Contact Parks and Recreation",
+        notes: "Oaks protected at lower 6\" DBH threshold. City arborist personally reviews all applications.",
+      }),
+      heritageTreeRules: JSON.stringify({}),
+      permitProcessNotes: "Submit Tree Removal Application to Parks and Recreation. City arborist reviews all applications and may schedule site visit.",
+      ordinanceUrl: null,
+      codeReference: "Burlingame Municipal Code",
+    },
+
+    // ----- SAN MATEO COUNTY (UNINCORPORATED) -----
+    // 12" DBH (Significant Tree)
+    {
+      cityName: "San Mateo County",
+      protectedSpecies: JSON.stringify([]),
+      defaultDbhThresholdNative: 12,
+      defaultDbhThresholdNonnative: 12,
+      certifierRequirement: "ISA Certified Arborist",
+      mitigationRules: JSON.stringify({
+        replantingRatio: "May be required",
+        inLieuFee: "Contact Planning and Building",
+        notes: "Coastal zone properties may require additional Coastal Development Permit review.",
+      }),
+      heritageTreeRules: JSON.stringify({
+        description: "Designated Heritage Trees have special considerations.",
+      }),
+      permitProcessNotes: "Submit Tree Removal Application to County Planning and Building Department (455 County Center, Redwood City). Coastal zone properties require additional review.",
+      ordinanceUrl: "https://www.smcgov.org/planning-building",
+      codeReference: "San Mateo County Ordinance Code",
+    },
   ];
 
   for (const ord of ordinances) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { renderMarkdownToHtml } from "@/lib/markdown";
+import { logEvent } from "@/lib/analytics";
 import puppeteer from "puppeteer";
 import fs from "fs";
 import path from "path";
@@ -69,7 +70,7 @@ export async function GET(
     const property = report.property;
     const trees = property.trees;
     const arborist = report.arborist;
-    const isCertified = report.status === "certified";
+    const isCertified = report.status === "certified" || report.status === "filed";
 
     const reportTitle =
       REPORT_TYPE_TITLES[report.reportType] ||
@@ -2038,6 +2039,13 @@ export async function GET(
       <div class="cover-credentials-line">${esc(arborist.name)} &nbsp;&bull;&nbsp; ISA Certified Arborist #${esc(arborist.isaCertificationNum)}</div>
       ${arborist.traqCertified ? '<div class="cover-credentials-line">ISA Tree Risk Assessment Qualified</div>' : ""}
       <div class="cover-confidential">Confidential \u2014 Prepared for property owner and authorized parties only</div>
+      ${report.amendmentNumber > 0 ? `
+      <div style="margin-top:16px;padding:12px 16px;border:1px solid #d97706;border-radius:6px;background:#fffbeb;">
+        <div style="font-weight:700;font-size:11px;color:#92400e;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Amended Report</div>
+        ${report.originalCertifiedAt ? `<div style="font-size:10px;color:#78350f;">Original certification: ${new Date(report.originalCertifiedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</div>` : ""}
+        ${report.certifiedAt ? `<div style="font-size:10px;color:#78350f;">Amendment #${report.amendmentNumber} certified: ${new Date(report.certifiedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</div>` : ""}
+        ${report.amendmentReason ? `<div style="font-size:10px;color:#78350f;margin-top:4px;">Reason: ${esc(report.amendmentReason)}</div>` : ""}
+      </div>` : ""}
     </div>
   </div>
 
@@ -2175,6 +2183,12 @@ export async function GET(
 
     await browser.close();
     browser = undefined;
+
+    logEvent("pdf_downloaded", shareToken ? null : report.arboristId, {
+      reportId: report.id,
+      reportType: report.reportType,
+      ...(shareToken ? { source: "share_page" } : {}),
+    });
 
     const filename = `Arborist_Report_${property.address.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
 

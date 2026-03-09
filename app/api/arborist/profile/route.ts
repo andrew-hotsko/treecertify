@@ -78,6 +78,12 @@ export async function PUT(request: NextRequest) {
       "pdfCoverAccentColor",
       "shareDefaultMessage",
       "shareThankYouMessage",
+      // AI writing preferences
+      "aiPreferredTerms",
+      "aiAvoidTerms",
+      "aiStandardDisclaimer",
+      "aiTonePreference",
+      "aiCustomInstructions",
     ];
 
     const updateData: Record<string, string | boolean | number | null> = {};

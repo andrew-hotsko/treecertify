@@ -99,6 +99,12 @@ interface ArboristProfile {
   photoRequiredCount?: number;
   defaultValuationUnitPrice?: number | null;
   valuationLimitingConditions?: string | null;
+  // AI writing preferences
+  aiPreferredTerms?: string | null;
+  aiAvoidTerms?: string | null;
+  aiStandardDisclaimer?: string | null;
+  aiTonePreference?: string | null;
+  aiCustomInstructions?: string | null;
 }
 
 interface ReportDefaults {
@@ -346,6 +352,15 @@ export default function SettingsPage() {
   const [valuationLimitingConditions, setValuationLimitingConditions] = useState<string>("");
   const [savingValuation, setSavingValuation] = useState(false);
 
+  // AI writing preferences state
+  const [aiTonePreference, setAiTonePreference] = useState("formal");
+  const [aiPreferredTerms, setAiPreferredTerms] = useState<string[]>([]);
+  const [aiAvoidTerms, setAiAvoidTerms] = useState<string[]>([]);
+  const [aiStandardDisclaimer, setAiStandardDisclaimer] = useState("");
+  const [aiCustomInstructions, setAiCustomInstructions] = useState("");
+  const [newPreferredTerm, setNewPreferredTerm] = useState("");
+  const [newAvoidTerm, setNewAvoidTerm] = useState("");
+
   // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -441,6 +456,13 @@ export default function SettingsPage() {
           shareDefaultMessage: data.shareDefaultMessage || "",
           shareThankYouMessage: data.shareThankYouMessage || "",
         });
+
+        // Initialize AI writing preferences
+        setAiTonePreference(data.aiTonePreference || "formal");
+        try { setAiPreferredTerms(JSON.parse(data.aiPreferredTerms || "[]")); } catch { setAiPreferredTerms([]); }
+        try { setAiAvoidTerms(JSON.parse(data.aiAvoidTerms || "[]")); } catch { setAiAvoidTerms([]); }
+        setAiStandardDisclaimer(data.aiStandardDisclaimer || "");
+        setAiCustomInstructions(data.aiCustomInstructions || "");
       } catch (err) {
         setMessage({
           type: "error",
@@ -486,6 +508,11 @@ export default function SettingsPage() {
           ...form,
           defaultReportFee: form.defaultReportFee ? parseFloat(form.defaultReportFee as string) : null,
           reportDefaults: JSON.stringify(reportDefaults),
+          aiTonePreference: aiTonePreference || null,
+          aiPreferredTerms: aiPreferredTerms.length > 0 ? JSON.stringify(aiPreferredTerms) : null,
+          aiAvoidTerms: aiAvoidTerms.length > 0 ? JSON.stringify(aiAvoidTerms) : null,
+          aiStandardDisclaimer: aiStandardDisclaimer || null,
+          aiCustomInstructions: aiCustomInstructions || null,
         }),
       });
       if (!res.ok) throw new Error("Failed to save");
@@ -1750,6 +1777,179 @@ export default function SettingsPage() {
             <p className="text-xs text-muted-foreground mt-1">
               Shown on client share pages — tell clients how to pay you
             </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Report Writing Style */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Sparkles className="h-5 w-5 text-forest" />
+            Report Writing Style
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            These preferences are applied to every AI-generated report. They help TreeCertify match your professional voice.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* Tone */}
+          <div>
+            <Label className="text-sm font-medium">Tone</Label>
+            <div className="mt-2 flex flex-col gap-2">
+              {[
+                { value: "formal", label: "Formal", desc: "Standard ISA professional language" },
+                { value: "conversational", label: "Conversational", desc: "Slightly less formal, approachable for homeowners" },
+                { value: "technical", label: "Technical", desc: "Detailed technical language for professional audiences" },
+              ].map((opt) => (
+                <label key={opt.value} className="flex items-start gap-3 cursor-pointer p-2 rounded-md border hover:bg-muted/50 transition-colors">
+                  <input
+                    type="radio"
+                    name="aiTone"
+                    value={opt.value}
+                    checked={aiTonePreference === opt.value}
+                    onChange={() => setAiTonePreference(opt.value)}
+                    className="mt-1 h-4 w-4 text-forest focus:ring-forest"
+                  />
+                  <div>
+                    <span className="text-sm font-medium">{opt.label}</span>
+                    <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Preferred Terms */}
+          <div>
+            <Label className="text-sm font-medium">Preferred Terms (optional)</Label>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+              Words and phrases you prefer in your reports. The AI will use these when possible.
+            </p>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {aiPreferredTerms.map((term, idx) => (
+                <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-forest/10 text-forest text-xs font-medium">
+                  {term}
+                  <button
+                    onClick={() => setAiPreferredTerms(aiPreferredTerms.filter((_, i) => i !== idx))}
+                    className="hover:text-red-500 transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder='e.g., "canopy" or "root zone"'
+                value={newPreferredTerm}
+                onChange={(e) => setNewPreferredTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newPreferredTerm.trim()) {
+                    e.preventDefault();
+                    setAiPreferredTerms([...aiPreferredTerms, newPreferredTerm.trim()]);
+                    setNewPreferredTerm("");
+                  }
+                }}
+                className="flex-1"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (newPreferredTerm.trim()) {
+                    setAiPreferredTerms([...aiPreferredTerms, newPreferredTerm.trim()]);
+                    setNewPreferredTerm("");
+                  }
+                }}
+                disabled={!newPreferredTerm.trim()}
+              >
+                Add
+              </Button>
+            </div>
+          </div>
+
+          {/* Terms to Avoid */}
+          <div>
+            <Label className="text-sm font-medium">Terms to Avoid (optional)</Label>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+              Words the AI should not use in your reports. Max 20 terms.
+            </p>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {aiAvoidTerms.map((term, idx) => (
+                <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 text-red-700 text-xs font-medium">
+                  {term}
+                  <button
+                    onClick={() => setAiAvoidTerms(aiAvoidTerms.filter((_, i) => i !== idx))}
+                    className="hover:text-red-900 transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+            {aiAvoidTerms.length < 20 && (
+              <div className="flex gap-2">
+                <Input
+                  placeholder='e.g., "specimen" or "aforementioned"'
+                  value={newAvoidTerm}
+                  onChange={(e) => setNewAvoidTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newAvoidTerm.trim() && aiAvoidTerms.length < 20) {
+                      e.preventDefault();
+                      setAiAvoidTerms([...aiAvoidTerms, newAvoidTerm.trim()]);
+                      setNewAvoidTerm("");
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (newAvoidTerm.trim() && aiAvoidTerms.length < 20) {
+                      setAiAvoidTerms([...aiAvoidTerms, newAvoidTerm.trim()]);
+                      setNewAvoidTerm("");
+                    }
+                  }}
+                  disabled={!newAvoidTerm.trim() || aiAvoidTerms.length >= 20}
+                >
+                  Add
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Standard Disclaimer */}
+          <div>
+            <Label htmlFor="aiStandardDisclaimer" className="text-sm font-medium">Standard Disclaimer (optional)</Label>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-1.5">
+              Text appended verbatim to the end of every report, before the certification block. Not sent to the AI.
+            </p>
+            <textarea
+              id="aiStandardDisclaimer"
+              rows={3}
+              value={aiStandardDisclaimer}
+              onChange={(e) => setAiStandardDisclaimer(e.target.value)}
+              placeholder="e.g., This report is based on a visual assessment from the ground only. No invasive testing was performed. Conditions may change due to weather, disease, or other factors."
+              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+            />
+          </div>
+
+          {/* Additional Instructions */}
+          <div>
+            <Label htmlFor="aiCustomInstructions" className="text-sm font-medium">Additional Instructions (optional)</Label>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-1.5">
+              Any other instructions for the AI report writer. Be specific.
+            </p>
+            <textarea
+              id="aiCustomInstructions"
+              rows={3}
+              value={aiCustomInstructions}
+              onChange={(e) => setAiCustomInstructions(e.target.value)}
+              placeholder={"e.g., \"Always mention the tree's contribution to the streetscape. Never recommend removal without offering alternatives.\""}
+              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+            />
           </div>
         </CardContent>
       </Card>

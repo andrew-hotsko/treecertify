@@ -62,13 +62,21 @@ model Arborist {
   defaultValuationUnitPrice      Float?    // arborist's preferred default unit price
   valuationLimitingConditions    String?   // JSON array of strings, customizable per arborist
 
+  // AI writing preferences
+  aiPreferredTerms    String?  // JSON array: ["canopy", "root zone", etc.]
+  aiAvoidTerms        String?  // JSON array: ["specimen", "deficiency", etc.]
+  aiStandardDisclaimer String? // Appended verbatim after AI generation
+  aiTonePreference    String?  // "formal" | "conversational" | "technical"
+  aiCustomInstructions String? // Free text instructions for AI
+
   createdAt DateTime @default(now())
 
-  properties   Property[]
-  reports      Report[]
-  apiUsageLogs ApiUsageLog[]
-  feedbacks    Feedback[]
-  invoices     Invoice[]
+  properties      Property[]
+  reports         Report[]
+  apiUsageLogs    ApiUsageLog[]
+  feedbacks       Feedback[]
+  invoices        Invoice[]
+  analyticsEvents AnalyticsEvent[]
 }
 
 model Property {
@@ -290,7 +298,12 @@ model Report {
   reListingPrice             Float?
   rePackageNotes             String?   // arborist notes for the RE agent
 
-  status String @default("draft") // draft, review, certified, filed
+  // Amendment tracking
+  amendmentReason     String?
+  amendmentNumber     Int       @default(0) // 0 = original, 1 = first amendment, etc.
+  originalCertifiedAt DateTime? // preserved from first certification
+
+  status String @default("draft") // draft, review, certified, filed, amendment_in_progress
 
   property Property @relation(fields: [propertyId], references: [id])
   arborist Arborist @relation(fields: [arboristId], references: [id])
@@ -339,6 +352,20 @@ model Feedback {
   metadata      String?  // JSON: { userAgent, propertyId, viewport, timestamp }
   status        String   @default("new") // new, reviewed, resolved
   createdAt     DateTime @default(now())
+}
+
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  arboristId String?
+  eventType  String
+  metadata   String?
+  createdAt  DateTime @default(now())
+
+  arborist Arborist? @relation(fields: [arboristId], references: [id])
+
+  @@index([arboristId])
+  @@index([eventType])
+  @@index([createdAt])
 }
 
 model Invoice {

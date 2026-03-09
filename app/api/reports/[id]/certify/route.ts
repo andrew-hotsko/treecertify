@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { validateReportForCertification } from "@/lib/report-validation";
 import { NextRequest, NextResponse } from "next/server";
+import { logEvent } from "@/lib/analytics";
 
 export async function POST(
   request: NextRequest,
@@ -42,12 +43,15 @@ export async function POST(
 
     // Snapshot content before certification
     const certContent = existing.finalContent || existing.aiDraftContent;
+    const isAmendment = existing.status === "amendment_in_progress";
     if (certContent) {
       await prisma.reportVersion.create({
         data: {
           reportId: id,
           content: certContent,
-          label: "Pre-certification",
+          label: isAmendment
+            ? `Amendment #${existing.amendmentNumber} — Certified`
+            : "Pre-certification",
         },
       });
     }
@@ -66,6 +70,22 @@ export async function POST(
     await prisma.treeRecord.updateMany({
       where: { propertyId: report.propertyId },
       data: { status: "certified" },
+    });
+
+    const treeCount = await prisma.treeRecord.count({
+      where: { propertyId: report.propertyId },
+    });
+    const property = await prisma.property.findUnique({
+      where: { id: report.propertyId },
+      select: { createdAt: true },
+    });
+    logEvent("report_certified", existing.arboristId, {
+      reportId: id,
+      reportType: existing.reportType,
+      treeCount,
+      minutesToCertify: property
+        ? Math.round((Date.now() - new Date(property.createdAt).getTime()) / 60000)
+        : null,
     });
 
     return NextResponse.json(report);

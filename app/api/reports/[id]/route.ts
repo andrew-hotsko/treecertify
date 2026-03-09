@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getCurrentArborist } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
+import { logEvent } from "@/lib/analytics";
 
 export async function GET(
   request: NextRequest,
@@ -116,6 +117,15 @@ export async function PUT(
         ...(body.rePackageNotes !== undefined && { rePackageNotes: body.rePackageNotes }),
       },
     });
+
+    if (body.finalContent !== undefined) {
+      const draftWords = (existing.aiDraftContent || "").split(/\s+/).length;
+      const editWords = (body.finalContent || "").split(/\s+/).length;
+      logEvent("report_edited", existing.arboristId, {
+        reportId: id,
+        editWordDelta: Math.abs(draftWords - editWords),
+      });
+    }
 
     return NextResponse.json(report);
   } catch (error) {
