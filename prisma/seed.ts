@@ -438,6 +438,300 @@ async function main() {
       ordinanceUrl: "https://www.smcgov.org/planning-building",
       codeReference: "San Mateo County Ordinance Code",
     },
+
+    // =====================================================================
+    // NORTH BAY + TAHOE/RENO EXPANSION — Added 2026-03-09
+    // All entries NEEDS_VERIFICATION — phone confirmation required before GA.
+    // Confidence levels noted per entry. Species scientific names inferred
+    // from standard California flora references where ordinance text uses
+    // common names only.
+    // =====================================================================
+
+    // ----- SONOMA COUNTY (UNINCORPORATED) -----
+    // Source: Sonoma County Code §26-88-010(m) — 2024 update (effective May 30, 2024)
+    // Confidence: HIGH for thresholds and species list (confirmed from Permit Sonoma PJR-151 form)
+    // 31 protected native species at 6"+ DBH. Two-tier permit system:
+    //   Zoning Permit (ministerial): 6"+ DBH for all 31 species
+    //   Use Permit (discretionary): >36" DBH hardwoods, >48" DBH redwoods
+    {
+      cityName: "Sonoma County",
+      protectedSpecies: JSON.stringify([
+        // Oaks (7 species) — all at 6" DBH
+        { species: "Valley Oak", scientific: "Quercus lobata", dbhThreshold: 6, category: "native_oak" },
+        { species: "Coast Live Oak", scientific: "Quercus agrifolia", dbhThreshold: 6, category: "native_oak" },
+        { species: "Black Oak", scientific: "Quercus kelloggii", dbhThreshold: 6, category: "native_oak" },
+        { species: "Blue Oak", scientific: "Quercus douglasii", dbhThreshold: 6, category: "native_oak" },
+        { species: "Canyon Live Oak", scientific: "Quercus chrysolepis", dbhThreshold: 6, category: "native_oak" },
+        { species: "Interior Live Oak", scientific: "Quercus wislizeni", dbhThreshold: 6, category: "native_oak" },
+        { species: "Oregon White Oak", scientific: "Quercus garryana", dbhThreshold: 6, category: "native_oak" },
+        // Broadleaf / Hardwood (14 species) — all at 6" DBH
+        { species: "Big Leaf Maple", scientific: "Acer macrophyllum", dbhThreshold: 6, category: "native" },
+        { species: "Boxelder", scientific: "Acer negundo", dbhThreshold: 6, category: "native" },
+        { species: "California Bay Laurel", scientific: "Umbellularia californica", dbhThreshold: 6, category: "native" },
+        { species: "California Black Walnut", scientific: "Juglans californica", dbhThreshold: 6, category: "native" },
+        { species: "California Buckeye", scientific: "Aesculus californica", dbhThreshold: 6, category: "native" },
+        { species: "Fremont Cottonwood", scientific: "Populus fremontii", dbhThreshold: 6, category: "native" },
+        { species: "Black Cottonwood", scientific: "Populus trichocarpa", dbhThreshold: 6, category: "native" },
+        { species: "Madrone", scientific: "Arbutus menziesii", dbhThreshold: 6, category: "native" },
+        { species: "Oregon Ash", scientific: "Fraxinus latifolia", dbhThreshold: 6, category: "native" },
+        { species: "Red Alder", scientific: "Alnus rubra", dbhThreshold: 6, category: "native" },
+        { species: "White Alder", scientific: "Alnus rhombifolia", dbhThreshold: 6, category: "native" },
+        { species: "Red Willow", scientific: "Salix laevigata", dbhThreshold: 6, category: "native" },
+        { species: "Pacific Willow", scientific: "Salix lasiandra", dbhThreshold: 6, category: "native" },
+        // Conifers (10 species) — all at 6" DBH
+        { species: "Coast Redwood", scientific: "Sequoia sempervirens", dbhThreshold: 6, category: "native_conifer" },
+        { species: "Western Hemlock", scientific: "Tsuga heterophylla", dbhThreshold: 6, category: "native_conifer" },
+        { species: "Grand Fir", scientific: "Abies grandis", dbhThreshold: 6, category: "native_conifer" },
+        { species: "Monterey Cypress", scientific: "Hesperocyparis macrocarpa", dbhThreshold: 6, category: "native_conifer" },
+        { species: "Macnab Cypress", scientific: "Cupressus macnabiana", dbhThreshold: 6, category: "native_conifer" },
+        { species: "Knobcone Pine", scientific: "Pinus attenuata", dbhThreshold: 6, category: "native_conifer" },
+        { species: "Lodgepole Pine", scientific: "Pinus contorta", dbhThreshold: 6, category: "native_conifer" },
+        { species: "Sugar Pine", scientific: "Pinus lambertiana", dbhThreshold: 6, category: "native_conifer" },
+        { species: "Bishop Pine", scientific: "Pinus muricata", dbhThreshold: 6, category: "native_conifer" },
+        { species: "Ponderosa Pine", scientific: "Pinus ponderosa", dbhThreshold: 6, category: "native_conifer" },
+        { species: "Gray Pine", scientific: "Pinus sabiniana", dbhThreshold: 6, category: "native_conifer" },
+      ]),
+      defaultDbhThresholdNative: 6,
+      defaultDbhThresholdNonnative: null, // non-native species not protected
+      certifierRequirement: "ISA Certified Arborist",
+      mitigationRules: JSON.stringify({
+        replantingRatio: "Arboreal Value Points system: 6-12\" = 1 pt, >12-18\" = 2 pts, >18-24\" = 3 pts, >24-30\" = 4 pts, >30-36\" = 5 pts, >36\" = 6+ pts. Per point: six 5-gallon trees OR two 15-gallon trees. 2 pts = one 24-inch box tree.",
+        inLieuFee: "$510 per arboreal value point (e.g., 6\" tree = $510, 36\" tree = $2,550)",
+        notes: "Same-species replacement required unless planning director approves alternative. 7-year annual monitoring report required — mortality must be replaced. Valley Oak Habitat (VOH) zone: 1.5x mitigation multiplier. Violation penalty: 5x normal mitigation rate. Eucalyptus explicitly excluded from protection.",
+      }),
+      heritageTreeRules: JSON.stringify({
+        dbhThreshold: 36, // >36" hardwoods require Use Permit (discretionary hearing)
+        description: "Hardwood trees >36\" DBH and redwoods >48\" DBH require a Use Permit (discretionary, public hearing, 60-90 days). Separate Chapter 26D Heritage/Landmark Tree ordinance: ~50 individually designated trees.",
+        reviewProcess: "Planning Commission hearing for Use Permit; Chapter 26D designation by planning director",
+        notes: "Two-tier system: Zoning Permit (ministerial, 15-30 days) for standard protected trees 6\"+ DBH. Use Permit (discretionary, 60-90 days) for hardwoods >36\" DBH or redwoods >48\" DBH.",
+      }),
+      permitProcessNotes: "Submit Zoning Permit (PJR-151) or Use Permit (PJR-150) to Permit Sonoma — Planning Division. Zoning Permits are ministerial (15-30 days). Use Permits require public hearing (60-90 days). Defensible space removals exempt (no redwood removal under this exemption). Dead/dying/diseased trees exempt. Agricultural use exempt.",
+      ordinanceUrl: "https://permitsonoma.org/regulationsandlongrangeplans/regulationsandinitiatives/treepermitrequirements",
+      codeReference: "Sonoma County Code §26-88-010(m) (tree protection), Chapter 26D (heritage/landmark trees), §26-67 (oak woodland)",
+    },
+
+    // ----- SANTA ROSA -----
+    // Source: Santa Rosa Municipal Code Chapter 17-24 (adopted October 2, 1990)
+    // Confidence: HIGH for species/thresholds (confirmed from ecode360 §17-24.020)
+    // Heritage trees: 15 native species with species-specific diameter thresholds
+    // General trees: 4" DBH in most zones (exempt in developed R-1 lots)
+    {
+      cityName: "Santa Rosa",
+      protectedSpecies: JSON.stringify([
+        // 6" diameter / 19" circumference
+        { species: "Valley Oak", scientific: "Quercus lobata", dbhThreshold: 6, category: "heritage" },
+        { species: "Blue Oak", scientific: "Quercus douglasii", dbhThreshold: 6, category: "heritage" },
+        { species: "California Buckeye", scientific: "Aesculus californica", dbhThreshold: 6, category: "heritage" },
+        // 12" diameter / 38" circumference
+        { species: "Madrone", scientific: "Arbutus menziesii", dbhThreshold: 12, category: "heritage" },
+        // 18" diameter / 57" circumference
+        { species: "Coast Live Oak", scientific: "Quercus agrifolia", dbhThreshold: 18, category: "heritage" },
+        { species: "California Black Oak", scientific: "Quercus kelloggii", dbhThreshold: 18, category: "heritage" },
+        { species: "Oregon White Oak", scientific: "Quercus garryana", dbhThreshold: 18, category: "heritage" },
+        { species: "Canyon Live Oak", scientific: "Quercus chrysolepis", dbhThreshold: 18, category: "heritage" },
+        { species: "Interior Live Oak", scientific: "Quercus wislizeni", dbhThreshold: 18, category: "heritage" },
+        { species: "Red Alder", scientific: "Alnus rubra", dbhThreshold: 18, category: "heritage" },
+        { species: "White Alder", scientific: "Alnus rhombifolia", dbhThreshold: 18, category: "heritage" },
+        // 24" diameter / 75" circumference
+        { species: "Coast Redwood", scientific: "Sequoia sempervirens", dbhThreshold: 24, category: "heritage" },
+        { species: "California Bay Laurel", scientific: "Umbellularia californica", dbhThreshold: 24, category: "heritage" },
+        { species: "Douglas Fir", scientific: "Pseudotsuga menziesii", dbhThreshold: 24, category: "heritage" },
+        { species: "Big Leaf Maple", scientific: "Acer macrophyllum", dbhThreshold: 24, category: "heritage" },
+      ]),
+      // General "tree" threshold: 4" DBH (but exempt in developed R-1 zoning)
+      defaultDbhThresholdNative: 4,
+      defaultDbhThresholdNonnative: 4,
+      certifierRequirement: "ISA Certified Arborist",
+      mitigationRules: JSON.stringify({
+        replantingRatio: "2 trees per 6\" of trunk diameter (15-gallon minimum, same genus/species). Violation: 4 trees per 6\" of trunk diameter.",
+        inLieuFee: "$100 per 15-gallon replacement tree (NEEDS_VERIFICATION — amount may be outdated from 1990 ordinance adoption)",
+        notes: "24-inch box = 3x 15-gallon trees. 36-inch box = 5x 15-gallon. 48-inch box = 8x 15-gallon. Replacement ratios above are for Category II (development-related) removals per §17-24.050. Category I (non-development) replacement is at Director's discretion. Exempt species: Acacia, Silver Maple, Poplar, Ailanthus, Hawthorn, Fruitless Mulberry, Monterey Pine, Monterey Cypress, fruit/nut trees (except walnut). Scenic Road (-SR) district: all trees require permit regardless of species.",
+      }),
+      heritageTreeRules: JSON.stringify({
+        dbhThreshold: null, // heritage status is species-specific, not a universal DBH threshold
+        designatedByCouncil: true,
+        reviewProcess: "Planning Commission resolution for historic/cultural designation. Heritage trees require permit in ALL zoning districts (no exemptions).",
+        notes: "Heritage tree = either (a) tree/grove designated by Planning Commission for historical/cultural significance, OR (b) any of 15 native Sonoma County species at species-specific diameter thresholds (6\"-24\" depending on species). See protectedSpecies list for per-species thresholds.",
+      }),
+      permitProcessNotes: "Submit Tree Removal Permit to Planning and Economic Development Permit Center. Heritage trees (15 native species at threshold) require permit in all zones. Non-heritage trees 4\"+ DBH require permit in most zones except developed R-1 lots. Scenic Road (-SR) district: all trees require permit. Category I (non-development) vs Category II (development) permit paths.",
+      ordinanceUrl: "https://www.srcity.org/583/Tree-Removal-Preservation",
+      codeReference: "SRMC Chapter 17-24: §17-24.020 (definitions), §17-24.030 (permit required), §17-24.040 (Category I), §17-24.050 (Category II)",
+    },
+
+    // ----- CITY OF NAPA -----
+    // Source: Napa Municipal Code Chapter 12.45 — Protected Native Trees on Private Property
+    // Confidence: HIGH for key oak thresholds (confirmed from city website + arborist sources)
+    // MEDIUM for full 14-species list (only ~7 species confirmed with specific thresholds)
+    // Three separate programs: Street Tree, Protected Native Tree (Ch. 12.45), Significant Tree
+    {
+      cityName: "City Of Napa",
+      protectedSpecies: JSON.stringify([
+        // Confirmed thresholds from city website + arborist references
+        { species: "Valley Oak", scientific: "Quercus lobata", dbhThreshold: 12, category: "native_oak" },
+        { species: "Coast Live Oak", scientific: "Quercus agrifolia", dbhThreshold: 12, category: "native_oak" },
+        { species: "California Black Oak", scientific: "Quercus kelloggii", dbhThreshold: 12, category: "native_oak" },
+        { species: "Blue Oak", scientific: "Quercus douglasii", dbhThreshold: 6, category: "native_oak" },
+        // These species are confirmed on the list but exact thresholds NEED_VERIFICATION
+        { species: "Coast Redwood", scientific: "Sequoia sempervirens", dbhThreshold: 24, category: "native", NEEDS_VERIFICATION: true },
+        { species: "California Bay Laurel", scientific: "Umbellularia californica", dbhThreshold: 18, category: "native", NEEDS_VERIFICATION: true },
+        { species: "California Black Walnut", scientific: "Juglans californica", dbhThreshold: 12, category: "native", NEEDS_VERIFICATION: true },
+      ]),
+      // Applies to properties 1 acre+ (residential/agricultural) or commercial/industrial
+      defaultDbhThresholdNative: 12, // most species at 12" DBH; Blue Oak lower at 6"
+      defaultDbhThresholdNonnative: null, // only native species protected
+      certifierRequirement: "ISA Certified Arborist",
+      mitigationRules: JSON.stringify({
+        replantingRatio: "2 trees per 6\" of trunk diameter (15-gallon minimum, same species or approved alternative)",
+        inLieuFee: "CTLA Guide for Plant Appraisal methodology used for valuation — contact Parks and Recreation for fee schedule",
+        notes: "14 species of Napa Valley native trees are protected. Only applies to private property 1 acre+ (residential/agricultural) or commercial/industrial zoned parcels. Pruning branches >4\" diameter or removing >10% live foliage in one year requires permit. Cutting roots >2\" within drip line prohibited without permit. $5,000 minimum penalty or appraised tree value for unauthorized removal.",
+      }),
+      heritageTreeRules: JSON.stringify({
+        dbhThreshold: null,
+        designatedByCouncil: true,
+        reviewProcess: "Significant Tree Committee review and Parks Commission hearing",
+        notes: "Significant Tree Program is separate from Protected Native Tree program. Covers trees of historic significance, unique/rare specimens, trees with special habitat value, or outstanding Napa Valley natives. Pruning significant tree branches >4\" requires permit; topping prohibited.",
+      }),
+      permitProcessNotes: "Submit Significant Tree Pruning/Removal Application to Parks and Recreation Services Department. Commission meets monthly — confirm meeting schedule and application deadline. Three separate programs: Street Trees, Protected Native Trees (Ch. 12.45), and Significant Trees. Protected native tree provisions only apply to parcels 1 acre or larger.",
+      ordinanceUrl: "https://www.cityofnapa.org/377/Trees-Urban-Forestry",
+      codeReference: "Napa MC Chapter 12.45 (protected native trees), §12.45.090 (removal permits), §12.45.100 (penalties)",
+    },
+
+    // ----- WINDSOR -----
+    // Source: Town of Windsor Zoning Ordinance Chapter 27.36 — Tree Preservation and Protection
+    // Confidence: HIGH for species/thresholds (confirmed from multiple official sources)
+    // Note: New Zoning Code (Ord. 2024-394, effective Dec 2024) may have renumbered sections
+    {
+      cityName: "Windsor",
+      protectedSpecies: JSON.stringify([
+        // Native oaks — all at 6" DBH (no residential exemption for these)
+        { species: "Coast Live Oak", scientific: "Quercus agrifolia", dbhThreshold: 6, category: "native_oak" },
+        { species: "Valley Oak", scientific: "Quercus lobata", dbhThreshold: 6, category: "native_oak" },
+        { species: "Black Oak", scientific: "Quercus kelloggii", dbhThreshold: 6, category: "native_oak" },
+        { species: "Blue Oak", scientific: "Quercus douglasii", dbhThreshold: 6, category: "native_oak" },
+        { species: "Interior Live Oak", scientific: "Quercus wislizeni", dbhThreshold: 6, category: "native_oak" },
+        { species: "Oregon Oak", scientific: "Quercus garryana", dbhThreshold: 6, category: "native_oak" },
+        { species: "Oracle Oak", scientific: "Quercus x morehus", dbhThreshold: 6, category: "native_oak" },
+        { species: "Chase Oak", scientific: "Quercus x chaseii", dbhThreshold: 6, category: "native_oak" },
+        // Other protected native species
+        { species: "California Buckeye", scientific: "Aesculus californica", dbhThreshold: 6, category: "native" },
+        { species: "California Bay Laurel", scientific: "Umbellularia californica", dbhThreshold: 12, category: "native" },
+      ]),
+      // Non-protected trees on <1 acre residential lots are exempt (§27.36.030)
+      // Protected species always require permit regardless of lot size
+      defaultDbhThresholdNative: 6,
+      defaultDbhThresholdNonnative: null, // non-native not protected (exempt on <1 acre lots)
+      certifierRequirement: "ISA Certified Arborist (project arborist required per §27.36.051)",
+      mitigationRules: JSON.stringify({
+        replantingRatio: "Condition-based: Rating 1 (good/excellent) = 1:1 trunk diameter inch-for-inch. Rating 2 (fair/marginal) = 2:1 (half diameter required). Rating 3 (poor) = no replacement. Dead/dying = no replacement. 24-inch box tree = 2\" of replacement diameter.",
+        inLieuFee: "In-lieu fees per ordinance when on-site replanting impractical — contact Planning for current fee schedule",
+        notes: "Same-species replacement required unless Director approves alternative. In-lieu fees may fund acquisition of native tree preserves or public tree planting. 'No net loss' of protected tree canopy is the goal. Security deposits tiered by tree value, capped at $50,000. Residential exemption (§27.36.030) for <1 acre lots does NOT apply to protected species — native oaks and buckeye at 6\"+ and bay at 12\"+ always need a permit.",
+      }),
+      heritageTreeRules: JSON.stringify({
+        dbhThreshold: null,
+        designatedByCouncil: true,
+        reviewProcess: "Council resolution designation",
+        notes: "Heritage/landmark trees identified by Council resolution per §27.36.040. Separate from species-based protection. The Esposti Park coast live oak (~325 years old) is a notable example.",
+      }),
+      permitProcessNotes: "Submit Tree Removal Permit Application to Planning Department. Protected trees (native oaks 6\"+ DBH, buckeye 6\"+, bay 12\"+) always require permit. Non-protected trees on residential lots <1 acre are exempt. Mature trees on parcels 1 acre+ are also protected. New Zoning Code (Ord. 2024-394, effective Dec 2024) may have renumbered sections — confirm with Planning.",
+      ordinanceUrl: "https://www.townofwindsor.ca.gov/388/Tree-Protection",
+      codeReference: "Windsor Zoning Code Chapter 27.36: §27.36.030 (exceptions), §27.36.040 (protected trees), §27.36.061 (mitigation)",
+    },
+
+    // ----- HEALDSBURG -----
+    // Source: Healdsburg Land Use Code Chapter 20.24, Article II — Heritage Tree Protection
+    // Confidence: HIGH (confirmed from codepublishing.com and city FAQs)
+    // Heritage trees ONLY — non-heritage trees are NOT protected
+    // IMPORTANT: measures diameter at 2 feet above grade, NOT standard 4.5 ft DBH
+    {
+      cityName: "Healdsburg",
+      protectedSpecies: JSON.stringify([]),
+      // Heritage = 30" diameter at 2 ft above grade (non-standard measurement point!)
+      // Converting to approximate DBH: a 30" trunk at 2 ft would typically be slightly
+      // smaller at 4.5 ft, so effective DBH threshold is roughly 28-30" depending on taper.
+      // We store 30 and note the non-standard measurement in permitProcessNotes.
+      defaultDbhThresholdNative: 30, // technically measured at 2 ft above grade, not 4.5 ft
+      defaultDbhThresholdNonnative: 30, // all species treated equally
+      certifierRequirement: "ISA Certified Arborist (arborist report may be peer-reviewed; $1,050 peer review fee)",
+      mitigationRules: JSON.stringify({
+        replantingRatio: "3:1 — three new trees per heritage tree removed (per §20.24.075)",
+        inLieuFee: "In-lieu fee available when on-site replanting infeasible — amount set by Council resolution (NEEDS_VERIFICATION — specific amount not found in code)",
+        notes: "Conditions of approval may include: Tree Location and Preservation Plan by qualified arborist, 5-year minimum maintenance program secured by cash surety, temporary fencing around root zones during construction. Penalty for unpermitted removal: code violation + misdemeanor + fine equal to tree valuation. Application fee: $1,417.54 (FY 2025-26). Non-heritage trees do NOT require a permit.",
+      }),
+      heritageTreeRules: JSON.stringify({
+        dbhThreshold: 30,
+        measurementHeight: "2 feet above level ground (non-standard — NOT 4.5 ft DBH)",
+        designatedByCouncil: true,
+        reviewProcess: "Planning Commission review at regularly scheduled meeting",
+        notes: "Heritage tree = (a) any tree with diameter 30\"+ at 2 ft above grade (ALL species, not species-specific), OR (b) tree designated by Council resolution for historical significance. Non-heritage trees on private property do NOT require a removal permit. Street trees governed separately under Chapter 12.20.",
+      }),
+      permitProcessNotes: "Submit Tree Permit Application to Planning and Building Department. Only heritage trees (30\"+ at 2 ft above grade or Council-designated) require a permit. Planning Commission reviews at regular meeting. IMPORTANT: Healdsburg measures at 2 feet above grade, not standard DBH (4.5 feet) — verify measurement point with property owner. Properties in unincorporated Sonoma County (outside city limits) are subject to county ordinance instead (31 species at 6\"+ DBH).",
+      ordinanceUrl: "https://www.codepublishing.com/CA/Healdsburg/html/Healdsburg20/Healdsburg2024.html",
+      codeReference: "HMC Chapter 20.24, Article II: §20.24.045 (definitions), §20.24.050 (permit required), §20.24.075 (replacement)",
+    },
+
+    // ----- TAHOE BASIN (TRPA) -----
+    // Source: TRPA Code of Ordinances Chapter 61 — Vegetation and Forest Health
+    // Confidence: HIGH for thresholds (confirmed from TRPA official website and code)
+    // TRPA is a REGIONAL authority that overrides all local jurisdictions in the basin.
+    // Uses a land-capability-based approach, not a typical city ordinance structure.
+    // Protection is size/location-based, NOT species-specific.
+    {
+      cityName: "Tahoe Basin",
+      state: "CA", // bi-state (CA + NV) — TRPA jurisdiction spans both
+      protectedSpecies: JSON.stringify([
+        // TRPA does NOT use species-specific thresholds.
+        // The "any tree" entry captures the general 14" threshold for standard residential.
+        { species: "Any Tree", scientific: "", dbhThreshold: 14, category: "standard_residential" },
+      ]),
+      // Standard residential (non-lakefront): trees >14" DBH require TRPA permit
+      // Lakefront (between house and lake): >6" DBH requires permit
+      // SEZ (Stream Environment Zone): ANY tree requires permit regardless of size
+      // Old-growth absolute protection: 30" westside / 24" eastside
+      defaultDbhThresholdNative: 14,
+      defaultDbhThresholdNonnative: 14,
+      certifierRequirement: "TRPA forester conducts site assessment — arborist report supports but does not replace forester review",
+      mitigationRules: JSON.stringify({
+        replantingRatio: "No fixed codified ratio — determined per-permit by TRPA forester during site visit",
+        inLieuFee: "No standard in-lieu fee — enforcement settlements have required 2:1 replacement with mature 15-20 ft native conifers",
+        notes: "TRPA approach is forester-discretionary, not ratio-based. Revegetation must use TRPA-approved species from the 'TRPA Recommended Native and Adapted Plant List' (BMP Handbook). Enforcement is aggressive: unauthorized SEZ removal of 387 trees resulted in ~$800,000 remediation. Unauthorized removal of 2 trees resulted in $20,000 fine + 4 replacement trees. Trees <14\" DBH can typically be removed for defensible space without a permit, EXCEPT in SEZ, backshore, or when retained as condition of prior permit.",
+      }),
+      heritageTreeRules: JSON.stringify({
+        dbhThreshold: 30, // westside old-growth threshold (absolute protection)
+        description: "Old-growth protection: 30\" DBH (westside forest types) and 24\" DBH (eastside/Jeffrey Pine forest). These trees 'shall not be felled, treated, or removed' in SEZ and conservation/recreation land — absolute prohibition. In non-SEZ urban areas, 30\"+ trees must be retained if healthy/structurally sound unless no reasonable alternative.",
+        reviewProcess: "Individual TRPA approval required for each tree >30\" (westside) or >24\" (eastside) in forest management projects",
+        notes: "Westside = west of Brockway Summit to CA-NV state line. Eastside = east of that line (Jeffrey Pine dominant). Species of limited occurrence requiring enhancement: Aspen, Black Cottonwood, Ponderosa Pine, Douglas Fir, Incense Cedar, Sugar Pine, Western White Pine, Mountain Hemlock, Whitebark Pine (ESA Threatened), Western Juniper.",
+      }),
+      permitProcessNotes: "Submit TRPA Tree Removal Permit Application. TRPA — not local cities or counties — is the sole permit authority for tree removal in the Tahoe Basin. This includes South Lake Tahoe (CA), Incline Village (NV), Tahoe City (CA), Kings Beach (CA), and surrounding communities. Forester site visit required. Standard residential: >14\" DBH requires permit. Lakefront (between house and lake): >6\" DBH. SEZ: ANY tree. Truckee is OUTSIDE the TRPA boundary — do NOT use this ordinance for Truckee properties.",
+      ordinanceUrl: "https://www.trpa.gov/trees-and-defensible-space/",
+      codeReference: "TRPA Code Chapter 61: §61.1 (tree removal), §61.1.6 (old-growth protection), §61.3 (vegetation protection/SEZ), §61.4 (revegetation)",
+    },
+
+    // ----- RENO -----
+    // Source: Reno Administrative Code Chapter 8.32 (Trees and Shrubs)
+    // Confidence: HIGH (confirmed from City of Reno official Tree FAQ page)
+    // NO permit required for private property tree removal.
+    // Only ROW/city property tree work requires a permit.
+    {
+      cityName: "Reno",
+      state: "NV",
+      protectedSpecies: JSON.stringify([]),
+      defaultDbhThresholdNative: null, // no private property protection
+      defaultDbhThresholdNonnative: null,
+      certifierRequirement: null, // no city requirement for private property
+      mitigationRules: JSON.stringify({
+        replantingRatio: "N/A — no city-mandated replacement for private property tree removal",
+        inLieuFee: "N/A",
+        notes: "No permit required for private residential tree removal in the City of Reno. City Tree Ordinance (AC Ch. 8.32) governs public trees only. Tree Work Permit required only for ROW/city property (ISA certification required for ROW work). Development context: LDC Chapter 18.12, Article V has tree protection standards for new construction/grading permits only. Planting prohibitions: Ulmus (elm) banned citywide; Populus (poplar) and Salix (willow) banned on public property.",
+      }),
+      heritageTreeRules: JSON.stringify({
+        dbhThreshold: null,
+        description: "No heritage or significant tree designation exists for private property in Reno.",
+        notes: "Washoe County (unincorporated areas) also has no standalone private-property tree removal ordinance. HOA/CC&Rs may have private restrictions — advise homeowners to check with their HOA.",
+      }),
+      permitProcessNotes: "No city permit required for removing trees on private residential property. This arborist report is for the property owner's records, insurance, real estate, or other private purposes. If the tree is within or overhanging the public right-of-way, contact Urban Forestry at (775) 321-8373 before any work.",
+      ordinanceUrl: "https://www.reno.gov/government/departments/parks-recreation-community-services/urban-forestry",
+      codeReference: "Reno AC Chapter 8.32 (public trees); LDC Chapter 18.12, Art. V (development-context tree protection)",
+    },
   ];
 
   for (const ord of ordinances) {

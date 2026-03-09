@@ -94,7 +94,7 @@ export async function checkTreeProtection(
   if (!ordinance) {
     return {
       isProtected: false,
-      reason: `No ordinance data available for ${cityName}`,
+      reason: `Ordinance data not available for ${cityName} — protection status unknown. Check with your local planning department before proceeding with removal.`,
       isHeritage: false,
       heritageReason: null,
       mitigationRequired: null,

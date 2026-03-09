@@ -380,29 +380,32 @@ const CITY_CONTACTS: Record<string, Record<string, CityContact>> = {
   Healdsburg: {
     removal_permit: {
       jurisdictionType: "city",
-      department: "Planning Division",
-      phone: "(707) 431-3346", // VERIFY
+      department: "Planning and Building Department",
+      phone: "(707) 431-3348",
       email: null,
       address: "401 Grove Street, Healdsburg, CA 95448",
-      hours: "Monday–Friday 8:00 AM–5:00 PM", // VERIFY
+      hours: "Monday–Thursday 7:30 AM–5:00 PM; every other Friday 8:00 AM–5:00 PM (9/80 schedule)", // VERIFY
       portalUrl: null,
-      websiteUrl: "https://www.ci.healdsburg.ca.us",
+      websiteUrl: "https://www.ci.healdsburg.ca.us/352/Application-Forms-Submittal-Requirements",
       submissionMethod:
-        "Tree permits are required for removal of heritage trees, and for encroachments into protected areas adjacent to heritage trees. Heritage trees in Healdsburg are defined as any tree 30 inches DBH or greater, or any tree identified by City Council resolution as having historic value.",
+        "Tree permits are required for removal of heritage trees, and for encroachments into protected areas adjacent to heritage trees. Heritage trees in Healdsburg are defined as any tree with a diameter of 30 inches or more measured at two feet above level ground, or any tree identified by City Council resolution as having historic value. IMPORTANT: Healdsburg measures diameter at 2 feet above grade, NOT standard DBH (4.5 feet).",
       requiredDocuments: [
         "Tree Removal Permit Application",
         "This certified arborist report (PDF)",
         "Site plan with tree location",
+        "Tree Location and Preservation Plan prepared by a qualified arborist (may be required)",
       ],
       typicalTimeline:
-        "Contact the Planning Division to confirm current review timelines.",
+        "Planning Commission reviews at regularly scheduled meeting.",
       applicationFee:
-        "Contact Planning Division for current fee schedule.",
+        "$1,417.54 (base $1,050.03 + GP surcharge $367.51, FY 2025-26). Arborist report peer-review fee: $1,050.03.",
       mitigationSummary:
-        "Contact Planning Division for current mitigation requirements.",
+        "3:1 replacement ratio — three new trees per heritage tree removed (§20.24.075). In-lieu fee available when on-site replanting infeasible — amount set by Council resolution. 5-year maintenance program secured by cash surety may be required.",
       tips: [
-        "Healdsburg's heritage tree threshold (30 inches DBH) is one of the higher thresholds in the region — many trees that require permits elsewhere may be exempt here.",
-        "Call the Planning Division to confirm current requirements before preparing application materials.",
+        "IMPORTANT: Healdsburg measures tree diameter at 2 feet above level ground, NOT standard DBH (4.5 feet). Verify your measurements match the city's measurement standard before submitting.",
+        "Healdsburg's heritage tree threshold (30 inches at 2 ft above grade) is one of the higher thresholds in the region — many trees that require permits elsewhere may be exempt here.",
+        "Non-heritage trees do NOT require a permit in Healdsburg. Only heritage trees (30\"+ at 2 ft above grade or Council-designated) are regulated.",
+        "Properties outside Healdsburg city limits but in the area are in unincorporated Sonoma County, which has a much stricter ordinance (31 species at 6\"+ DBH).",
       ],
     },
   },

@@ -138,6 +138,69 @@ const ordinances: OrdinanceData[] = [
     heritageTreeRules: { dbhThreshold: null, designatedByCouncil: true, reviewProcess: "Town Council", notes: "Heritage by Council designation." },
     codeReference: "PVMC §15.12.060, §15.12.070, §15.12.275",
   },
+  // --- North Bay + Tahoe/Reno expansion ---
+  {
+    cityName: "Sonoma County",
+    protectedSpecies: [
+      { species: "Valley Oak", scientific: "Quercus lobata", dbhThreshold: 6, category: "native_oak" },
+      { species: "Coast Live Oak", scientific: "Quercus agrifolia", dbhThreshold: 6, category: "native_oak" },
+      { species: "Coast Redwood", scientific: "Sequoia sempervirens", dbhThreshold: 6, category: "native_conifer" },
+      { species: "Madrone", scientific: "Arbutus menziesii", dbhThreshold: 6, category: "native" },
+    ],
+    defaultDbhThresholdNative: 6,
+    defaultDbhThresholdNonnative: null,
+    mitigationRules: { replantingRatio: "Arboreal Value Points system", inLieuFee: "$510/point", notes: "Same-species replacement, 7-year monitoring." },
+    heritageTreeRules: { dbhThreshold: 36, reviewProcess: "Planning Commission hearing for Use Permit", notes: "Hardwoods >36\" / Redwoods >48\" require Use Permit." },
+    codeReference: "Sonoma County Code §26-88-010(m)",
+  },
+  {
+    cityName: "Santa Rosa",
+    protectedSpecies: [
+      { species: "Valley Oak", scientific: "Quercus lobata", dbhThreshold: 6, category: "heritage" },
+      { species: "Blue Oak", scientific: "Quercus douglasii", dbhThreshold: 6, category: "heritage" },
+      { species: "Coast Live Oak", scientific: "Quercus agrifolia", dbhThreshold: 18, category: "heritage" },
+      { species: "Madrone", scientific: "Arbutus menziesii", dbhThreshold: 12, category: "heritage" },
+      { species: "Coast Redwood", scientific: "Sequoia sempervirens", dbhThreshold: 24, category: "heritage" },
+    ],
+    defaultDbhThresholdNative: 4,
+    defaultDbhThresholdNonnative: 4,
+    mitigationRules: { replantingRatio: "2 trees per 6\" trunk diameter", inLieuFee: "$100 per 15-gal", notes: "Category II rates." },
+    heritageTreeRules: { dbhThreshold: null, designatedByCouncil: true, reviewProcess: "Planning Commission", notes: "Heritage = 15 native species at species-specific thresholds." },
+    codeReference: "SRMC Chapter 17-24",
+  },
+  {
+    cityName: "City Of Napa",
+    protectedSpecies: [
+      { species: "Valley Oak", scientific: "Quercus lobata", dbhThreshold: 12, category: "native_oak" },
+      { species: "Coast Live Oak", scientific: "Quercus agrifolia", dbhThreshold: 12, category: "native_oak" },
+      { species: "Blue Oak", scientific: "Quercus douglasii", dbhThreshold: 6, category: "native_oak" },
+    ],
+    defaultDbhThresholdNative: 12,
+    defaultDbhThresholdNonnative: null,
+    mitigationRules: { replantingRatio: "2 per 6\" trunk diameter", inLieuFee: "CTLA-based", notes: "$5K penalty minimum." },
+    heritageTreeRules: { dbhThreshold: null, designatedByCouncil: true, reviewProcess: "Significant Tree Committee", notes: "Separate program." },
+    codeReference: "Napa MC Chapter 12.45",
+  },
+  {
+    cityName: "Tahoe Basin",
+    protectedSpecies: [
+      { species: "Any Tree", scientific: "", dbhThreshold: 14, category: "standard_residential" },
+    ],
+    defaultDbhThresholdNative: 14,
+    defaultDbhThresholdNonnative: 14,
+    mitigationRules: { replantingRatio: "Per TRPA forester", inLieuFee: "None codified", notes: "Discretionary per-permit." },
+    heritageTreeRules: { dbhThreshold: 30, reviewProcess: "Individual TRPA approval", notes: "Old-growth: 30\" westside / 24\" eastside." },
+    codeReference: "TRPA Code Chapter 61",
+  },
+  {
+    cityName: "Reno",
+    protectedSpecies: [],
+    defaultDbhThresholdNative: null,
+    defaultDbhThresholdNonnative: null,
+    mitigationRules: { replantingRatio: "N/A", inLieuFee: "N/A", notes: "No private property regulation." },
+    heritageTreeRules: { dbhThreshold: null, reviewProcess: "", notes: "No heritage designation for private property." },
+    codeReference: "Reno AC Chapter 8.32",
+  },
 ];
 
 // --- Check logic (mirroring lib/ordinances.ts checkTreeProtection) ---
@@ -205,11 +268,19 @@ console.log("ORDINANCE CHECK TEST RESULTS");
 console.log("=".repeat(80));
 
 const tests = [
-  { city: "Palo Alto", species: "Coast Live Oak", dbh: 24, expectProtected: true, expectHeritage: false, label: "Test 1" },
-  { city: "Palo Alto", species: "Flowering Pear", dbh: 6, expectProtected: false, expectHeritage: false, label: "Test 2" },
-  { city: "Atherton", species: "Valley Oak", dbh: 36, expectProtected: true, expectHeritage: true, label: "Test 3" },
-  { city: "Menlo Park", species: "Coast Redwood", dbh: 14, expectProtected: false, expectHeritage: false, label: "Test 4" },
-  { city: "Woodside", species: "Coast Live Oak", dbh: 30, expectProtected: true, expectHeritage: false, label: "Test 5" },
+  // Original 5 tests (Peninsula cities)
+  { city: "Palo Alto", species: "Coast Live Oak", dbh: 24, expectProtected: true, expectHeritage: false, label: "Test 1: Palo Alto — protected native oak" },
+  { city: "Palo Alto", species: "Flowering Pear", dbh: 6, expectProtected: false, expectHeritage: false, label: "Test 2: Palo Alto — small non-native" },
+  { city: "Atherton", species: "Valley Oak", dbh: 36, expectProtected: true, expectHeritage: true, label: "Test 3: Atherton — heritage oak" },
+  { city: "Menlo Park", species: "Coast Redwood", dbh: 14, expectProtected: false, expectHeritage: false, label: "Test 4: Menlo Park — redwood below threshold" },
+  { city: "Woodside", species: "Coast Live Oak", dbh: 30, expectProtected: true, expectHeritage: false, label: "Test 5: Woodside — large native oak" },
+
+  // North Bay + Tahoe/Reno expansion tests
+  { city: "Santa Rosa", species: "Valley Oak", dbh: 24, expectProtected: true, expectHeritage: false, label: "Test 6: Santa Rosa — Valley Oak 24\" (heritage species at 6\" threshold)" },
+  { city: "Sonoma County", species: "Coast Live Oak", dbh: 30, expectProtected: true, expectHeritage: false, label: "Test 7: Sonoma County — Coast Live Oak 30\" (below 36\" heritage)" },
+  { city: "City Of Napa", species: "Valley Oak", dbh: 12, expectProtected: true, expectHeritage: false, label: "Test 8: Napa — Valley Oak at exact 12\" threshold" },
+  { city: "Tahoe Basin", species: "Jeffrey Pine", dbh: 14, expectProtected: true, expectHeritage: false, label: "Test 9: Tahoe Basin — Jeffrey Pine 14\" (meets 'Any Tree' 14\" threshold)" },
+  { city: "Reno", species: "Ponderosa Pine", dbh: 20, expectProtected: false, expectHeritage: false, label: "Test 10: Reno — no private property protection" },
 ];
 
 let pass = 0;
