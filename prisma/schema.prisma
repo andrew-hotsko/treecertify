@@ -121,6 +121,9 @@ model Property {
   reports            Report[]
   propertyAudioNotes PropertyAudioNote[]
   invoices           Invoice[]
+
+  @@index([arboristId])
+  @@index([status])
 }
 
 model TreeRecord {
@@ -175,6 +178,8 @@ model TreeRecord {
   property       Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   treePhotos     TreePhoto[]
   treeAudioNotes TreeAudioNote[]
+
+  @@index([propertyId])
 }
 
 model TreePhoto {
@@ -200,6 +205,8 @@ model TreePhoto {
   exifTakenAt DateTime?
 
   treeRecord TreeRecord @relation(fields: [treeRecordId], references: [id], onDelete: Cascade)
+
+  @@index([treeRecordId])
 }
 
 model TreeAudioNote {
@@ -215,6 +222,8 @@ model TreeAudioNote {
   createdAt            DateTime @default(now())
 
   treeRecord TreeRecord @relation(fields: [treeRecordId], references: [id], onDelete: Cascade)
+
+  @@index([treeRecordId])
 }
 
 model PropertyAudioNote {
@@ -230,6 +239,8 @@ model PropertyAudioNote {
   createdAt            DateTime @default(now())
 
   property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
 }
 
 model MunicipalOrdinance {
@@ -314,6 +325,10 @@ model Report {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([propertyId])
+  @@index([arboristId])
+  @@index([status])
 }
 
 model ReportVersion {
@@ -324,6 +339,8 @@ model ReportVersion {
   createdAt DateTime @default(now())
 
   report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
 }
 
 model ApiUsageLog {
@@ -394,4 +411,7 @@ model Invoice {
   arborist  Arborist @relation(fields: [arboristId], references: [id])
   report    Report   @relation(fields: [reportId], references: [id])
   property  Property @relation(fields: [propertyId], references: [id])
+
+  @@index([arboristId])
+  @@index([propertyId])
 }

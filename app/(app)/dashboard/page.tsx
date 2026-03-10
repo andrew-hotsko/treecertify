@@ -22,7 +22,12 @@ function getContextMessage(props: { draftCount: number; overdueCount: number; to
 export default async function DashboardPage() {
   const arborist = await requireArborist();
 
-  const [allProperties, totalTrees, recentActivity] = await Promise.all([
+  const now = new Date();
+  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+  // All dashboard queries in a single Promise.all — eliminates sequential waterfalls
+  const [allProperties, totalTrees, outstandingBilling, treesThisWeek, treesLastWeek] = await Promise.all([
     prisma.property.findMany({
       where: { arboristId: arborist.id },
       orderBy: { updatedAt: "desc" },
@@ -33,7 +38,7 @@ export default async function DashboardPage() {
           orderBy: { treeNumber: "asc" },
         },
         reports: {
-          select: { id: true, status: true, permitStatus: true },
+          select: { id: true, status: true, permitStatus: true, certifiedAt: true },
           orderBy: { updatedAt: "desc" },
           take: 1,
         },
@@ -42,82 +47,15 @@ export default async function DashboardPage() {
     prisma.treeRecord.count({
       where: { property: { arboristId: arborist.id } },
     }),
-    // Recent activity: last 5 updated properties
-    prisma.property.findMany({
-      where: { arboristId: arborist.id },
-      orderBy: { updatedAt: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        address: true,
-        city: true,
-        updatedAt: true,
-        _count: { select: { trees: true } },
-        reports: {
-          select: { status: true, certifiedAt: true },
-          orderBy: { updatedAt: "desc" },
-          take: 1,
-        },
+    prisma.report.findMany({
+      where: {
+        arboristId: arborist.id,
+        billingIncluded: true,
+        billingAmount: { gt: 0 },
+        billingPaidAt: null,
       },
+      select: { billingAmount: true },
     }),
-  ]);
-
-  // Compute contextual stats
-  const draftCount = allProperties.filter(
-    (p) => p.reports[0] && p.reports[0].status !== "certified"
-  ).length;
-  const now = new Date();
-  const overdueCount = allProperties.filter((p) => {
-    const due = p.neededByDate;
-    return due && new Date(due) < now && (!p.reports[0] || p.reports[0].status !== "certified");
-  }).length;
-
-  // Permit pipeline stats
-  const certifiedReports = allProperties
-    .filter((p) => p.reports[0]?.status === "certified")
-    .map((p) => p.reports[0]);
-  const permitStats = {
-    pendingSubmission: certifiedReports.filter((r) => !r.permitStatus).length,
-    submittedOrReview: certifiedReports.filter(
-      (r) => r.permitStatus === "submitted" || r.permitStatus === "under_review"
-    ).length,
-    approved: certifiedReports.filter((r) => r.permitStatus === "approved").length,
-    needingRevision: certifiedReports.filter(
-      (r) => r.permitStatus === "denied" || r.permitStatus === "revision_requested"
-    ).length,
-  };
-
-  // Next Actions
-  const nextActions = {
-    needTreeAssessment: allProperties.filter((p) => p.trees.length === 0).length,
-    needReport: allProperties.filter((p) => p.trees.length > 0 && !p.reports[0]).length,
-    readyToCertify: allProperties.filter(
-      (p) => p.reports[0] && (p.reports[0].status === "draft" || p.reports[0].status === "review")
-    ).length,
-  };
-
-  // Outstanding billing stats
-  const outstandingBilling = await prisma.report.findMany({
-    where: {
-      arboristId: arborist.id,
-      billingIncluded: true,
-      billingAmount: { gt: 0 },
-      billingPaidAt: null,
-    },
-    select: { billingAmount: true },
-  });
-
-  const billingStats = outstandingBilling.length > 0
-    ? {
-        count: outstandingBilling.length,
-        total: outstandingBilling.reduce((sum, r) => sum + (r.billingAmount ?? 0), 0),
-      }
-    : null;
-
-  // Weekly activity comparison
-  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-  const [treesThisWeek, treesLastWeek] = await Promise.all([
     prisma.treeRecord.count({
       where: {
         property: { arboristId: arborist.id },
@@ -131,6 +69,54 @@ export default async function DashboardPage() {
       },
     }),
   ]);
+
+  // Compute all stats in a single pass through allProperties
+  let draftCount = 0;
+  let overdueCount = 0;
+  let needTreeAssessment = 0;
+  let needReport = 0;
+  let readyToCertify = 0;
+  let pendingSubmission = 0;
+  let submittedOrReview = 0;
+  let approved = 0;
+  let needingRevision = 0;
+
+  for (const p of allProperties) {
+    const r = p.reports[0];
+    const hasTrees = p.trees.length > 0;
+
+    if (!hasTrees) {
+      needTreeAssessment++;
+    } else if (!r) {
+      needReport++;
+    } else if (r.status === "draft" || r.status === "review") {
+      draftCount++;
+      readyToCertify++;
+    }
+
+    // Overdue check
+    if (p.neededByDate && new Date(p.neededByDate) < now && (!r || r.status !== "certified")) {
+      overdueCount++;
+    }
+
+    // Permit pipeline (certified reports only)
+    if (r?.status === "certified") {
+      if (!r.permitStatus) pendingSubmission++;
+      else if (r.permitStatus === "submitted" || r.permitStatus === "under_review") submittedOrReview++;
+      else if (r.permitStatus === "approved") approved++;
+      else if (r.permitStatus === "denied" || r.permitStatus === "revision_requested") needingRevision++;
+    }
+  }
+
+  const permitStats = { pendingSubmission, submittedOrReview, approved, needingRevision };
+  const nextActions = { needTreeAssessment, needReport, readyToCertify };
+
+  const billingStats = outstandingBilling.length > 0
+    ? {
+        count: outstandingBilling.length,
+        total: outstandingBilling.reduce((sum, r) => sum + (r.billingAmount ?? 0), 0),
+      }
+    : null;
 
   const greeting = getGreeting();
   const contextMessage = getContextMessage({ draftCount, overdueCount, totalTrees });
@@ -146,12 +132,13 @@ export default async function DashboardPage() {
           ? "no_reports"
           : "normal";
 
-  const activityFeed = recentActivity.map((p) => ({
+  // Derive activity feed from allProperties (already sorted by updatedAt desc, take top 5)
+  const activityFeed = allProperties.slice(0, 5).map((p) => ({
     id: p.id,
     address: p.address,
     city: p.city,
     updatedAt: p.updatedAt.toISOString(),
-    treeCount: p._count.trees,
+    treeCount: p.trees.length,
     reportStatus: p.reports[0]?.status || null,
     certifiedAt: p.reports[0]?.certifiedAt?.toISOString() || null,
   }));

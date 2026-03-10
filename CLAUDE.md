@@ -357,5 +357,15 @@
 - **Dashboard integration**: "Next Action Needed" section shows per-property Quick Review links (address, city, tree count, revision status) for ≤3 certifiable properties. Links go to `/properties/[id]/report?view=quickReview`. Falls back to count-based link for >3 properties.
 - Schema: `Report.reviewFlags String?` — JSON array of `ReviewFlag` objects. API: `PUT /api/reports/[id]` accepts `reviewFlags`.
 
+## Performance Optimization (Session 34)
+- **Database indexes**: 12 `@@index` directives added across 8 models (Property, TreeRecord, TreePhoto, TreeAudioNote, PropertyAudioNote, Report, ReportVersion, Invoice) covering all foreign key fields used in WHERE clauses. Pushed via `prisma db push`.
+- **Dashboard query consolidation**: Eliminated duplicate `recentActivity` query (was fetching same properties twice). Moved billing + weekly tree counts into single `Promise.all` with 5 parallel queries (was 3 sequential groups). Replaced 8+ `Array.filter()` passes with single for-loop computing all stats in one pass. Activity feed derived from `allProperties.slice(0, 5)` instead of separate query.
+- **Share page deduplication**: `generateMetadata()` and page component both called `prisma.property.findUnique`. Wrapped in React `cache()` to deduplicate within the same request.
+- **Property detail optimization**: Removed `arborist: true` include (data fetched client-side via `/api/arborist/profile`). Added `select` clause to reports include to reduce over-fetching.
+- **Ordinance caching**: `getOrdinanceByCity()` in `lib/ordinances.ts` now uses in-memory `Map` cache with 1-hour TTL. Null results also cached to avoid repeated lookups for unsupported cities.
+- **Loading skeletons**: Added `loading.tsx` for 4 routes (dashboard, properties, properties/[id], settings). Uses `Skeleton` component from `components/ui/skeleton.tsx`. Previously zero loading files — users saw blank screens during server rendering.
+- **Bundle sizes (post-optimization)**: Dashboard 5.95 kB (121 kB first load), Properties 7.69 kB (134 kB), Property detail 48.5 kB (200 kB), Report 53.9 kB (199 kB), Settings 27.3 kB (133 kB), Share 3.71 kB (103 kB). Shared chunks 87.9 kB.
+- **Remaining bottlenecks (not addressed)**: Property detail/report pages are ~200 kB first load — driven by Mapbox GL + rich editor bundles, already dynamically imported. No further easy wins without feature removal.
+
 ## Session Completion
 - When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.
