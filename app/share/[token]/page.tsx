@@ -408,17 +408,17 @@ export default async function SharedPropertyPage({
 
   if (!property) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50">
-        <div className="text-center max-w-md px-6">
-          <div className="inline-flex items-center gap-2 mb-6">
-            <TreePine className="h-6 w-6 text-[#1D4E3E]" />
-            <span className="font-semibold text-[#1D4E3E] tracking-tight">TreeCertify</span>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50" data-theme="light">
+        <div className="text-center max-w-sm px-6">
+          <div className="inline-flex items-center gap-2 mb-8">
+            <TreePine className="h-6 w-6 text-forest" />
+            <span className="font-display font-semibold text-forest tracking-tight">TreeCertify</span>
           </div>
-          <h1 className="text-xl font-semibold text-neutral-800 mb-2">
-            This report link is no longer available
+          <h1 className="text-xl font-semibold text-neutral-900 font-display mb-2">
+            Report Not Available
           </h1>
           <p className="text-neutral-500 text-sm leading-relaxed">
-            The link may have been revoked or is no longer active.
+            This link may have been revoked or is no longer active.
             If you need access to this report, please contact your arborist directly.
           </p>
         </div>
@@ -531,10 +531,10 @@ export default async function SharedPropertyPage({
     REPORT_TYPE_LABELS[report?.reportType ?? ""] ?? "Arborist Report";
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-neutral-50" data-theme="light">
       {/* ==== A. Branded Header ==== */}
-      <header className="bg-white border-b">
-        <div className="max-w-2xl mx-auto px-5 py-8">
+      <header className="bg-white border-b border-neutral-200">
+        <div className="max-w-2xl mx-auto px-5 py-8 sm:py-10">
           {/* Company logo */}
           {arborist?.companyLogoUrl && (
             /* eslint-disable-next-line @next/next/no-img-element */
@@ -581,20 +581,22 @@ export default async function SharedPropertyPage({
 
           {/* Certification date */}
           {isCertified && (report?.certifiedAt || report?.originalCertifiedAt) && (
-            <p className="flex items-center gap-1.5 text-sm text-green-700 mt-2">
-              <CheckCircle2 className="h-4 w-4" />
-              Certified{" "}
-              {new Date(
-                (isAmending ? report?.originalCertifiedAt : report?.certifiedAt) ?? report?.certifiedAt ?? ""
-              ).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
+            <div className="inline-flex items-center gap-2 mt-3 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <span className="text-sm font-medium text-emerald-800">
+                Certified{" "}
+                {new Date(
+                  (isAmending ? report?.originalCertifiedAt : report?.certifiedAt) ?? report?.certifiedAt ?? ""
+                ).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </span>
               {report?.amendmentNumber != null && report.amendmentNumber > 0 && !isAmending && (
-                <span className="text-green-600 text-xs ml-1">(Amended)</span>
+                <span className="text-emerald-600 text-xs">(Amended)</span>
               )}
-            </p>
+            </div>
           )}
         </div>
       </header>
@@ -645,16 +647,22 @@ export default async function SharedPropertyPage({
             </p>
 
             {/* Stat cards grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-              {summary.stats.map((stat) => (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+              {summary.stats.map((stat, idx) => (
                 <div
                   key={stat.label}
-                  className="bg-white rounded-lg border p-3 text-center"
+                  className={`rounded-lg p-3 text-center ${
+                    idx === 0
+                      ? "bg-forest/5 border border-forest/15"
+                      : "bg-white border border-neutral-200"
+                  }`}
                 >
-                  <p className="text-2xl font-semibold text-neutral-900 font-mono">
+                  <p className={`text-2xl font-semibold font-mono ${
+                    idx === 0 ? "text-forest" : "text-neutral-900"
+                  }`}>
                     {stat.value}
                   </p>
-                  <p className="text-xs text-neutral-500 mt-1 leading-tight">
+                  <p className="text-[11px] text-neutral-500 mt-1 leading-tight">
                     {stat.label}
                   </p>
                 </div>
@@ -816,57 +824,54 @@ export default async function SharedPropertyPage({
                 return (
                   <div
                     key={tree.id}
-                    className="bg-white rounded-lg border p-4 shadow-sm"
+                    className="bg-white rounded-lg border p-4"
                   >
-                    {/* Row 1: condition dot + tree number + species */}
-                    <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className={`h-2.5 w-2.5 rounded-full shrink-0 ${
-                          CONDITION_DOT_BG[tree.conditionRating] ??
-                          "bg-neutral-400"
-                        }`}
-                      />
-                      <span className="text-xs font-mono text-neutral-500">
-                        #{tree.treeNumber}
-                      </span>
-                      <h3 className="font-medium text-neutral-900 font-display">
-                        {tree.speciesCommon || "Unidentified Species"}
-                      </h3>
+                    {/* Header row: condition dot + tree number + species + protected badge */}
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className={`h-2.5 w-2.5 rounded-full shrink-0 ${
+                            CONDITION_DOT_BG[tree.conditionRating] ??
+                            "bg-neutral-400"
+                          }`}
+                        />
+                        <span className="text-xs font-mono text-neutral-400">
+                          #{tree.treeNumber}
+                        </span>
+                        <h3 className="font-medium text-neutral-900 font-display truncate">
+                          {tree.speciesCommon || "Unidentified Species"}
+                        </h3>
+                      </div>
+                      {tree.isProtected && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 shrink-0">
+                          <ShieldCheck className="h-3 w-3" />
+                          Protected
+                        </span>
+                      )}
                     </div>
 
-                    {/* Scientific name */}
-                    {tree.speciesScientific && (
-                      <p className="text-xs text-neutral-400 italic ml-5 mb-2">
-                        {tree.speciesScientific}
-                      </p>
-                    )}
+                    {/* Scientific name + measurements on one line */}
+                    <div className="flex items-center gap-3 ml-5 text-xs text-neutral-500 mb-2">
+                      {tree.speciesScientific && (
+                        <span className="italic">{tree.speciesScientific}</span>
+                      )}
+                      {tree.speciesScientific && measurements.length > 0 && (
+                        <span className="text-neutral-300">·</span>
+                      )}
+                      {measurements.length > 0 && (
+                        <span className="font-mono">{measurements.join(" · ")}</span>
+                      )}
+                    </div>
 
-                    {/* Measurements row */}
-                    {measurements.length > 0 && (
-                      <p className="text-xs font-mono text-neutral-500 ml-5 mb-2">
-                        {measurements.join(" · ")}
-                      </p>
-                    )}
-
-                    {/* Condition + Action */}
-                    <div className="ml-5 space-y-1">
-                      <p className="text-sm text-neutral-600">
+                    {/* Condition + Action separated by border */}
+                    <div className="ml-5 pt-2 border-t border-neutral-100 space-y-1">
+                      <p className="text-sm text-neutral-500">
                         {CONDITION_FRIENDLY[tree.conditionRating] ?? "Not assessed"}
                       </p>
-                      <p className="text-sm text-neutral-600">
+                      <p className="text-sm text-neutral-700 font-medium">
                         {actionText}
                       </p>
                     </div>
-
-                    {/* Protected badge */}
-                    {tree.isProtected && (
-                      <div className="ml-5 mt-2">
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
-                          <ShieldCheck className="h-3 w-3" />
-                          Protected Tree
-                        </span>
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -1317,44 +1322,50 @@ export default async function SharedPropertyPage({
           report?.reportType === "removal_permit" &&
           !cityContact && (
             <section>
+              <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-4">
+                Submitting Your Report
+              </p>
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Submitting Your Report
-                </h3>
-                <p className="text-gray-700 text-sm">
+                <p className="text-sm text-neutral-600 leading-relaxed">
                   Your arborist report is ready to submit. Here&apos;s the general process
                   for tree removal permits in California cities:
                 </p>
-                <div className="space-y-3">
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-forest/10 text-forest flex items-center justify-center text-sm font-semibold">
-                      1
+                <div className="space-y-4">
+                  <div className="flex gap-4">
+                    <div className="flex-none flex items-start">
+                      <span className="h-7 w-7 rounded-full bg-forest text-white text-sm font-semibold flex items-center justify-center">
+                        1
+                      </span>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">Contact your city&apos;s Planning Department</p>
-                      <p className="text-sm text-gray-600">
+                      <h3 className="font-medium text-neutral-900 text-sm">Contact your city&apos;s Planning Department</h3>
+                      <p className="text-sm text-neutral-600 mt-1">
                         Search for &ldquo;{property.city} tree removal permit&rdquo; or call your city hall to find the right department.
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-forest/10 text-forest flex items-center justify-center text-sm font-semibold">
-                      2
+                  <div className="flex gap-4">
+                    <div className="flex-none flex items-start">
+                      <span className="h-7 w-7 rounded-full bg-forest text-white text-sm font-semibold flex items-center justify-center">
+                        2
+                      </span>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">Request a Tree Removal Permit Application</p>
-                      <p className="text-sm text-gray-600">
+                      <h3 className="font-medium text-neutral-900 text-sm">Request a Tree Removal Permit Application</h3>
+                      <p className="text-sm text-neutral-600 mt-1">
                         Most cities have a specific form. Ask what documents are required — your arborist report will be one of them.
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-forest/10 text-forest flex items-center justify-center text-sm font-semibold">
-                      3
+                  <div className="flex gap-4">
+                    <div className="flex-none flex items-start">
+                      <span className="h-7 w-7 rounded-full bg-forest text-white text-sm font-semibold flex items-center justify-center">
+                        3
+                      </span>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">Submit the application with this report</p>
-                      <p className="text-sm text-gray-600">
+                      <h3 className="font-medium text-neutral-900 text-sm">Submit the application with this report</h3>
+                      <p className="text-sm text-neutral-600 mt-1">
                         Download the PDF below and include it with your permit application.
                       </p>
                     </div>
@@ -1363,13 +1374,11 @@ export default async function SharedPropertyPage({
 
                 {/* Arborist contact nudge */}
                 {arborist && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">
-                      Your arborist can help with the submission process.{" "}
-                      <span className="font-medium text-gray-700">{arborist.name}</span>{" "}
-                      is available to answer questions about your report and permit requirements.
-                    </p>
-                  </div>
+                  <p className="text-sm text-neutral-500 mt-2">
+                    Need help?{" "}
+                    <span className="font-medium text-neutral-700">{arborist.name}</span>{" "}
+                    can assist with the permit process.
+                  </p>
                 )}
               </div>
             </section>
@@ -1604,7 +1613,7 @@ export default async function SharedPropertyPage({
         {/* ==== H. PDF Download ==== */}
         {isCertified && report && (
           <section>
-            <div className="bg-white rounded-lg border p-6 shadow-sm text-center">
+            <div className="bg-forest/5 border border-forest/15 rounded-lg p-6 text-center">
               <FileText className="h-8 w-8 text-forest mx-auto mb-3" />
               {cityContact?.jurisdictionType === "no_permit" ? (
                 <p className="text-sm text-neutral-600 mb-4 max-w-md mx-auto">
@@ -1713,11 +1722,14 @@ export default async function SharedPropertyPage({
         {/* ==== I. Satellite Map ==== */}
         {mapImageUrl && (
           <section>
+            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3">
+              Property Location
+            </p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={mapImageUrl}
               alt={`Satellite map of ${property.address}`}
-              className="w-full rounded-lg shadow-sm border"
+              className="w-full rounded-lg border border-neutral-200"
               style={{ maxHeight: 400, objectFit: "cover" }}
             />
           </section>
@@ -1895,9 +1907,10 @@ export default async function SharedPropertyPage({
       </main>
 
       {/* ==== K. Footer ==== */}
-      <footer className="border-t mt-12">
-        <div className="max-w-2xl mx-auto px-5 py-4 text-center text-xs text-neutral-400">
-          Powered by TreeCertify
+      <footer className="border-t border-neutral-200 mt-12">
+        <div className="max-w-2xl mx-auto px-5 py-6 flex items-center justify-center gap-2 text-xs text-neutral-400">
+          <TreePine className="h-3.5 w-3.5" />
+          <span>Powered by <span className="font-display font-medium">TreeCertify</span></span>
         </div>
       </footer>
     </div>

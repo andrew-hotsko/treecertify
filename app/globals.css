@@ -153,3 +153,37 @@
 .focus-ring:focus-visible {
   box-shadow: 0 0 0 2px var(--bg-page), 0 0 0 4px rgba(29, 78, 62, 0.6);
 }
+
+/* Print styles — share page print-friendly */
+@media print {
+  body {
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Hide interactive elements when printing */
+  a[download],
+  a[href^="tel:"],
+  a[href^="mailto:"],
+  button {
+    display: none !important;
+  }
+  /* Remove box shadows and borders for cleaner print */
+  .shadow-sm, .shadow {
+    box-shadow: none !important;
+  }
+  /* Ensure all sections are visible */
+  details {
+    open: true;
+  }
+  details > summary {
+    display: none !important;
+  }
+  details > *:not(summary) {
+    display: block !important;
+  }
+  /* Page breaks */
+  section {
+    break-inside: avoid;
+  }
+}

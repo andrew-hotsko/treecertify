@@ -2,10 +2,10 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,11 +21,12 @@ import {
   Plus,
   TreePine,
   ShieldCheck,
-  ArrowRight,
   Search,
   ChevronDown,
   Trash2,
   X,
+  Home,
+  SlidersHorizontal,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -72,15 +73,17 @@ interface PropertiesListProps {
 type FilterStatus = "all" | "inProgress" | "draft" | "certified";
 type SortKey = "recent" | "oldest" | "cityAZ" | "dueSoonest";
 
-function getWorkflowStatus(property: PropertyItem) {
+function getWorkflowBadge(property: PropertyItem) {
   const latestReport = property.reports[0];
   if (property.trees.length === 0)
-    return { label: "No Trees", color: "bg-neutral-200 text-neutral-600" };
+    return { label: "No Trees", className: "bg-muted text-muted-foreground" };
   if (!latestReport)
-    return { label: "Assessing", color: "bg-amber-100 text-amber-700" };
+    return { label: "Assessing", className: "bg-amber-100 text-amber-700" };
   if (latestReport.status === "certified")
-    return { label: "Certified", color: "bg-forest/10 text-forest" };
-  return { label: "Draft", color: "bg-blue-100 text-blue-700" };
+    return { label: "Certified", className: "bg-forest/10 text-forest" };
+  if (latestReport.status === "review")
+    return { label: "In Review", className: "bg-blue-100 text-blue-700" };
+  return { label: "Draft", className: "bg-blue-100 text-blue-700" };
 }
 
 function getFilterCategory(property: PropertyItem): FilterStatus {
@@ -122,7 +125,12 @@ function formatReportType(reportType: string) {
 // Component
 // ---------------------------------------------------------------------------
 
-const VALID_FILTERS: FilterStatus[] = ["all", "inProgress", "draft", "certified"];
+const VALID_FILTERS: FilterStatus[] = [
+  "all",
+  "inProgress",
+  "draft",
+  "certified",
+];
 
 const PERMIT_FILTER_LABELS: Record<string, string> = {
   pending: "Pending Submission",
@@ -131,14 +139,23 @@ const PERMIT_FILTER_LABELS: Record<string, string> = {
   revision: "Needing Revision",
 };
 
-export function PropertiesList({ properties: initialProperties, initialFilter, initialPermitFilter }: PropertiesListProps) {
+export function PropertiesList({
+  properties: initialProperties,
+  initialFilter,
+  initialPermitFilter,
+}: PropertiesListProps) {
   const { toast } = useToast();
   const [properties, setProperties] = useState(initialProperties);
   const [filter, setFilter] = useState<FilterStatus>(
-    VALID_FILTERS.includes(initialFilter as FilterStatus) ? (initialFilter as FilterStatus) : "all"
+    VALID_FILTERS.includes(initialFilter as FilterStatus)
+      ? (initialFilter as FilterStatus)
+      : "all"
   );
   const [permitFilter, setPermitFilter] = useState<string | null>(
-    initialPermitFilter && Object.keys(PERMIT_FILTER_LABELS).includes(initialPermitFilter) ? initialPermitFilter : null
+    initialPermitFilter &&
+      Object.keys(PERMIT_FILTER_LABELS).includes(initialPermitFilter)
+      ? initialPermitFilter
+      : null
   );
   const [sortKey, setSortKey] = useState<SortKey>("recent");
   const [search, setSearch] = useState("");
@@ -148,14 +165,18 @@ export function PropertiesList({ properties: initialProperties, initialFilter, i
   const [deletePropertyId, setDeletePropertyId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Derive unique cities and report types for filter dropdowns
+  // Derive unique cities and report types
   const uniqueCities = useMemo(() => {
-    const cities = Array.from(new Set(properties.map((p) => p.city))).filter(Boolean).sort();
+    const cities = Array.from(new Set(properties.map((p) => p.city)))
+      .filter(Boolean)
+      .sort();
     return cities;
   }, [properties]);
 
   const uniqueTypes = useMemo(() => {
-    const types = Array.from(new Set(properties.map((p) => p.reportType))).filter(Boolean).sort();
+    const types = Array.from(new Set(properties.map((p) => p.reportType)))
+      .filter(Boolean)
+      .sort();
     return types;
   }, [properties]);
 
@@ -163,8 +184,9 @@ export function PropertiesList({ properties: initialProperties, initialFilter, i
   const counts = useMemo(
     () => ({
       all: properties.length,
-      inProgress: properties.filter((p) => getFilterCategory(p) === "inProgress")
-        .length,
+      inProgress: properties.filter(
+        (p) => getFilterCategory(p) === "inProgress"
+      ).length,
       draft: properties.filter((p) => getFilterCategory(p) === "draft").length,
       certified: properties.filter(
         (p) => getFilterCategory(p) === "certified"
@@ -177,36 +199,37 @@ export function PropertiesList({ properties: initialProperties, initialFilter, i
   const filteredProperties = useMemo(() => {
     let result = properties;
 
-    // Filter by permit status (from dashboard pipeline click)
+    // Filter by permit status
     if (permitFilter) {
       result = result.filter((p) => {
         const ps = p.reports[0]?.permitStatus;
         switch (permitFilter) {
-          case "pending": return p.reports[0]?.status === "certified" && !ps;
-          case "submitted": return ps === "submitted" || ps === "under_review";
-          case "approved": return ps === "approved";
-          case "revision": return ps === "denied" || ps === "revision_requested";
-          default: return true;
+          case "pending":
+            return p.reports[0]?.status === "certified" && !ps;
+          case "submitted":
+            return ps === "submitted" || ps === "under_review";
+          case "approved":
+            return ps === "approved";
+          case "revision":
+            return ps === "denied" || ps === "revision_requested";
+          default:
+            return true;
         }
       });
     }
 
-    // Filter by status
     if (filter !== "all") {
       result = result.filter((p) => getFilterCategory(p) === filter);
     }
 
-    // Filter by city
     if (cityFilter !== "all") {
       result = result.filter((p) => p.city === cityFilter);
     }
 
-    // Filter by report type
     if (typeFilter !== "all") {
       result = result.filter((p) => p.reportType === typeFilter);
     }
 
-    // Search by address or city
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       result = result.filter(
@@ -216,7 +239,6 @@ export function PropertiesList({ properties: initialProperties, initialFilter, i
       );
     }
 
-    // Sort
     result = [...result].sort((a, b) => {
       switch (sortKey) {
         case "recent":
@@ -244,7 +266,15 @@ export function PropertiesList({ properties: initialProperties, initialFilter, i
     });
 
     return result;
-  }, [properties, filter, permitFilter, search, sortKey, cityFilter, typeFilter]);
+  }, [
+    properties,
+    filter,
+    permitFilter,
+    search,
+    sortKey,
+    cityFilter,
+    typeFilter,
+  ]);
 
   const filters: { key: FilterStatus; label: string }[] = [
     { key: "all", label: `All (${counts.all})` },
@@ -287,13 +317,22 @@ export function PropertiesList({ properties: initialProperties, initialFilter, i
     }
   };
 
+  const hasActiveFilters =
+    filter !== "all" ||
+    cityFilter !== "all" ||
+    typeFilter !== "all" ||
+    !!permitFilter;
+
   return (
     <>
       {/* Permit filter banner */}
       {permitFilter && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-forest/5 border border-forest/20 text-sm">
-          <span className="text-neutral-700">
-            Showing: <span className="font-semibold text-forest">{PERMIT_FILTER_LABELS[permitFilter]}</span>
+          <span className="text-foreground">
+            Showing:{" "}
+            <span className="font-semibold text-forest">
+              {PERMIT_FILTER_LABELS[permitFilter]}
+            </span>
           </span>
           <button
             onClick={() => setPermitFilter(null)}
@@ -305,7 +344,7 @@ export function PropertiesList({ properties: initialProperties, initialFilter, i
         </div>
       )}
 
-      {/* Search + Sort */}
+      {/* Search + Sort + Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -313,245 +352,256 @@ export function PropertiesList({ properties: initialProperties, initialFilter, i
             placeholder="Search by address or city..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-10"
           />
         </div>
-        <div className="relative">
-          <button
-            onClick={() => setShowSort(!showSort)}
-            className="flex items-center gap-2 px-3 py-2 text-sm border rounded-md bg-neutral-50 hover:bg-neutral-100 text-neutral-700"
-          >
-            {sortOptions.find((s) => s.key === sortKey)?.label}
-            <ChevronDown className="h-3.5 w-3.5" />
-          </button>
-          {showSort && (
-            <div className="absolute right-0 top-full mt-1 bg-neutral-50 border rounded-md shadow-lg z-10 py-1 min-w-[160px]">
-              {sortOptions.map((opt) => (
-                <button
-                  key={opt.key}
-                  onClick={() => {
-                    setSortKey(opt.key);
-                    setShowSort(false);
-                  }}
-                  className={cn(
-                    "w-full text-left px-3 py-1.5 text-sm hover:bg-neutral-100",
-                    sortKey === opt.key
-                      ? "text-forest font-medium"
-                      : "text-neutral-600"
-                  )}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* City & Type Filters */}
-      {(uniqueCities.length > 1 || uniqueTypes.length > 1) && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          {/* City filter */}
           {uniqueCities.length > 1 && (
             <select
               value={cityFilter}
               onChange={(e) => setCityFilter(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded-md border bg-neutral-50 text-neutral-700 hover:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-forest-light"
+              className="h-11 text-sm px-3 rounded-lg border border-input bg-background text-foreground hover:border-ring/50 focus:outline-none focus:ring-2 focus:ring-ring/50"
             >
               <option value="all">All Cities</option>
               {uniqueCities.map((city) => (
-                <option key={city} value={city}>{city}</option>
+                <option key={city} value={city}>
+                  {city}
+                </option>
               ))}
             </select>
           )}
-          {uniqueTypes.length > 1 && (
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded-md border bg-neutral-50 text-neutral-700 hover:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-forest-light"
+          {/* Sort dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowSort(!showSort)}
+              className="flex items-center gap-2 h-11 px-3 text-sm border border-input rounded-lg bg-background text-foreground hover:border-ring/50 transition-colors"
             >
-              <option value="all">All Report Types</option>
-              {uniqueTypes.map((type) => (
-                <option key={type} value={type}>{formatReportType(type)}</option>
-              ))}
-            </select>
-          )}
+              <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+              <span className="hidden sm:inline">
+                {sortOptions.find((s) => s.key === sortKey)?.label}
+              </span>
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+            {showSort && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowSort(false)}
+                />
+                <div className="absolute right-0 top-full mt-1 bg-popover border rounded-lg shadow-lg z-20 py-1 min-w-[160px]">
+                  {sortOptions.map((opt) => (
+                    <button
+                      key={opt.key}
+                      onClick={() => {
+                        setSortKey(opt.key);
+                        setShowSort(false);
+                      }}
+                      className={cn(
+                        "w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors",
+                        sortKey === opt.key
+                          ? "text-forest font-medium"
+                          : "text-foreground"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      )}
+      </div>
 
-      {/* Filter Pills */}
-      <div className="flex flex-wrap gap-2">
+      {/* Filter pills */}
+      <div className="flex flex-wrap items-center gap-2">
         {filters.map((f) => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
             className={cn(
-              "px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+              "px-3 py-1.5 rounded-full text-xs font-medium transition-colors min-h-[32px]",
               filter === f.key
                 ? "bg-forest text-white"
-                : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300"
+                : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
             )}
           >
             {f.label}
           </button>
         ))}
+        {/* Report type filter pills */}
+        {uniqueTypes.length > 1 && (
+          <>
+            <div className="w-px h-4 bg-border" />
+            {uniqueTypes.map((type) => (
+              <button
+                key={type}
+                onClick={() =>
+                  setTypeFilter(typeFilter === type ? "all" : type)
+                }
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-medium transition-colors min-h-[32px]",
+                  typeFilter === type
+                    ? "bg-forest text-white"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                )}
+              >
+                {formatReportType(type)}
+              </button>
+            ))}
+          </>
+        )}
+        {hasActiveFilters && (
+          <button
+            onClick={() => {
+              setFilter("all");
+              setCityFilter("all");
+              setTypeFilter("all");
+              setPermitFilter(null);
+            }}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-1"
+          >
+            Clear all
+          </button>
+        )}
       </div>
 
-      {/* Property List */}
+      {/* Property grid */}
       {filteredProperties.length === 0 ? (
-        <Card className="py-16">
-          <CardContent className="flex flex-col items-center justify-center text-center">
-            <div className="rounded-full bg-neutral-100 p-4 mb-4">
-              <MapPin className="h-8 w-8 text-neutral-400" />
-            </div>
-            <p className="text-sm font-medium text-neutral-900">
-              {properties.length === 0
-                ? "No properties yet"
-                : "No properties match your search"}
-            </p>
-            {properties.length === 0 && (
-              <>
-                <p className="mt-1 text-sm text-neutral-500">
-                  Add your first property to start pinning trees on the
-                  satellite map and generating AI-assisted reports.
-                </p>
-                <Button
-                  asChild
-                  size="sm"
-                  className="mt-4 bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform"
-                >
-                  <Link href="/properties/new">
-                    <Plus className="mr-2 h-4 w-4" />
-                    New Property
-                  </Link>
-                </Button>
-              </>
-            )}
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={MapPin}
+          title={
+            properties.length === 0
+              ? "No properties yet"
+              : "No properties match your filters"
+          }
+          description={
+            properties.length === 0
+              ? "Add your first property to start pinning trees on the satellite map and generating AI-assisted reports."
+              : "Try adjusting your search or filters."
+          }
+          action={
+            properties.length === 0 ? (
+              <Button
+                asChild
+                size="sm"
+                className="bg-forest hover:bg-forest-light"
+              >
+                <Link href="/properties/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Property
+                </Link>
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredProperties.map((property) => {
             const treeCount = property.trees.length;
             const protectedCount = property.trees.filter(
               (t) => t.isProtected
             ).length;
-            const assessedCount = property.trees.filter(
-              (t) => t.status !== "draft"
-            ).length;
-            const workflow = getWorkflowStatus(property);
+            const workflow = getWorkflowBadge(property);
             const dueIndicator = getDueIndicator(property.neededByDate);
+            const isRealEstate = property.reportType === "real_estate_package";
 
             return (
               <div key={property.id} className="group relative">
                 <Link
                   href={`/properties/${property.id}`}
-                  className="block"
+                  className="block rounded-xl bg-card border border-border p-4 transition-all hover:shadow-sm hover:border-forest/20"
                 >
-                  <Card className="hover:border-forest/30 hover:shadow-md transition-all duration-150 cursor-pointer">
-                    <CardContent className="p-4 sm:p-5">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                          <div className="flex-shrink-0 hidden sm:block">
-                            <div className="rounded-full bg-forest/5 p-2">
-                              <MapPin className="h-5 w-5 text-forest" />
-                            </div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">
-                                {property.address}
-                              </h3>
-                              {property.address === "123 Sample Street" && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-[10px] px-1.5 py-0 text-muted-foreground border-muted-foreground/30 shrink-0"
-                                >
-                                  Sample
-                                </Badge>
-                              )}
-                              <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-neutral-200 text-neutral-600">
-                                {formatReportType(property.reportType)}
-                              </span>
-                              <span
-                                className={cn(
-                                  "text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0",
-                                  workflow.color
-                                )}
-                              >
-                                {workflow.label}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <span className="truncate">
-                                {property.city}
-                                {property.county
-                                  ? `, ${property.county} County`
-                                  : ""}
-                              </span>
-                              {dueIndicator && (
-                                <span
-                                  className={cn(
-                                    "text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0",
-                                    dueIndicator.className
-                                  )}
-                                >
-                                  {dueIndicator.label}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3 sm:gap-5 flex-shrink-0">
-                          <div className="hidden sm:block text-right">
-                            <div className="flex items-center gap-2 text-sm">
-                              <TreePine className="h-4 w-4 text-forest" />
-                              <span className="font-mono font-medium">
-                                {treeCount}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              {protectedCount > 0 && (
-                                <span className="flex items-center gap-1 text-xs text-forest">
-                                  <ShieldCheck className="h-3 w-3" />
-                                  {protectedCount}
-                                </span>
-                              )}
-                              {assessedCount > 0 && (
-                                <span className="text-xs text-muted-foreground">
-                                  {assessedCount}/{treeCount}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Mobile tree count */}
-                          <span className="flex items-center gap-1 sm:hidden text-xs shrink-0">
-                            <TreePine className="h-3.5 w-3.5 text-forest" />
-                            <span className="font-mono">{treeCount}</span>
-                          </span>
-
-                          <span className="hidden md:inline-block text-xs text-muted-foreground">
-                            {format(
-                              new Date(property.updatedAt),
-                              "MMM d, yyyy"
-                            )}
-                          </span>
-
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                        </div>
+                  {/* Top row */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-forest/5 mt-0.5">
+                        {isRealEstate ? (
+                          <Home className="h-4 w-4 text-forest" />
+                        ) : (
+                          <MapPin className="h-4 w-4 text-forest" />
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-display font-medium text-foreground truncate">
+                            {property.address}
+                          </p>
+                          {property.address === "123 Sample Street" && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] px-1.5 py-0 text-muted-foreground border-muted-foreground/30 shrink-0"
+                            >
+                              Sample
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                          {property.city}
+                          {property.county
+                            ? `, ${property.county} County`
+                            : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={cn(
+                        "text-[11px] font-medium px-2 py-0.5 rounded-full shrink-0",
+                        workflow.className
+                      )}
+                    >
+                      {workflow.label}
+                    </span>
+                  </div>
+
+                  {/* Bottom row */}
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <TreePine className="h-3.5 w-3.5" />
+                        <span className="font-mono">
+                          {treeCount} tree{treeCount !== 1 ? "s" : ""}
+                        </span>
+                      </div>
+                      {protectedCount > 0 && (
+                        <div className="flex items-center gap-0.5 text-xs text-forest">
+                          <ShieldCheck className="h-3 w-3" />
+                          <span className="font-mono">{protectedCount}</span>
+                        </div>
+                      )}
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                        {isRealEstate
+                          ? "Real Estate"
+                          : formatReportType(property.reportType)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {dueIndicator && (
+                        <span
+                          className={cn(
+                            "text-[10px] font-medium px-1.5 py-0.5 rounded",
+                            dueIndicator.className
+                          )}
+                        >
+                          {dueIndicator.label}
+                        </span>
+                      )}
+                      <span className="text-[11px] text-muted-foreground font-mono">
+                        {format(new Date(property.updatedAt), "MMM d")}
+                      </span>
+                    </div>
+                  </div>
                 </Link>
-                {/* Delete button — appears on hover */}
+
+                {/* Delete button — hover only */}
                 <button
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     setDeletePropertyId(property.id);
                   }}
-                  className="absolute top-3 right-3 z-10 p-1.5 rounded-md opacity-0 group-hover:opacity-100 sm:transition-opacity bg-neutral-50/80 hover:bg-red-50 text-muted-foreground hover:text-red-600"
+                  className="absolute top-3 right-3 z-10 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity bg-card/80 hover:bg-red-50 text-muted-foreground hover:text-red-600"
                   title="Delete property"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -563,7 +613,10 @@ export function PropertiesList({ properties: initialProperties, initialFilter, i
       )}
 
       {/* Delete Property Confirmation */}
-      <AlertDialog open={!!deletePropertyId} onOpenChange={(open) => !open && setDeletePropertyId(null)}>
+      <AlertDialog
+        open={!!deletePropertyId}
+        onOpenChange={(open) => !open && setDeletePropertyId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Property?</AlertDialogTitle>
@@ -571,14 +624,26 @@ export function PropertiesList({ properties: initialProperties, initialFilter, i
               <div className="space-y-2">
                 <p>
                   This will permanently delete{" "}
-                  <span className="font-semibold text-foreground">&ldquo;{deleteTarget?.address}&rdquo;</span> and all associated data:
+                  <span className="font-semibold text-foreground">
+                    &ldquo;{deleteTarget?.address}&rdquo;
+                  </span>{" "}
+                  and all associated data:
                 </p>
                 <ul className="list-disc pl-5 space-y-1 text-sm">
-                  <li>{deleteTarget?.trees.length ?? 0} tree{(deleteTarget?.trees.length ?? 0) !== 1 ? "s" : ""} and their assessments</li>
-                  <li>{deleteTarget?.reports.length ?? 0} report{(deleteTarget?.reports.length ?? 0) !== 1 ? "s" : ""}</li>
+                  <li>
+                    {deleteTarget?.trees.length ?? 0} tree
+                    {(deleteTarget?.trees.length ?? 0) !== 1 ? "s" : ""} and
+                    their assessments
+                  </li>
+                  <li>
+                    {deleteTarget?.reports.length ?? 0} report
+                    {(deleteTarget?.reports.length ?? 0) !== 1 ? "s" : ""}
+                  </li>
                   <li>All photos and audio notes</li>
                 </ul>
-                <p className="font-medium text-destructive">This cannot be undone.</p>
+                <p className="font-medium text-destructive">
+                  This cannot be undone.
+                </p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>

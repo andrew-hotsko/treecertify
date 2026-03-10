@@ -45,9 +45,21 @@ interface SidebarProps {
   isAdmin?: boolean;
 }
 
-export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl, isAdmin }: SidebarProps) {
+export function Sidebar({
+  arboristName,
+  isaCertNum,
+  profilePhotoUrl,
+  isAdmin,
+}: SidebarProps) {
   const pathname = usePathname();
   const { isOnline, pendingCount } = useConnectivity();
+
+  const allNavItems = [
+    ...navItems,
+    ...(isAdmin
+      ? [{ label: "Admin", href: "/admin", icon: Shield }]
+      : []),
+  ];
 
   return (
     <aside className="hidden md:flex fixed inset-y-0 left-0 z-50 w-64 flex-col bg-neutral-800 text-neutral-100">
@@ -68,7 +80,7 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl, isAdmin }: 
       <div className="px-4 py-4">
         <Link
           href="/properties/new"
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-forest px-4 py-2.5 text-sm font-medium text-neutral-50 transition-colors hover:bg-forest-light"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-forest px-4 py-2.5 text-sm font-medium text-neutral-50 transition-colors hover:bg-forest-light active:scale-[0.98]"
         >
           <Plus className="h-4 w-4" />
           New Property
@@ -77,7 +89,7 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl, isAdmin }: 
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-3">
-        {[...navItems, ...(isAdmin ? [{ label: "Admin", href: "/admin", icon: Shield }] : [])].map((item) => {
+        {allNavItems.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
           return (
@@ -113,14 +125,17 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl, isAdmin }: 
 
       {/* User section */}
       <div className="border-t border-neutral-700 p-4">
-        <div className="flex items-center gap-3">
+        <Link
+          href="/settings"
+          className="flex items-center gap-3 rounded-lg p-1 -m-1 hover:bg-neutral-700/50 transition-colors"
+        >
           <div className="relative">
             {profilePhotoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={profilePhotoUrl}
                 alt={arboristName}
-                className="h-8 w-8 rounded-full object-cover"
+                className="h-9 w-9 rounded-full object-cover"
               />
             ) : (
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-700">
@@ -135,7 +150,9 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl, isAdmin }: 
             />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-neutral-300 truncate">{arboristName}</p>
+            <p className="text-sm font-medium text-neutral-300 truncate">
+              {arboristName}
+            </p>
             <p className="font-mono text-xs text-neutral-500 truncate">
               ISA {isaCertNum}
             </p>
@@ -145,7 +162,7 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl, isAdmin }: 
               </p>
             )}
           </div>
-        </div>
+        </Link>
       </div>
     </aside>
   );

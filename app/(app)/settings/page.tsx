@@ -740,9 +740,9 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-2xl font-semibold tracking-tight font-display mb-1">Settings</h1>
-      <p className="text-muted-foreground mb-6">
-        Manage your arborist profile and company branding
+      <h1 className="text-2xl font-semibold tracking-tight font-display text-foreground">Settings</h1>
+      <p className="text-sm text-muted-foreground mt-0.5 mb-8">
+        Manage your profile, branding, and report preferences
       </p>
 
       {message && (
@@ -756,6 +756,13 @@ export default function SettingsPage() {
           {message.text}
         </div>
       )}
+
+      {/* ── Section: Profile & Credentials ── */}
+      <div className="mb-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Profile &amp; Credentials
+        </h2>
+      </div>
 
       {/* Profile Photo */}
       <Card className="mb-6">
@@ -891,12 +898,19 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* ── Section: Appearance ── */}
+      <div className="mb-2 mt-10">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Appearance
+        </h2>
+      </div>
+
       {/* Appearance */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base font-display">
             <Sun className="h-5 w-5 text-forest" />
-            Appearance
+            Theme
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -1074,6 +1088,13 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ── Section: Report Preferences ── */}
+      <div className="mb-2 mt-10">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Report Preferences
+        </h2>
+      </div>
 
       {/* Report Defaults */}
       <Card className="mb-6">
@@ -1786,6 +1807,13 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* ── Section: Billing ── */}
+      <div className="mb-2 mt-10">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Billing
+        </h2>
+      </div>
+
       {/* Client Billing */}
       <Card className="mb-6">
         <CardHeader>
@@ -1844,6 +1872,13 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ── Section: AI & Writing ── */}
+      <div className="mb-2 mt-10">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          AI &amp; Writing
+        </h2>
+      </div>
 
       {/* Report Writing Style */}
       <Card className="mb-6">

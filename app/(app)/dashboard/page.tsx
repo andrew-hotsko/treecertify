@@ -12,10 +12,17 @@ function getGreeting(): string {
   return "Good evening";
 }
 
-function getContextMessage(props: { draftCount: number; overdueCount: number; totalTrees: number }): string | null {
-  if (props.overdueCount > 0) return `You have ${props.overdueCount} overdue ${props.overdueCount === 1 ? "report" : "reports"} to finish.`;
-  if (props.draftCount > 0) return `${props.draftCount} ${props.draftCount === 1 ? "report is" : "reports are"} ready to certify.`;
-  if (props.totalTrees === 0) return "Get started by creating a property and pinning trees on the map.";
+function getContextMessage(props: {
+  draftCount: number;
+  overdueCount: number;
+  totalTrees: number;
+}): string | null {
+  if (props.overdueCount > 0)
+    return `You have ${props.overdueCount} overdue ${props.overdueCount === 1 ? "report" : "reports"} to finish.`;
+  if (props.draftCount > 0)
+    return `${props.draftCount} ${props.draftCount === 1 ? "report is" : "reports are"} ready to certify.`;
+  if (props.totalTrees === 0)
+    return "Get started by creating a property and pinning trees on the map.";
   return null;
 }
 
@@ -27,7 +34,13 @@ export default async function DashboardPage() {
   const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
   // All dashboard queries in a single Promise.all — eliminates sequential waterfalls
-  const [allProperties, totalTrees, outstandingBilling, treesThisWeek, treesLastWeek] = await Promise.all([
+  const [
+    allProperties,
+    totalTrees,
+    outstandingBilling,
+    treesThisWeek,
+    treesLastWeek,
+  ] = await Promise.all([
     prisma.property.findMany({
       where: { arboristId: arborist.id },
       orderBy: { updatedAt: "desc" },
@@ -38,7 +51,12 @@ export default async function DashboardPage() {
           orderBy: { treeNumber: "asc" },
         },
         reports: {
-          select: { id: true, status: true, permitStatus: true, certifiedAt: true },
+          select: {
+            id: true,
+            status: true,
+            permitStatus: true,
+            certifiedAt: true,
+          },
           orderBy: { updatedAt: "desc" },
           take: 1,
         },
@@ -95,31 +113,56 @@ export default async function DashboardPage() {
     }
 
     // Overdue check
-    if (p.neededByDate && new Date(p.neededByDate) < now && (!r || r.status !== "certified")) {
+    if (
+      p.neededByDate &&
+      new Date(p.neededByDate) < now &&
+      (!r || r.status !== "certified")
+    ) {
       overdueCount++;
     }
 
     // Permit pipeline (certified reports only)
     if (r?.status === "certified") {
       if (!r.permitStatus) pendingSubmission++;
-      else if (r.permitStatus === "submitted" || r.permitStatus === "under_review") submittedOrReview++;
+      else if (
+        r.permitStatus === "submitted" ||
+        r.permitStatus === "under_review"
+      )
+        submittedOrReview++;
       else if (r.permitStatus === "approved") approved++;
-      else if (r.permitStatus === "denied" || r.permitStatus === "revision_requested") needingRevision++;
+      else if (
+        r.permitStatus === "denied" ||
+        r.permitStatus === "revision_requested"
+      )
+        needingRevision++;
     }
   }
 
-  const permitStats = { pendingSubmission, submittedOrReview, approved, needingRevision };
+  const permitStats = {
+    pendingSubmission,
+    submittedOrReview,
+    approved,
+    needingRevision,
+  };
   const nextActions = { needTreeAssessment, needReport, readyToCertify };
 
-  const billingStats = outstandingBilling.length > 0
-    ? {
-        count: outstandingBilling.length,
-        total: outstandingBilling.reduce((sum, r) => sum + (r.billingAmount ?? 0), 0),
-      }
-    : null;
+  const billingStats =
+    outstandingBilling.length > 0
+      ? {
+          count: outstandingBilling.length,
+          total: outstandingBilling.reduce(
+            (sum, r) => sum + (r.billingAmount ?? 0),
+            0
+          ),
+        }
+      : null;
 
   const greeting = getGreeting();
-  const contextMessage = getContextMessage({ draftCount, overdueCount, totalTrees });
+  const contextMessage = getContextMessage({
+    draftCount,
+    overdueCount,
+    totalTrees,
+  });
 
   // Welcome state for new/returning users
   const hasReports = allProperties.some((p) => p.reports.length > 0);
@@ -143,17 +186,20 @@ export default async function DashboardPage() {
     certifiedAt: p.reports[0]?.certifiedAt?.toISOString() || null,
   }));
 
+  const firstName = arborist.name.split(" ")[0];
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight font-display text-foreground">
-            {greeting}, {arborist.name.split(" ")[0]}
+            {greeting}, {firstName}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground truncate">
-            ISA #<span className="font-mono">{arborist.isaCertificationNum}</span> &middot;{" "}
-            {arborist.companyName ?? "Independent Arborist"}
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            ISA #
+            <span className="font-mono">{arborist.isaCertificationNum}</span>{" "}
+            &middot; {arborist.companyName ?? "Independent Arborist"}
           </p>
           {contextMessage && (
             <p className="mt-1 text-sm text-forest font-medium">
@@ -163,7 +209,7 @@ export default async function DashboardPage() {
         </div>
         <Button
           asChild
-          className="bg-forest hover:bg-forest-light self-start sm:self-auto"
+          className="bg-forest hover:bg-forest-light self-start hidden md:flex"
         >
           <Link href="/properties/new">
             <Plus className="mr-2 h-4 w-4" />
