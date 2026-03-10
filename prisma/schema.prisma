@@ -32,6 +32,7 @@ model Arborist {
   reportDefaults   String?  // JSON string for report template defaults
   onboardingStep         Int      @default(0) // 0=not started, 1=credentials, 2=sample, 3=complete
   hasCompletedOnboarding Boolean  @default(false)
+  themePreference        String   @default("light") // "light" | "dark" | "system"
 
   // Invoice settings — DORMANT: Saved via API but no UI. Invoice feature paused.
   invoiceHourlyRate          Float?

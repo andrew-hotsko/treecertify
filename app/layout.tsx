@@ -35,9 +35,9 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en">
+      <html lang="en" data-theme="light" suppressHydrationWarning>
         <body
-          className={`${roboto.variable} ${ibmPlexMono.variable} font-body antialiased text-neutral-700 bg-neutral-50`}
+          className={`${roboto.variable} ${ibmPlexMono.variable} font-body antialiased`}
         >
           {children}
           <Toaster />

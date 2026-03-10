@@ -12,27 +12,29 @@
 }
 
 @layer base {
+  /* ===== Light mode (default) ===== */
   :root {
     --font-instrument-sans: 'Instrument Sans', sans-serif;
 
+    /* shadcn HSL tokens — light */
     --background: 40 33% 99%;
     --foreground: 60 3% 22%;
     --card: 40 15% 98%;
     --card-foreground: 60 3% 22%;
-    --popover: 40 20% 97%;
+    --popover: 0 0% 100%;
     --popover-foreground: 60 3% 22%;
     --primary: 160 44% 21%;
     --primary-foreground: 40 33% 99%;
-    --secondary: 50 6% 90%;
+    --secondary: 45 14% 94%;
     --secondary-foreground: 60 3% 22%;
-    --muted: 50 6% 90%;
-    --muted-foreground: 60 2% 50%;
+    --muted: 45 14% 94%;
+    --muted-foreground: 53 4% 46%;
     --accent: 160 33% 36%;
     --accent-foreground: 40 33% 99%;
-    --destructive: 0 84% 60%;
+    --destructive: 0 84% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 50 6% 90%;
-    --input: 50 9% 93%;
+    --border: 45 10% 85%;
+    --input: 45 10% 85%;
     --ring: 160 44% 28%;
     --chart-1: 160 44% 21%;
     --chart-2: 30 40% 50%;
@@ -44,6 +46,88 @@
     --sidebar-foreground: 40 20% 97%;
     --sidebar-muted: 60 2% 20%;
     --sidebar-accent: 160 44% 21%;
+
+    /* Semantic theme tokens — light */
+    --bg-page: #FEFDFB;
+    --bg-card: #FAF9F6;
+    --bg-elevated: #FFFFFF;
+    --border-color: #D9D8D2;
+    --text-primary: #3A3A36;
+    --text-secondary: #6B6B63;
+    --text-muted: #76766E;
+    --text-heading: #0A0A09;
+  }
+
+  /* ===== Dark mode (explicit) ===== */
+  [data-theme="dark"] {
+    --background: 60 5% 3%;
+    --foreground: 45 6% 93%;
+    --card: 60 3% 13%;
+    --card-foreground: 45 6% 93%;
+    --popover: 60 3% 16%;
+    --popover-foreground: 45 6% 93%;
+    --primary: 160 44% 34%;
+    --primary-foreground: 40 33% 99%;
+    --secondary: 60 3% 16%;
+    --secondary-foreground: 45 6% 93%;
+    --muted: 60 3% 16%;
+    --muted-foreground: 53 4% 60%;
+    --accent: 160 33% 40%;
+    --accent-foreground: 40 33% 99%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 60 3% 28%;
+    --input: 60 3% 28%;
+    --ring: 160 44% 38%;
+
+    --bg-page: #0A0A09;
+    --bg-card: #222220;
+    --bg-elevated: #3A3A36;
+    --border-color: #47473F;
+    --text-primary: #F2F1EC;
+    --text-secondary: #C4C4BB;
+    --text-muted: #9C9C93;
+    --text-heading: #FEFDFB;
+  }
+
+  /* ===== System preference (follows OS) ===== */
+  @media (prefers-color-scheme: dark) {
+    [data-theme="system"] {
+      --background: 60 5% 3%;
+      --foreground: 45 6% 93%;
+      --card: 60 3% 13%;
+      --card-foreground: 45 6% 93%;
+      --popover: 60 3% 16%;
+      --popover-foreground: 45 6% 93%;
+      --primary: 160 44% 34%;
+      --primary-foreground: 40 33% 99%;
+      --secondary: 60 3% 16%;
+      --secondary-foreground: 45 6% 93%;
+      --muted: 60 3% 16%;
+      --muted-foreground: 53 4% 60%;
+      --accent: 160 33% 40%;
+      --accent-foreground: 40 33% 99%;
+      --destructive: 0 70% 55%;
+      --destructive-foreground: 0 0% 100%;
+      --border: 60 3% 28%;
+      --input: 60 3% 28%;
+      --ring: 160 44% 38%;
+
+      --bg-page: #0A0A09;
+      --bg-card: #222220;
+      --bg-elevated: #3A3A36;
+      --border-color: #47473F;
+      --text-primary: #F2F1EC;
+      --text-secondary: #C4C4BB;
+      --text-muted: #9C9C93;
+      --text-heading: #FEFDFB;
+    }
+  }
+
+  /* Base element styles */
+  body {
+    background-color: var(--bg-page);
+    color: var(--text-primary);
   }
 }
 
@@ -60,4 +144,12 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));
+}
+
+/* Focus ring utility */
+.focus-ring {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px var(--bg-page), 0 0 0 4px rgba(29, 78, 62, 0.6);
 }

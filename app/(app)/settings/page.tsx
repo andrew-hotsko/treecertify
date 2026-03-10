@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTheme } from "@/components/theme-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,9 @@ import {
   RotateCcw,
   ChevronUp,
   ChevronDown,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
 import {
   DndContext,
@@ -105,6 +109,7 @@ interface ArboristProfile {
   aiStandardDisclaimer?: string | null;
   aiTonePreference?: string | null;
   aiCustomInstructions?: string | null;
+  themePreference?: string | null;
 }
 
 interface ReportDefaults {
@@ -271,6 +276,7 @@ export default function SettingsPage() {
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const { theme, setTheme } = useTheme();
 
   // Usage data state
   interface UsageData {
@@ -881,6 +887,44 @@ export default function SettingsPage() {
                 JPG, PNG, WebP, or SVG &bull; Max 10 MB
               </p>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Appearance */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base font-display">
+            <Sun className="h-5 w-5 text-forest" />
+            Appearance
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Choose your preferred color mode. Field mode on mobile always uses light theme for outdoor visibility.
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+            {([
+              { value: "light" as const, label: "Light", icon: Sun },
+              { value: "dark" as const, label: "Dark", icon: Moon },
+              { value: "system" as const, label: "System", icon: Monitor },
+            ]).map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setTheme(option.value)}
+                className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all ${
+                  theme === option.value
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/40"
+                }`}
+              >
+                <option.icon className={`h-5 w-5 ${theme === option.value ? "text-primary" : "text-muted-foreground"}`} />
+                <span className={`text-sm font-medium ${theme === option.value ? "text-primary" : "text-foreground"}`}>
+                  {option.label}
+                </span>
+              </button>
+            ))}
           </div>
         </CardContent>
       </Card>
