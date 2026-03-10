@@ -88,6 +88,13 @@ import { useToast } from "@/hooks/use-toast";
 // Types
 // ---------------------------------------------------------------------------
 
+interface TreePhoto {
+  id: string;
+  url: string;
+  caption?: string | null;
+  category?: string | null;
+}
+
 interface TreeRecord {
   id: string;
   treeNumber: number;
@@ -95,12 +102,32 @@ interface TreeRecord {
   speciesScientific: string;
   dbhInches: number;
   heightFt: number | null;
+  canopySpreadFt?: number | null;
   conditionRating: number;
   healthNotes: string;
   structuralNotes: string;
   isProtected: boolean;
+  protectionReason?: string | null;
   recommendedAction: string;
   status: string;
+  tagNumber?: string | null;
+  treePhotos?: TreePhoto[];
+  // Valuation fields
+  valuationUnitPrice?: number | null;
+  valuationHealthRating?: number | null;
+  valuationStructureRating?: number | null;
+  valuationFormRating?: number | null;
+  valuationConditionRating?: number | null;
+  valuationSpeciesRating?: number | null;
+  valuationSiteRating?: number | null;
+  valuationContributionRating?: number | null;
+  valuationLocationRating?: number | null;
+  valuationBasicValue?: number | null;
+  valuationAppraisedValue?: number | null;
+  valuationNotes?: string | null;
+  // Type-specific
+  typeSpecificData?: string | null;
+  mitigationRequired?: string | null;
 }
 
 interface Property {
@@ -170,6 +197,10 @@ interface ArboristInfo {
   companyEmail?: string | null;
   companyWebsite?: string | null;
   signatureName?: string | null;
+  traqCertified?: boolean;
+  additionalCerts?: string | null;
+  licenseNumbers?: string | null;
+  valuationLimitingConditions?: string | null;
   // Billing defaults
   showBillingOnShare?: boolean;
   defaultReportFee?: number | null;
@@ -2303,6 +2334,7 @@ export default function PropertyReportPage() {
                   reportType={report.reportType}
                   certifiedAt={report.certifiedAt}
                   eSignatureText={report.eSignatureText}
+                  reportOptions={report.reportOptions}
                 />
               </div>
             </ScrollArea>

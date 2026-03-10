@@ -14,6 +14,12 @@ export async function GET(
       include: {
         trees: {
           orderBy: { treeNumber: "asc" },
+          include: {
+            treePhotos: {
+              select: { id: true, url: true, caption: true, category: true, sortOrder: true },
+              orderBy: { sortOrder: "asc" },
+            },
+          },
         },
         reports: true,
       },
@@ -87,6 +93,12 @@ export async function PUT(
       include: {
         trees: {
           orderBy: { treeNumber: "asc" },
+          include: {
+            treePhotos: {
+              select: { id: true, url: true, caption: true, category: true, sortOrder: true },
+              orderBy: { sortOrder: "asc" },
+            },
+          },
         },
         reports: true,
       },

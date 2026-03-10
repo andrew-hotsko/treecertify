@@ -316,5 +316,16 @@
 - **Skeleton component**: `components/ui/skeleton.tsx` created (standard shadcn pattern with `bg-neutral-200/70`).
 - **Skipped** (would take >30 min each): "Next Action Needed" with specific property addresses, dynamic summary sentence below greeting, full dashboard Suspense skeletons, comprehensive button loading audit, page fade-in transitions, certification "sealed" visual treatment.
 
+## Editor Preview / PDF Alignment (Session 30)
+- **Typography alignment**: Report preview in `components/report-preview.tsx` now uses the same font stack as the PDF: Roboto body (`10.5pt`, `line-height: 1.55`, `color: #3A3A36`), Instrument Sans headings. All #2d5016 olive green replaced with #1D4E3E forest brand color.
+- **Heading sizes**: H1 = `14pt`, 700 weight, `2.5px solid #1D4E3E` bottom border. H2 = `12pt`, 600 weight, `1px solid #e5e4df` bottom border. H3 = `10.5pt`, 600 weight, `color: #333`. All match PDF route exactly.
+- **Table styling**: Header `background: #1D4E3E`, `font-size: 8.5pt`, `letter-spacing: 0.3px`. Cell borders: bottom-only `#e5e4df` (not all-sides). Alt-row shading `#FEFDFB`.
+- **Inventory table**: Color-coded condition labels (Dead=gray, Critical=red, Poor=orange, Fair=amber, Good=lime, Excellent=green). Color-coded actions (retain=green, remove=red, monitor=amber, prune=blue). Unicode shield `🛡` with code reference for protected trees. Summary row with action counts + protected count. Legend line below table.
+- **Photo thumbnails**: 80×80px thumbnails injected after each `### Tree #N` heading via `injectPhotoThumbnails()` regex post-processing. Max 4 shown with "+N more" overflow. Click opens `PhotoLightbox` component. Photos sourced from `TreePhoto` relation (included in property API).
+- **Collapsible auto-generated sections**: `CollapsibleSection` component (inline, collapsed by default). Visual divider: "Auto-Generated Sections (included in final PDF)". Sections: Valuation Summary (tree_valuation/real_estate_package), Mitigation Requirements (removal_permit with protected removal trees), TRAQ Risk Assessment (when TRAQ data exists), Limiting Conditions (valuation types with arborist customization or defaults).
+- **Certification box**: `2px solid #1D4E3E` border, `border-radius: 2px`, `background: #FBF9F6`. Full credential detail table with alternating rows: Name, ISA #, TRAQ qualification, additional certs, licenses, company, date.
+- **Property API**: `GET /api/properties/[id]` now includes `treePhotos` relation on each tree (select: id, url, caption, category, sortOrder).
+- **Files changed**: `components/report-preview.tsx` (complete rewrite), `app/(app)/properties/[id]/report/page.tsx` (ArboristInfo + TreeRecord interfaces, reportOptions prop), `app/api/properties/[id]/route.ts` (treePhotos include).
+
 ## Session Completion
 - When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.
