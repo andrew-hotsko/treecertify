@@ -39,11 +39,21 @@ export interface OrdinanceData {
   codeReference: string | null;
 }
 
+// In-memory cache for ordinance data — static reference data, rarely changes
+const ordinanceCache = new Map<string, { data: OrdinanceData | null; expiry: number }>();
+const ORDINANCE_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
 export async function getOrdinanceByCity(
   cityName: string
 ): Promise<OrdinanceData | null> {
   // Normalize input: trim + title case, and use case-insensitive match
   const normalized = toTitleCase(cityName);
+
+  // Check cache first
+  const cached = ordinanceCache.get(normalized);
+  if (cached && Date.now() < cached.expiry) {
+    return cached.data;
+  }
 
   const ord = await prisma.municipalOrdinance.findFirst({
     where: {
@@ -53,14 +63,21 @@ export async function getOrdinanceByCity(
       },
     },
   });
-  if (!ord) return null;
 
-  return {
+  if (!ord) {
+    ordinanceCache.set(normalized, { data: null, expiry: Date.now() + ORDINANCE_CACHE_TTL });
+    return null;
+  }
+
+  const result: OrdinanceData = {
     ...ord,
     protectedSpecies: JSON.parse(ord.protectedSpecies) as ProtectedSpeciesRule[],
     mitigationRules: JSON.parse(ord.mitigationRules) as MitigationRules,
     heritageTreeRules: JSON.parse(ord.heritageTreeRules) as HeritageTreeRules,
   };
+
+  ordinanceCache.set(normalized, { data: result, expiry: Date.now() + ORDINANCE_CACHE_TTL });
+  return result;
 }
 
 export interface OrdinanceContext {
