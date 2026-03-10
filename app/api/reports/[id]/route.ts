@@ -97,6 +97,7 @@ export async function PUT(
         ...(body.approvedAt !== undefined && { approvedAt: body.approvedAt }),
         ...(body.permitExpiresAt !== undefined && { permitExpiresAt: body.permitExpiresAt }),
         ...(body.submissionChecklist !== undefined && { submissionChecklist: body.submissionChecklist }),
+        ...(body.reviewFlags !== undefined && { reviewFlags: body.reviewFlags }),
         ...(body.clientNote !== undefined && { clientNote: body.clientNote }),
         // Simple billing fields
         ...(body.billingAmount !== undefined && { billingAmount: body.billingAmount != null ? parseFloat(body.billingAmount) : null }),

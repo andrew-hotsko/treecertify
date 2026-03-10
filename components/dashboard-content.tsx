@@ -22,6 +22,7 @@ import {
   FileText,
   Award,
   Home,
+  Smartphone,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -385,20 +386,62 @@ export function DashboardContent({
                   <ArrowRight className="h-4 w-4 text-blue-600" />
                 </Link>
               )}
-              {nextActions.readyToCertify > 0 && (
-                <Link
-                  href="/properties?status=draft"
-                  className="flex items-center justify-between p-3 rounded-lg bg-forest/5 hover:bg-forest/10 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <Award className="h-4 w-4 text-forest" />
-                    <span className="text-sm text-neutral-900">
-                      {nextActions.readyToCertify} report{nextActions.readyToCertify !== 1 ? "s" : ""} ready to certify
-                    </span>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-forest" />
-                </Link>
-              )}
+              {nextActions.readyToCertify > 0 && (() => {
+                const certifiableProperties = properties.filter(
+                  (p) => p.reports[0] && (p.reports[0].status === "draft" || p.reports[0].status === "review")
+                );
+                // Show up to 3 individual properties with Quick Review links
+                if (certifiableProperties.length <= 3) {
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 px-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        <Award className="h-3.5 w-3.5 text-forest" />
+                        Ready to Certify
+                      </div>
+                      {certifiableProperties.map((p) => (
+                        <Link
+                          key={p.id}
+                          href={`/properties/${p.id}/report?view=quickReview`}
+                          className="flex items-center justify-between p-3 rounded-lg bg-forest/5 hover:bg-forest/10 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <Smartphone className="h-4 w-4 text-forest shrink-0" />
+                            <div className="min-w-0">
+                              <span className="text-sm text-neutral-900 truncate block">
+                                {p.address}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {p.city} · {p.trees.length} tree{p.trees.length !== 1 ? "s" : ""}
+                                {p.reports[0]?.status === "review" && (
+                                  <span className="text-amber-600 ml-1">· Flagged for revision</span>
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="text-xs font-medium text-forest shrink-0 ml-2">
+                            Quick Review →
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  );
+                }
+                // More than 3: show count link as before
+                return (
+                  <Link
+                    href="/properties?status=draft"
+                    className="flex items-center justify-between p-3 rounded-lg bg-forest/5 hover:bg-forest/10 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Award className="h-4 w-4 text-forest" />
+                      <span className="text-sm text-neutral-900">
+                        {nextActions.readyToCertify} report{nextActions.readyToCertify !== 1 ? "s" : ""} ready to certify
+                      </span>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-forest" />
+                  </Link>
+                );
+              })()}
             </div>
           </CardContent>
         </Card>

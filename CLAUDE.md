@@ -347,5 +347,15 @@
 - **City-specific details**: Palo Alto (TLTM worksheet, ~$507 fee, neighbor notification), Menlo Park (mitigation plan, TPZ plan), Atherton (Tree Protection & Preservation Plan, Planning Commission for heritage oaks, quarterly inspections), Woodside (orange ribbon photos, proximity sketch), Portola Valley (Site Development Permit, Conservation Committee review).
 - Schema: `Report.submissionChecklist String?`. API: `PUT /api/reports/[id]` accepts `submissionChecklist`.
 
+## Quick Review Mode (Session 33)
+- Mobile-optimized read-and-certify flow for reviewing AI-generated reports from a phone. Eliminates the biggest certification drop-off by letting arborists review and certify in their truck after a field visit.
+- **Component**: `components/quick-review.tsx` — full-screen mobile experience with sticky header (back, address, status badge, 3-dot menu), scrollable report content parsed into sections, tree inventory cards, and sticky bottom action bar.
+- **Section flagging**: Each report section (split by `## ` headings) has a "Flag this section" button. Arborist can add a note describing what needs to change. Flagged sections show amber left border + flag note. Flags stored as `ReviewFlag[]` (sectionId, sectionTitle, note, createdAt).
+- **Bottom action bar** (three states): No flags → "Certify Report" (forest green). Has flags → "Send Back for Revision (N flags)" (amber) + "Certify anyway" link. Certified → "Share with Client" + Download button.
+- **"Send Back for Revision"**: Saves flags to `Report.reviewFlags` JSON field and sets status to `"review"`. In the full editor, an amber banner shows "N sections flagged for revision" with section names and a "Clear flags" button.
+- **Report page integration**: `viewMode` expanded to `"edit" | "split" | "preview" | "quickReview"`. Quick Review button added to view mode toggle (visible on all screen sizes, but the only visible option on mobile since Edit/Split/Preview are `hidden sm:flex`). Certified reports also get a Quick Review button in the toolbar. Auto-opens via `?view=quickReview` query parameter.
+- **Dashboard integration**: "Next Action Needed" section shows per-property Quick Review links (address, city, tree count, revision status) for ≤3 certifiable properties. Links go to `/properties/[id]/report?view=quickReview`. Falls back to count-based link for >3 properties.
+- Schema: `Report.reviewFlags String?` — JSON array of `ReviewFlag` objects. API: `PUT /api/reports/[id]` accepts `reviewFlags`.
+
 ## Session Completion
 - When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.

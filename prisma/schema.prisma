@@ -284,6 +284,7 @@ model Report {
   approvedAt           DateTime?
   permitExpiresAt      DateTime?
   submissionChecklist  String?    // JSON: { checkedItems, autoCheckedItems, submittedTo, completedAt }
+  reviewFlags          String?    // JSON: [{ sectionId, sectionTitle, note, createdAt }]
 
   // Valuation report fields
   valuationTotalValue        Float?    // sum of all appraised tree values

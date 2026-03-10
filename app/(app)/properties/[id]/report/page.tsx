@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,8 @@ import {
   Mail,
   FileEdit,
   BadgeCheck,
+  Flag,
+  Smartphone,
 } from "lucide-react";
 import { parseReportSections, replaceTreeSection } from "@/lib/report-sections";
 import {
@@ -87,6 +89,7 @@ import {
   SubmissionChecklistDialog,
   SubmissionChecklistSummary,
 } from "@/components/submission-checklist-dialog";
+import { QuickReview, ReviewFlag } from "@/components/quick-review";
 import { useToast } from "@/hooks/use-toast";
 
 // ---------------------------------------------------------------------------
@@ -171,6 +174,7 @@ interface Report {
   approvedAt: string | null;
   permitExpiresAt: string | null;
   submissionChecklist: string | null;
+  reviewFlags: string | null;
   clientNote: string | null;
   // Real estate package fields
   reListingAddress?: string | null;
@@ -287,6 +291,7 @@ export default function PropertyReportPage() {
   const params = useParams();
   const propertyId = params.id as string;
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   // Data state
@@ -318,7 +323,7 @@ export default function PropertyReportPage() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showSectionNav, setShowSectionNav] = useState(true);
-  const [viewMode, setViewMode] = useState<"edit" | "split" | "preview">("split");
+  const [viewMode, setViewMode] = useState<"edit" | "split" | "preview" | "quickReview">("split");
   const [showQualityDialog, setShowQualityDialog] = useState(false);
   const [qualityWarnings, setQualityWarnings] = useState<string[]>([]);
   const [streamingText, setStreamingText] = useState("");
@@ -427,7 +432,13 @@ export default function PropertyReportPage() {
           savedContentRef.current = c;
           setPreviewHtml(renderMarkdownToHtml(c));
           setReportType(r.reportType);
-          setViewMode(r.status === "certified" || r.status === "filed" ? "preview" : "split");
+          // Check query param for Quick Review entry
+          const requestedView = searchParams.get("view");
+          if (requestedView === "quickReview") {
+            setViewMode("quickReview");
+          } else {
+            setViewMode(r.status === "certified" || r.status === "filed" ? "preview" : "split");
+          }
           // Parse report options
           try {
             setReportOptions(JSON.parse(r.reportOptions || "{}"));
@@ -806,6 +817,7 @@ export default function PropertyReportPage() {
                   approvedAt: null,
                   permitExpiresAt: null,
                   submissionChecklist: null,
+                  reviewFlags: null,
                   amendmentReason: null,
                   amendmentNumber: 0,
                   originalCertifiedAt: null,
@@ -1427,11 +1439,11 @@ export default function PropertyReportPage() {
             {/* Edit actions */}
             {(!isCertified || isAmending) && (
               <>
-                {/* View mode toggle: Edit / Split / Preview */}
+                {/* View mode toggle: Edit / Split / Preview / Quick Review */}
                 <div className="flex rounded-lg border bg-muted p-0.5">
                   <button
                     onClick={() => setViewMode("edit")}
-                    className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                    className={`hidden sm:flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                       viewMode === "edit"
                         ? "bg-background text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
@@ -1442,7 +1454,7 @@ export default function PropertyReportPage() {
                   </button>
                   <button
                     onClick={() => setViewMode("split")}
-                    className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                    className={`hidden sm:flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                       viewMode === "split"
                         ? "bg-background text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
@@ -1452,7 +1464,7 @@ export default function PropertyReportPage() {
                   </button>
                   <button
                     onClick={() => setViewMode("preview")}
-                    className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                    className={`hidden sm:flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                       viewMode === "preview"
                         ? "bg-background text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
@@ -1460,6 +1472,17 @@ export default function PropertyReportPage() {
                   >
                     <Eye className="h-3 w-3" />
                     Preview
+                  </button>
+                  <button
+                    onClick={() => setViewMode("quickReview")}
+                    className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                      viewMode === "quickReview"
+                        ? "bg-forest text-white shadow-sm"
+                        : "text-forest hover:text-forest-light sm:text-muted-foreground sm:hover:text-foreground"
+                    }`}
+                  >
+                    <Smartphone className="h-3 w-3" />
+                    <span className="sm:inline">Quick Review</span>
                   </button>
                 </div>
 
@@ -1642,6 +1665,16 @@ export default function PropertyReportPage() {
             {/* Certified actions */}
             {isCertified && !isAmending && (
               <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setViewMode("quickReview")}
+                  className={viewMode === "quickReview" ? "bg-forest text-white hover:bg-forest-light" : ""}
+                >
+                  <Smartphone className="h-3.5 w-3.5 mr-1.5" />
+                  Quick Review
+                </Button>
+
                 <Button
                   size="sm"
                   className="bg-blue-600 hover:bg-blue-700"
@@ -1929,8 +1962,77 @@ export default function PropertyReportPage() {
           </div>
         )}
 
-        {/* Editor + Preview layout based on viewMode */}
-        {(viewMode === "edit" || viewMode === "split") && (!isCertified || isAmending) ? (
+        {/* Review flags banner — shown in editor modes when flags exist */}
+        {viewMode !== "quickReview" && report?.reviewFlags && (() => {
+          try {
+            const flags: ReviewFlag[] = JSON.parse(report.reviewFlags);
+            if (flags.length === 0) return null;
+            return (
+              <div className="flex-none border-b border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 flex items-center gap-2">
+                <Flag className="h-4 w-4 text-amber-600 shrink-0" />
+                <span>
+                  <span className="font-medium">{flags.length} section{flags.length !== 1 ? "s" : ""} flagged for revision</span>
+                  <span className="text-amber-600"> — {flags.map((f) => f.sectionTitle).join(", ")}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await fetch(`/api/reports/${report.id}`, {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ reviewFlags: null, status: "draft" }),
+                    });
+                    setReport({ ...report, reviewFlags: null, status: "draft" });
+                    toast({ title: "Review flags cleared" });
+                  }}
+                  className="ml-auto text-xs text-amber-600 hover:text-amber-800 underline shrink-0"
+                >
+                  Clear flags
+                </button>
+              </div>
+            );
+          } catch { return null; }
+        })()}
+
+        {/* Quick Review full-screen mode */}
+        {viewMode === "quickReview" && property && report ? (
+          <QuickReview
+            reportId={report.id}
+            reportContent={content}
+            reportStatus={report.status}
+            propertyId={property.id}
+            propertyAddress={property.address}
+            propertyCity={property.city}
+            trees={property.trees}
+            initialFlags={(() => {
+              try { return report.reviewFlags ? JSON.parse(report.reviewFlags) : []; }
+              catch { return []; }
+            })()}
+            onExitQuickReview={() => {
+              setViewMode(isCertified ? "preview" : "split");
+            }}
+            onStartCertification={() => {
+              setCertifyStep(1);
+              setReviewChecked(false);
+              setCertifyAgreed(false);
+              setSignatureText("");
+              setCertifySuccess(false);
+              setWarningsAcknowledged(false);
+              if (report) fetchValidation(report.id);
+              setShowCertifyPanel(true);
+            }}
+            onSaveFlags={async (flags) => {
+              const flagsJson = JSON.stringify(flags);
+              const res = await fetch(`/api/reports/${report.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reviewFlags: flagsJson }),
+              });
+              if (!res.ok) throw new Error("Failed to save flags");
+              setReport({ ...report, reviewFlags: flagsJson });
+            }}
+          />
+        ) : (viewMode === "edit" || viewMode === "split") && (!isCertified || isAmending) ? (
           <div className="flex-1 flex overflow-hidden">
             {/* Markdown Editor — full width in edit mode, 35% in split */}
             {(viewMode === "edit" || viewMode === "split") && (
