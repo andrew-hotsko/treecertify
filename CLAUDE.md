@@ -335,5 +335,17 @@
 - **TOC: cleaned up** — removed TODO comment about two-pass rendering. TOC section titles now use Instrument Sans font. Dot leaders hidden. Clean section list with descriptions.
 - **Terminology: standardized** to Assessment/Report/Property/Certified/Submitted/Property Owner. Changes: status badge "Filed" → "Submitted", report-types.ts "evaluation" → "assessment", share page RE action text, AI prompt instructions ("field inspection" → "field assessment", "evaluation" → "assessment" in mock text and prompt instructions), amend route error message.
 
+## City Submission Checklist (Session 32)
+- **Jurisdiction-specific submission requirements** shown before marking a report as submitted. Intercepts "Mark as Submitted" flow for `removal_permit` and `construction_encroachment` report types.
+- **Data layer**: `lib/city-submission-requirements.ts` — structured checklist configs for 14 Peninsula cities (5 verified with city-specific requirements, 9 expansion with common requirements). Types: `SubmissionRequirement` (id, label, description, category, autoCheckId, required) and `CitySubmissionConfig` (cityName, isVerified, submissionMethod, submissionNotes, typicalProcessingTime, requirements).
+- **Auto-verification** for: certification status (`report.status === 'certified'`), photo documentation (every tree has ≥1 photo). Failed auto-checks show amber warnings with specific tree numbers missing photos.
+- **Checklist dialog**: `components/submission-checklist-dialog.tsx` — full-screen sheet on mobile, centered card on desktop. Groups requirements by category (Documents, Forms, Fees, Site Requirements, Notifications). Auto-verified items show green CheckCircle2 with "Auto-verified" label. Required items must all be checked before "Confirm Submission" is enabled. "Save Progress" persists partial checklist without changing status.
+- **Submission info section**: City contact details (department, address, phone, email), submission method, typical processing time, and submission notes — all pulled from `lib/city-contacts.ts`.
+- **Checklist state persisted** on Report model as `submissionChecklist` (JSON string). Stores checkedItems, autoCheckedItems, submittedTo, isGeneric, completedAt. Viewable post-submission as collapsible `<details>` summary below permit pipeline showing "{n}/{total} verified".
+- **Fallback for unknown cities**: Generic checklist with common requirements (certified report, application form, site plan, photos, fee, owner authorization) + amber note to confirm with city directly. Shows whatever contact info is available from `getCityContact()`.
+- **PermitStatusPipeline**: New `onSubmitClick?` prop — when provided, "Mark as Submitted" button calls it instead of expanding inline form. Only used for removal_permit and construction_encroachment types; other report types keep inline flow.
+- **City-specific details**: Palo Alto (TLTM worksheet, ~$507 fee, neighbor notification), Menlo Park (mitigation plan, TPZ plan), Atherton (Tree Protection & Preservation Plan, Planning Commission for heritage oaks, quarterly inspections), Woodside (orange ribbon photos, proximity sketch), Portola Valley (Site Development Permit, Conservation Committee review).
+- Schema: `Report.submissionChecklist String?`. API: `PUT /api/reports/[id]` accepts `submissionChecklist`.
+
 ## Session Completion
 - When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.

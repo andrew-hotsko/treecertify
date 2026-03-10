@@ -83,6 +83,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { PermitStatusPipeline } from "@/components/permit-status-pipeline";
+import {
+  SubmissionChecklistDialog,
+  SubmissionChecklistSummary,
+} from "@/components/submission-checklist-dialog";
 import { useToast } from "@/hooks/use-toast";
 
 // ---------------------------------------------------------------------------
@@ -166,6 +170,7 @@ interface Report {
   denialReason: string | null;
   approvedAt: string | null;
   permitExpiresAt: string | null;
+  submissionChecklist: string | null;
   clientNote: string | null;
   // Real estate package fields
   reListingAddress?: string | null;
@@ -300,6 +305,7 @@ export default function PropertyReportPage() {
   const [reviewChecked, setReviewChecked] = useState(false);
   const [certifySuccess, setCertifySuccess] = useState(false);
   const [showCertifyCompletion, setShowCertifyCompletion] = useState(false);
+  const [showSubmissionChecklist, setShowSubmissionChecklist] = useState(false);
 
   // UI state
   const [loading, setLoading] = useState(true);
@@ -799,6 +805,7 @@ export default function PropertyReportPage() {
                   denialReason: null,
                   approvedAt: null,
                   permitExpiresAt: null,
+                  submissionChecklist: null,
                   amendmentReason: null,
                   amendmentNumber: 0,
                   originalCertifiedAt: null,
@@ -2024,20 +2031,34 @@ export default function PropertyReportPage() {
                   </div>
                 )}
                 {isCertified && report && (
-                  <PermitStatusPipeline
-                    permitStatus={report.permitStatus}
-                    submittedAt={report.submittedAt}
-                    submittedTo={report.submittedTo}
-                    reviewerName={report.reviewerName}
-                    reviewerNotes={report.reviewerNotes}
-                    conditionsOfApproval={report.conditionsOfApproval}
-                    denialReason={report.denialReason}
-                    approvedAt={report.approvedAt}
-                    permitExpiresAt={report.permitExpiresAt}
-                    certifiedAt={report.certifiedAt}
-                    mode="interactive"
-                    onUpdatePermitStatus={updatePermitStatus}
-                  />
+                  <>
+                    <PermitStatusPipeline
+                      permitStatus={report.permitStatus}
+                      submittedAt={report.submittedAt}
+                      submittedTo={report.submittedTo}
+                      reviewerName={report.reviewerName}
+                      reviewerNotes={report.reviewerNotes}
+                      conditionsOfApproval={report.conditionsOfApproval}
+                      denialReason={report.denialReason}
+                      approvedAt={report.approvedAt}
+                      permitExpiresAt={report.permitExpiresAt}
+                      certifiedAt={report.certifiedAt}
+                      mode="interactive"
+                      onUpdatePermitStatus={updatePermitStatus}
+                      onSubmitClick={
+                        reportType === "removal_permit" ||
+                        reportType === "construction_encroachment"
+                          ? () => setShowSubmissionChecklist(true)
+                          : undefined
+                      }
+                    />
+                    {/* Read-only submission checklist summary (post-submission) */}
+                    {report.submissionChecklist && (
+                      <SubmissionChecklistSummary
+                        checklistJson={report.submissionChecklist}
+                      />
+                    )}
+                  </>
                 )}
 
                 {/* ---- Listing Information (real_estate_package only) ---- */}
@@ -2865,6 +2886,26 @@ export default function PropertyReportPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* ---- Submission Checklist Dialog ---- */}
+      {showSubmissionChecklist && property && report && (
+        <SubmissionChecklistDialog
+          open={showSubmissionChecklist}
+          onClose={() => setShowSubmissionChecklist(false)}
+          onConfirmSubmission={async (data) => {
+            await updatePermitStatus(data);
+            setShowSubmissionChecklist(false);
+          }}
+          onSaveChecklist={async (checklist) => {
+            await updatePermitStatus({ submissionChecklist: checklist });
+          }}
+          cityName={property.city}
+          reportType={report.reportType}
+          report={report}
+          trees={property.trees}
+          initialChecklist={report.submissionChecklist}
+        />
       )}
 
       {/* ---- Certified details bar ---- */}

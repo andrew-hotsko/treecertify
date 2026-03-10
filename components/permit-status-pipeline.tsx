@@ -40,6 +40,7 @@ interface PermitStatusPipelineProps {
   mode: "interactive" | "readonly";
   friendlyLabels?: boolean;
   onUpdatePermitStatus?: (data: Record<string, unknown>) => Promise<void>;
+  onSubmitClick?: () => void; // Intercept "Mark as Submitted" to show checklist dialog
 }
 
 // ---------------------------------------------------------------------------
@@ -101,6 +102,7 @@ export function PermitStatusPipeline({
   mode,
   friendlyLabels = false,
   onUpdatePermitStatus,
+  onSubmitClick,
 }: PermitStatusPipelineProps) {
   const currentStage = getCurrentStageIndex(permitStatus, certifiedAt);
   const [expandedAction, setExpandedAction] = useState<string | null>(null);
@@ -271,7 +273,11 @@ export function PermitStatusPipeline({
                   <Button
                     size="sm"
                     className="bg-forest hover:bg-forest-light"
-                    onClick={() => setExpandedAction("submit")}
+                    onClick={() =>
+                      onSubmitClick
+                        ? onSubmitClick()
+                        : setExpandedAction("submit")
+                    }
                   >
                     <Send className="h-3.5 w-3.5 mr-1.5" />
                     Mark as Submitted
