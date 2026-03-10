@@ -1,20 +1,16 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   TreePine,
   Loader2,
   ShieldCheck,
-  Building2,
-  Upload,
-  ImageIcon,
   MapPin,
   Check,
   ArrowRight,
@@ -27,15 +23,54 @@ import {
   CheckCircle2,
   AlertTriangle,
   FileText,
-  Download,
+  Sparkles,
+  User,
+  ExternalLink,
 } from "lucide-react";
 import { REPORT_TYPES } from "@/lib/report-types";
+import { SAMPLE_REPORT } from "@/lib/sample-report-data";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
-// Supported cities
+// Service areas (grouped by region)
 // ---------------------------------------------------------------------------
 
+const SERVICE_AREAS = [
+  {
+    group: "Peninsula",
+    cities: [
+      "Palo Alto",
+      "Menlo Park",
+      "Atherton",
+      "Woodside",
+      "Portola Valley",
+      "Redwood City",
+      "San Mateo",
+      "Los Altos",
+      "Los Altos Hills",
+      "Mountain View",
+      "Hillsborough",
+      "San Carlos",
+      "Burlingame",
+    ],
+  },
+  {
+    group: "North Bay",
+    cities: [
+      "Sonoma County",
+      "Santa Rosa",
+      "City of Napa",
+      "Windsor",
+      "Healdsburg",
+    ],
+  },
+  {
+    group: "Tahoe / Nevada",
+    cities: ["Tahoe Basin", "Reno"],
+  },
+];
+
+// Cities with full ordinance data
 const SUPPORTED_CITIES = [
   "Palo Alto",
   "Menlo Park",
@@ -50,6 +85,19 @@ const COUNTY_MAP: Record<string, string> = {
   "Atherton": "San Mateo",
   "Woodside": "San Mateo",
   "Portola Valley": "San Mateo",
+  "Redwood City": "San Mateo",
+  "San Mateo": "San Mateo",
+  "Los Altos": "Santa Clara",
+  "Los Altos Hills": "Santa Clara",
+  "Mountain View": "Santa Clara",
+  "Hillsborough": "San Mateo",
+  "San Carlos": "San Mateo",
+  "Burlingame": "San Mateo",
+  "Sonoma County": "Sonoma",
+  "Santa Rosa": "Sonoma",
+  "City of Napa": "Napa",
+  "Windsor": "Sonoma",
+  "Healdsburg": "Sonoma",
 };
 
 const ICON_MAP = { Stethoscope, Axe, DollarSign, HardHat, Home } as const;
@@ -96,14 +144,41 @@ const COLOR_MAP: Record<
 };
 
 // ---------------------------------------------------------------------------
+// Condition dot colors (matching property-map-view)
+// ---------------------------------------------------------------------------
+
+const CONDITION_DOT: Record<number, string> = {
+  5: "bg-emerald-500",
+  4: "bg-lime-500",
+  3: "bg-amber-500",
+  2: "bg-orange-500",
+  1: "bg-red-500",
+};
+
+const CONDITION_LABEL: Record<number, string> = {
+  5: "Excellent",
+  4: "Good",
+  3: "Fair",
+  2: "Poor",
+  1: "Critical",
+};
+
+const ACTION_LABEL: Record<string, string> = {
+  retain: "Retain",
+  remove: "Remove",
+  prune: "Prune",
+  monitor: "Monitor",
+};
+
+// ---------------------------------------------------------------------------
 // Step indicator
 // ---------------------------------------------------------------------------
 
 function StepIndicator({ currentStep }: { currentStep: number }) {
   const steps = [
-    { num: 1, label: "Credentials", icon: ShieldCheck },
-    { num: 2, label: "Branding", icon: Building2 },
-    { num: 3, label: "First Property", icon: MapPin },
+    { num: 1, label: "Your Info", icon: User },
+    { num: 2, label: "See It In Action", icon: FileText },
+    { num: 3, label: "First Assessment", icon: MapPin },
   ];
 
   return (
@@ -148,57 +223,115 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
 }
 
 // ---------------------------------------------------------------------------
-// Cover page preview
+// Sample report mini preview (inline HTML, not PDF)
 // ---------------------------------------------------------------------------
 
-function CoverPagePreview({
-  logoUrl,
-  companyName,
-  arboristName,
-  isaCertNum,
-}: {
-  logoUrl: string | null;
-  companyName: string;
-  arboristName: string;
-  isaCertNum: string;
-}) {
+function SampleReportPreview() {
+  const { trees, property, certifier } = SAMPLE_REPORT;
+
   return (
-    <div className="border-2 border-dashed border-neutral-300 rounded-lg p-6 bg-neutral-50 max-w-xs mx-auto">
-      <p className="text-[10px] text-neutral-400 uppercase tracking-widest text-center mb-4">
-        Cover Page Preview
-      </p>
-      <div className="text-center space-y-3">
-        {logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={logoUrl}
-            alt="Logo"
-            className="h-14 mx-auto object-contain"
-          />
-        ) : (
-          <div className="h-14 w-14 mx-auto rounded-lg bg-neutral-200 flex items-center justify-center">
-            <ImageIcon className="h-6 w-6 text-neutral-300" />
+    <div className="border rounded-lg bg-white overflow-hidden">
+      <div className="max-h-[420px] overflow-y-auto">
+        <div className="p-5 sm:p-6 space-y-5" style={{ fontFamily: "'Roboto', sans-serif", fontSize: "10.5pt", lineHeight: 1.55, color: "#3A3A36" }}>
+          {/* Certification header */}
+          <div className="border-2 border-forest rounded p-4 bg-[#FBF9F6]">
+            <div className="text-center space-y-1">
+              <p className="text-[10px] uppercase tracking-widest text-forest font-semibold">Certified Arborist Report</p>
+              <p className="text-sm font-semibold text-neutral-800">{property.address}, {property.city}, {property.state} {property.zip}</p>
+              <p className="text-xs text-neutral-500">Prepared by {certifier.name}, ISA #{certifier.isaCertNum} &middot; {certifier.company}</p>
+            </div>
           </div>
-        )}
-        <h3
-          className="text-base font-semibold text-neutral-800"
-          style={{ fontFamily: "'Playfair Display', serif" }}
-        >
-          {companyName || "Your Company Name"}
-        </h3>
-        <div className="h-px bg-neutral-300 mx-8" />
-        <div>
-          <p className="text-[10px] text-neutral-400 uppercase tracking-wider">
-            Prepared by
-          </p>
-          <p className="text-sm font-medium text-neutral-700 mt-1">
-            {arboristName || "Your Name"}
-          </p>
-          <p className="text-xs text-neutral-400 mt-0.5">
-            ISA Certified Arborist #{isaCertNum || "XX-XXXXX"}
-          </p>
+
+          {/* Tree inventory mini-table */}
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-forest mb-2" style={{ fontFamily: "'Instrument Sans', sans-serif" }}>
+              Tree Inventory Summary
+            </h3>
+            <div className="border rounded overflow-hidden text-xs">
+              <table className="w-full">
+                <thead>
+                  <tr className="text-white text-left" style={{ backgroundColor: "#1D4E3E", fontSize: "8.5pt", letterSpacing: "0.3px" }}>
+                    <th className="px-3 py-2 font-medium">#</th>
+                    <th className="px-3 py-2 font-medium">Species</th>
+                    <th className="px-3 py-2 font-medium">DBH</th>
+                    <th className="px-3 py-2 font-medium">Condition</th>
+                    <th className="px-3 py-2 font-medium">Action</th>
+                    <th className="px-3 py-2 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trees.map((tree, i) => (
+                    <tr key={tree.treeNumber} className={i % 2 === 1 ? "bg-[#FEFDFB]" : ""} style={{ borderBottom: "1px solid #e5e4df" }}>
+                      <td className="px-3 py-2 font-mono">{tree.treeNumber}</td>
+                      <td className="px-3 py-2">
+                        <span className="font-medium">{tree.speciesCommon}</span>
+                        <br />
+                        <span className="text-neutral-400 italic text-[10px]">{tree.speciesScientific}</span>
+                      </td>
+                      <td className="px-3 py-2 font-mono">{tree.dbhInches}&quot;</td>
+                      <td className="px-3 py-2">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className={cn("w-2 h-2 rounded-full", CONDITION_DOT[tree.conditionRating])} />
+                          {CONDITION_LABEL[tree.conditionRating]}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className={cn(
+                          "font-medium",
+                          tree.recommendedAction === "remove" ? "text-red-600" : "text-forest"
+                        )}>
+                          {ACTION_LABEL[tree.recommendedAction]}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">
+                        {tree.isProtected && (
+                          <span className="inline-flex items-center gap-1 text-forest">
+                            <ShieldCheck className="h-3 w-3" />
+                            {tree.isHeritage ? "Heritage" : "Protected"}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Sample narrative excerpt — Tree #2 only (most compelling) */}
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-forest mb-2" style={{ fontFamily: "'Instrument Sans', sans-serif" }}>
+              Assessment Excerpt
+            </h3>
+            <div className="space-y-2 text-[10pt] leading-relaxed">
+              <h4 className="font-semibold text-[10.5pt]" style={{ fontFamily: "'Instrument Sans', sans-serif", color: "#333" }}>
+                Tree #2 — Monterey Pine (<em>Pinus radiata</em>)
+              </h4>
+              <p>
+                Significant health decline is evident throughout the specimen. Crown dieback affects approximately 45% of the upper canopy, with sparse needle retention and chlorotic foliage in the remaining live crown. Pitch canker (<em>Fusarium circinatum</em>) lesions are present on multiple scaffold branches. Fungal conks consistent with <em>Phellinus pini</em> were observed at two locations on the lower trunk, indicating advancing heartwood decay.
+              </p>
+              <p>
+                <strong>Protection Status:</strong> Protected under Palo Alto Municipal Code §8.10.020 — exceeds 11.5&quot; DBH threshold. Removal requires a permit and mitigation per §8.10.050.
+              </p>
+              <p>
+                <strong>Recommended Action:</strong>{" "}
+                <span className="text-red-600 font-medium">Remove.</span>{" "}
+                This tree presents an unacceptable level of risk due to advanced decay, active pitch canker infection, and significant lean toward occupied target zones. Per Palo Alto mitigation requirements, replacement planting at a 2:1 ratio is required.
+              </p>
+            </div>
+          </div>
+
+          {/* Limitations teaser */}
+          <div className="bg-neutral-50 rounded p-3 text-[9.5pt] text-neutral-500">
+            <p className="font-semibold text-neutral-600 mb-1">Limitations</p>
+            <p>
+              This assessment is based on a Level 2 Basic visual examination conducted from ground level per ISA Best Management Practices. No invasive testing, root excavation, or aerial inspection was performed...
+            </p>
+          </div>
         </div>
       </div>
+      {/* Fade overlay at bottom */}
+      <div className="h-8 bg-gradient-to-t from-white to-transparent -mt-8 relative z-10 pointer-events-none" />
     </div>
   );
 }
@@ -213,31 +346,12 @@ export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Step 1 fields
   const [name, setName] = useState(user?.fullName ?? "");
-  const [phone, setPhone] = useState("");
   const [isaCertificationNum, setIsaCertificationNum] = useState("");
-  const [isaExpirationDate, setIsaExpirationDate] = useState("");
-  const [traqCertified, setTraqCertified] = useState(false);
-  const [licenseNumbers, setLicenseNumbers] = useState("");
-  const [signatureName, setSignatureName] = useState("");
-
-  // Step 2 fields
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [companyName, setCompanyName] = useState("");
-  const [companyAddress, setCompanyAddress] = useState("");
-  const [companyPhone, setCompanyPhone] = useState("");
-  const [companyEmail, setCompanyEmail] = useState("");
-  const [companyWebsite, setCompanyWebsite] = useState("");
-
-  // Sample report state
-  const [showSampleReport, setShowSampleReport] = useState(false);
-  const [generatingSample, setGeneratingSample] = useState(false);
-  const [samplePdfUrl, setSamplePdfUrl] = useState<string | null>(null);
+  const [serviceArea, setServiceArea] = useState("");
 
   // Step 3 fields
   const [address, setAddress] = useState("");
@@ -262,32 +376,25 @@ export default function OnboardingPage() {
         const res = await fetch("/api/arborist/profile");
         if (res.ok) {
           const profile = await res.json();
-          if (profile.onboardingStep >= 3) {
+          if (profile.hasCompletedOnboarding) {
             router.replace("/dashboard");
             return;
           }
 
           // Pre-populate fields
           if (profile.name) setName(profile.name);
-          if (profile.phone) setPhone(profile.phone);
           if (profile.isaCertificationNum)
             setIsaCertificationNum(profile.isaCertificationNum);
-          if (profile.isaExpirationDate) {
-            const d = new Date(profile.isaExpirationDate);
-            setIsaExpirationDate(d.toISOString().split("T")[0]);
+          if (profile.citiesServed) {
+            try {
+              const cities = JSON.parse(profile.citiesServed);
+              if (Array.isArray(cities) && cities.length > 0) {
+                setServiceArea(cities[0]);
+              }
+            } catch {
+              // ignore parse errors
+            }
           }
-          if (profile.traqCertified) setTraqCertified(true);
-          if (profile.licenseNumbers)
-            setLicenseNumbers(profile.licenseNumbers);
-          if (profile.signatureName) setSignatureName(profile.signatureName);
-          if (profile.companyLogoUrl) setLogoUrl(profile.companyLogoUrl);
-          if (profile.companyName) setCompanyName(profile.companyName);
-          if (profile.companyAddress)
-            setCompanyAddress(profile.companyAddress);
-          if (profile.companyPhone) setCompanyPhone(profile.companyPhone);
-          if (profile.companyEmail) setCompanyEmail(profile.companyEmail);
-          if (profile.companyWebsite)
-            setCompanyWebsite(profile.companyWebsite);
 
           // Resume at next step
           if (profile.onboardingStep >= 1) {
@@ -311,12 +418,12 @@ export default function OnboardingPage() {
   }, [user?.fullName, name]);
 
   // ---------------------------------------------------------------------------
-  // Step 1: Save credentials
+  // Step 1: Save profile essentials
   // ---------------------------------------------------------------------------
 
   async function handleStep1() {
-    if (!name || !isaCertificationNum || !isaExpirationDate) {
-      setError("Please fill in all required fields.");
+    if (!name || !isaCertificationNum) {
+      setError("Please fill in your name and ISA certification number.");
       return;
     }
     setLoading(true);
@@ -327,99 +434,22 @@ export default function OnboardingPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          step: 1,
           name,
           email: user?.primaryEmailAddress?.emailAddress ?? "",
-          phone: phone || null,
           isaCertificationNum,
-          isaExpirationDate,
-          traqCertified,
-          licenseNumbers: licenseNumbers || null,
-          signatureName: signatureName || null,
+          citiesServed: serviceArea ? JSON.stringify([serviceArea]) : "[]",
         }),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to save credentials");
+        throw new Error(data.error || "Failed to save profile");
       }
 
       setCurrentStep(2);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
-      setLoading(false);
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Step 2: Save branding
-  // ---------------------------------------------------------------------------
-
-  async function uploadLogo(file: File) {
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("logo", file);
-      const res = await fetch("/api/arborist/logo", {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Upload failed");
-      }
-      const data = await res.json();
-      setLogoUrl(data.companyLogoUrl);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Logo upload failed");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  async function handleStep2() {
-    setLoading(true);
-    setError("");
-
-    try {
-      const res = await fetch("/api/arborist/onboard", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          step: 2,
-          companyName: companyName || null,
-          companyAddress: companyAddress || null,
-          companyPhone: companyPhone || null,
-          companyEmail: companyEmail || null,
-          companyWebsite: companyWebsite || null,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to save company info");
-      }
-
-      // Show sample report preview
-      setShowSampleReport(true);
-      setGeneratingSample(true);
-      setLoading(false);
-
-      // Generate sample PDF in background
-      try {
-        const sampleRes = await fetch("/api/sample-report", { method: "POST" });
-        if (sampleRes.ok) {
-          const blob = await sampleRes.blob();
-          setSamplePdfUrl(URL.createObjectURL(blob));
-        }
-      } catch {
-        // Sample generation failed — not blocking, user can still continue
-      } finally {
-        setGeneratingSample(false);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
       setLoading(false);
     }
   }
@@ -460,7 +490,7 @@ export default function OnboardingPage() {
       }
 
       // Create property
-      const county = COUNTY_MAP[normalizedCity] || "San Mateo";
+      const county = COUNTY_MAP[normalizedCity] || "";
       const res = await fetch("/api/properties", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -491,7 +521,7 @@ export default function OnboardingPage() {
     }
   }
 
-  async function handleSkipStep3() {
+  async function handleSkip() {
     setLoading(true);
     try {
       await fetch("/api/arborist/onboard", { method: "PATCH" });
@@ -521,16 +551,13 @@ export default function OnboardingPage() {
           <div className="mx-auto mb-4 rounded-full bg-forest/10 p-3 w-fit">
             <TreePine className="h-8 w-8 text-forest" />
           </div>
-          <h1 className="text-2xl font-bold text-neutral-900">
+          <h1 className="text-2xl font-display font-bold text-neutral-900">
             Welcome to TreeCertify
           </h1>
           <p className="text-sm text-neutral-500 mt-2 max-w-md mx-auto">
-            {currentStep === 1 &&
-              "Let's set up your arborist profile. This info will appear on your certified reports."}
-            {currentStep === 2 &&
-              "Add your company branding. This is optional but makes your reports look professional."}
-            {currentStep === 3 &&
-              "Set up your first property to see TreeCertify in action."}
+            {currentStep === 1 && "Let\u2019s get your practice set up."}
+            {currentStep === 2 && "See what your reports will look like."}
+            {currentStep === 3 && "Set up your first property to see TreeCertify in action."}
           </p>
         </div>
 
@@ -538,117 +565,66 @@ export default function OnboardingPage() {
         <StepIndicator currentStep={currentStep} />
 
         {/* ================================================================ */}
-        {/* STEP 1: Professional Credentials                                 */}
+        {/* STEP 1: Profile Essentials (30 seconds)                          */}
         {/* ================================================================ */}
         {currentStep === 1 && (
           <div className="space-y-6">
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <ShieldCheck className="h-4 w-4 text-forest" />
-                  <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide">
-                    Professional Credentials
-                  </h2>
-                </div>
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">
-                        Full Name <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Jane Smith"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="(650) 555-1234"
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">
+                      Full Name <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Jane Rodriguez"
+                      required
+                      className="h-12"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="isaCertificationNum">
-                        ISA Certification Number{" "}
-                        <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="isaCertificationNum"
-                        value={isaCertificationNum}
-                        onChange={(e) =>
-                          setIsaCertificationNum(e.target.value)
-                        }
-                        placeholder="WE-12345A"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="isaExpirationDate">
-                        Expiration Date{" "}
-                        <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="isaExpirationDate"
-                        type="date"
-                        value={isaExpirationDate}
-                        onChange={(e) =>
-                          setIsaExpirationDate(e.target.value)
-                        }
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="traqCertified"
-                      checked={traqCertified}
-                      onCheckedChange={(checked) =>
-                        setTraqCertified(checked === true)
+                  <div className="space-y-2">
+                    <Label htmlFor="isaCertificationNum">
+                      ISA Certification Number{" "}
+                      <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="isaCertificationNum"
+                      value={isaCertificationNum}
+                      onChange={(e) =>
+                        setIsaCertificationNum(e.target.value)
                       }
+                      placeholder="WE-12345A"
+                      required
+                      className="h-12"
                     />
-                    <Label
-                      htmlFor="traqCertified"
-                      className="text-sm font-normal cursor-pointer"
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="serviceArea">
+                      Primary Service Area
+                    </Label>
+                    <select
+                      id="serviceArea"
+                      value={serviceArea}
+                      onChange={(e) => setServiceArea(e.target.value)}
+                      className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
-                      ISA TRAQ Qualified
-                    </Label>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="licenseNumbers">
-                      Additional Licenses / Certifications
-                    </Label>
-                    <Input
-                      id="licenseNumbers"
-                      value={licenseNumbers}
-                      onChange={(e) => setLicenseNumbers(e.target.value)}
-                      placeholder="e.g., CA-QCLP #1234, BCMA, ASCA RCA"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signatureName">Report Signature Name</Label>
-                    <Input
-                      id="signatureName"
-                      value={signatureName}
-                      onChange={(e) => setSignatureName(e.target.value)}
-                      placeholder="e.g., Jane Smith, ISA Board Certified Master Arborist"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      How your name and credentials will appear on certified
-                      reports
-                    </p>
+                      <option value="">Select your area...</option>
+                      {SERVICE_AREAS.map((group) => (
+                        <optgroup key={group.group} label={group.group}>
+                          {group.cities.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                      <option value="Other">Other</option>
+                    </select>
                   </div>
                 </div>
               </CardContent>
@@ -681,141 +657,42 @@ export default function OnboardingPage() {
         )}
 
         {/* ================================================================ */}
-        {/* STEP 2: Company Branding                                         */}
+        {/* STEP 2: Explore a Sample Report (60 seconds)                     */}
         {/* ================================================================ */}
-        {currentStep === 2 && !showSampleReport && (
+        {currentStep === 2 && (
           <div className="space-y-6">
-            <Card>
-              <CardContent className="pt-6">
+            <SampleReportPreview />
+
+            {/* Feature callout cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="border-l-4 border-l-forest bg-forest/5 rounded-r-lg p-4">
                 <div className="flex items-center gap-2 mb-1">
-                  <Building2 className="h-4 w-4 text-forest" />
-                  <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide">
-                    Company Branding
-                  </h2>
+                  <Sparkles className="h-4 w-4 text-forest" />
+                  <h3 className="text-sm font-medium text-neutral-900">AI-generated narrative</h3>
                 </div>
-                <p className="text-xs text-muted-foreground mb-4">
-                  Optional &mdash; this information appears on report cover
-                  pages and headers
+                <p className="text-xs text-neutral-500 leading-relaxed">
+                  Enter tree data, get a professional report in seconds
                 </p>
-                <div className="space-y-4">
-                  {/* Logo upload */}
-                  <div className="space-y-2">
-                    <Label>Company Logo</Label>
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 border-dashed border-neutral-300 bg-neutral-100 overflow-hidden shrink-0">
-                        {logoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={logoUrl}
-                            alt="Company logo"
-                            className="h-full w-full object-contain p-1"
-                          />
-                        ) : (
-                          <ImageIcon className="h-6 w-6 text-neutral-300" />
-                        )}
-                      </div>
-                      <div>
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          className="hidden"
-                          accept="image/jpeg,image/png,image/webp,image/svg+xml"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) uploadLogo(file);
-                            e.target.value = "";
-                          }}
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={uploading}
-                        >
-                          {uploading ? (
-                            <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                          ) : (
-                            <Upload className="h-4 w-4 mr-1.5" />
-                          )}
-                          {uploading ? "Uploading..." : "Upload Logo"}
-                        </Button>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          JPG, PNG, WebP, or SVG
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="companyName">Company Name</Label>
-                      <Input
-                        id="companyName"
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        placeholder="Peninsula Tree Care"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="companyPhone">Phone</Label>
-                      <Input
-                        id="companyPhone"
-                        value={companyPhone}
-                        onChange={(e) => setCompanyPhone(e.target.value)}
-                        placeholder="(650) 555-0100"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="companyAddress">Address</Label>
-                    <Input
-                      id="companyAddress"
-                      value={companyAddress}
-                      onChange={(e) => setCompanyAddress(e.target.value)}
-                      placeholder="123 Main St, City, CA 94000"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="companyEmail">Email</Label>
-                      <Input
-                        id="companyEmail"
-                        type="email"
-                        value={companyEmail}
-                        onChange={(e) => setCompanyEmail(e.target.value)}
-                        placeholder="info@company.com"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="companyWebsite">Website</Label>
-                      <Input
-                        id="companyWebsite"
-                        value={companyWebsite}
-                        onChange={(e) => setCompanyWebsite(e.target.value)}
-                        placeholder="https://example.com"
-                      />
-                    </div>
-                  </div>
+              </div>
+              <div className="border-l-4 border-l-forest bg-forest/5 rounded-r-lg p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <ShieldCheck className="h-4 w-4 text-forest" />
+                  <h3 className="text-sm font-medium text-neutral-900">Ordinance intelligence</h3>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Live preview */}
-            <CoverPagePreview
-              logoUrl={logoUrl}
-              companyName={companyName}
-              arboristName={name}
-              isaCertNum={isaCertificationNum}
-            />
-
-            {error && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-                {error}
-              </p>
-            )}
+                <p className="text-xs text-neutral-500 leading-relaxed">
+                  Automatically checks protection status and cites local code
+                </p>
+              </div>
+              <div className="border-l-4 border-l-forest bg-forest/5 rounded-r-lg p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <FileText className="h-4 w-4 text-forest" />
+                  <h3 className="text-sm font-medium text-neutral-900">One-click PDF &amp; share</h3>
+                </div>
+                <p className="text-xs text-neutral-500 leading-relaxed">
+                  Download or share a branded report with your client
+                </p>
+              </div>
+            </div>
 
             <div className="flex gap-3">
               <Button
@@ -830,115 +707,28 @@ export default function OnboardingPage() {
                 Back
               </Button>
               <Button
-                onClick={handleStep2}
-                disabled={loading}
+                onClick={() => setCurrentStep(3)}
                 className="flex-1 bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform h-12 text-base"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    Continue
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
+                Continue
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
 
-            <button
-              onClick={handleStep2}
-              className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+            <a
+              href="/api/sample-report?showcase=true"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Skip &mdash; I&apos;ll add company details later
-            </button>
+              <ExternalLink className="h-3.5 w-3.5" />
+              View sample PDF
+            </a>
           </div>
         )}
 
         {/* ================================================================ */}
-        {/* SAMPLE REPORT PREVIEW (shown after step 2 save)                  */}
-        {/* ================================================================ */}
-        {currentStep === 2 && showSampleReport && (
-          <div className="space-y-6">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center space-y-4">
-                  <div className="mx-auto rounded-full bg-forest/10 p-3 w-fit">
-                    <FileText className="h-6 w-6 text-forest" />
-                  </div>
-                  <h2 className="text-lg font-semibold text-neutral-900">
-                    Your TreeCertify Report
-                  </h2>
-                  <p className="text-sm text-neutral-500 max-w-md mx-auto">
-                    {generatingSample
-                      ? "Generating your sample report..."
-                      : "This is a sample report using your branding and credentials. Every report you create will have this professional quality."}
-                  </p>
-
-                  {generatingSample && (
-                    <div className="flex items-center justify-center gap-2 py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-forest" />
-                      <span className="text-sm text-neutral-500">
-                        Generating your sample report...
-                      </span>
-                    </div>
-                  )}
-
-                  {!generatingSample && samplePdfUrl && (
-                    <div className="space-y-4">
-                      {/* PDF embed preview */}
-                      <div className="border rounded-lg overflow-hidden bg-neutral-100">
-                        <iframe
-                          src={samplePdfUrl}
-                          className="w-full"
-                          style={{ height: "400px" }}
-                          title="Sample Report Preview"
-                        />
-                      </div>
-
-                      <a
-                        href={samplePdfUrl}
-                        download="TreeCertify_Sample_Report.pdf"
-                        className="inline-flex items-center gap-2 px-6 py-2.5 bg-white border border-neutral-300 rounded-lg text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
-                      >
-                        <Download className="h-4 w-4" />
-                        Download Sample PDF
-                      </a>
-                    </div>
-                  )}
-
-                  {!generatingSample && !samplePdfUrl && (
-                    <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                      Sample report preview could not be generated. You can still continue — your real reports will look great!
-                    </p>
-                  )}
-
-                  {!logoUrl && !generatingSample && (
-                    <p className="text-xs text-neutral-400">
-                      Upload your company logo to see it on the cover page.
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Button
-              onClick={() => {
-                setShowSampleReport(false);
-                setCurrentStep(3);
-              }}
-              className="w-full bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform h-12 text-base"
-            >
-              Continue to Create Your First Property
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        )}
-
-        {/* ================================================================ */}
-        {/* STEP 3: First Property                                           */}
+        {/* STEP 3: First Assessment (30 seconds)                            */}
         {/* ================================================================ */}
         {currentStep === 3 && (
           <div className="space-y-6">
@@ -952,7 +742,6 @@ export default function OnboardingPage() {
                 </div>
                 <p className="text-xs text-muted-foreground mb-4">
                   Enter the address of a job you&apos;re currently working on.
-                  You&apos;ll be able to pin trees on the map.
                 </p>
                 <div className="space-y-4">
                   <div className="space-y-2">
@@ -964,6 +753,7 @@ export default function OnboardingPage() {
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       placeholder="123 University Ave"
+                      className="h-12"
                     />
                   </div>
 
@@ -976,6 +766,7 @@ export default function OnboardingPage() {
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                       placeholder="e.g., Palo Alto"
+                      className="h-12"
                     />
                     {showCityValidation && isSupportedCity && (
                       <p className="flex items-center gap-1.5 text-xs text-forest">
@@ -987,9 +778,7 @@ export default function OnboardingPage() {
                       <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                         <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                         <div>
-                          <p className="font-medium">
-                            Limited ordinance support
-                          </p>
+                          <p className="font-medium">Limited ordinance support</p>
                           <p className="text-amber-600 mt-0.5">
                             TreeCertify currently has full ordinance data for{" "}
                             {SUPPORTED_CITIES.join(", ")}. You can still create
@@ -1082,23 +871,23 @@ export default function OnboardingPage() {
                 {creatingProperty ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating Property...
+                    Creating...
                   </>
                 ) : (
                   <>
-                    <MapPin className="mr-2 h-4 w-4" />
-                    Create & Open Map
+                    Create Assessment
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </>
                 )}
               </Button>
             </div>
 
             <button
-              onClick={handleSkipStep3}
+              onClick={handleSkip}
               disabled={loading}
-              className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
             >
-              Skip for now &mdash; go to dashboard
+              I&apos;ll do this later &mdash; take me to the dashboard
             </button>
           </div>
         )}

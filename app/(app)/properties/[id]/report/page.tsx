@@ -60,6 +60,7 @@ import {
   Flag,
   Smartphone,
 } from "lucide-react";
+import { OnboardingHint } from "@/components/onboarding-hint";
 import { parseReportSections, replaceTreeSection } from "@/lib/report-sections";
 import {
   Sheet,
@@ -1217,6 +1218,10 @@ export default function PropertyReportPage() {
                   <li>Arborist Certification Statement</li>
                 </ul>
               </div>
+
+              <OnboardingHint hintId="report_generation" className="mb-2">
+                The AI will draft a full report based on your tree data. Review it, then certify when ready.
+              </OnboardingHint>
 
               <Button
                 onClick={handleGenerateClick}

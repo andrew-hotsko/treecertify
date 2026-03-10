@@ -23,7 +23,7 @@ export default async function AppLayout({
   });
 
   // Onboarding page gets rendered without sidebar
-  if (!arborist) {
+  if (!arborist || !arborist.hasCompletedOnboarding) {
     redirect("/onboarding");
   }
 

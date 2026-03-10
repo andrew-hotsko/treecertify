@@ -121,12 +121,15 @@
 - Configurable via `includeSiteMap` in report options (default: true). Graceful degradation if Mapbox fetch fails.
 - Pin colors: green (good/excellent), yellow (fair), orange (poor), red (critical/remove), gray (unassessed).
 
-## Beta Onboarding
-- 3-step onboarding flow at `/onboarding`: Step 1 (Professional Credentials), Step 2 (Company Branding with live cover page preview), Step 3 (First Property walkthrough with supported city validation).
-- `Arborist.onboardingStep` tracks progress (0=not started, 1=credentials, 2=branding, 3=complete). On page mount, profile is fetched and flow resumes at `onboardingStep + 1`.
-- Step-based saves via `POST /api/arborist/onboard` with `body.step` (1 or 2). `PATCH` marks complete (`onboardingStep = 3`).
-- Step 3 creates a real property via existing `POST /api/properties`, then calls PATCH to finalize.
-- Supported cities (5): Palo Alto, Menlo Park, Atherton, Woodside, Portola Valley. Unsupported cities show amber warning but still allow property creation.
+## Onboarding (First-Run Experience)
+- 3-step onboarding at `/onboarding`: Step 1 "Your Info" (name, ISA cert#, service area — 3 fields only), Step 2 "See It In Action" (inline sample report preview + callout cards), Step 3 "First Assessment" (create property or skip to dashboard).
+- `Arborist.hasCompletedOnboarding` (Boolean, default false) gates access to `/(app)/` routes. Layout guard in `app/(app)/layout.tsx` redirects to `/onboarding` if false.
+- `Arborist.onboardingStep` (Int) tracks resume position within the flow. Step 1 POST saves profile, PATCH sets `hasCompletedOnboarding = true`.
+- Step 2 renders an inline `SampleReportPreview` component (certification header, 3-tree inventory table, assessment excerpt, limitations) — NOT a PDF iframe. "View sample PDF" link opens `/api/sample-report?showcase=true` in new tab.
+- Step 3 creates a real property via `POST /api/properties`, or "I'll do this later" skips to dashboard. Both call PATCH to finalize.
+- Contextual hints (`components/onboarding-hint.tsx`): dismissable banners using `localStorage` key `tc_hint_dismissed_{hintId}`. Placed on first tree placement (assessment page), first report generation (report page), and share link popover.
+- Sidebar and mobile nav include "Sample Report" link to `/api/sample-report?showcase=true`.
+- Migration script: `scripts/migrate-onboarding.ts` — sets `hasCompletedOnboarding = true` for existing arborists. Run with `npx tsx scripts/migrate-onboarding.ts`.
 
 ## In-App Feedback
 - `FeedbackButton` component: floating forest FAB (bottom-right) on all `/(app)/` pages. Dialog with type selector (bug/suggestion/question), description textarea, and auto-screenshot via `html2canvas`.
@@ -240,11 +243,11 @@
 - Share page renders a vertical timeline between `PermitStatusPipeline` and PDF download. Shows for `removal_permit` and `construction_encroachment` only. Status-aware styling: forest (completed), ring glow (active), red (denied), amber (revision). Dates calculated from `submittedAt + typicalDaysFromSubmission`. Disclaimer with city contact info at bottom.
 - `computeTimelineProgress()` maps `permitStatus` to completed/active/terminal stage sets. `getStageDate()` returns actual dates for past stages, estimated dates for future stages. Both are inline helpers in the share page RSC.
 
-## Sample Report (Onboarding)
-- After onboarding step 2 (branding), a sample PDF is generated using the arborist's branding and the same Puppeteer pipeline as production PDFs.
-- Static ISA-quality content in `lib/sample-report-data.ts` — never AI-generated. 2-tree removal permit scenario (Coast Live Oak retain + Monterey Pine remove) for 742 Evergreen Terrace, Palo Alto.
-- API route: `app/api/sample-report/route.ts` — GET returns cached PDF, POST generates + caches. Cache at `uploads/sample-reports/sample-report-{arboristId}.pdf`.
-- Onboarding shows the PDF in an iframe with download button before continuing to step 3.
+## Sample Report (Onboarding & Showcase)
+- Static ISA-quality content in `lib/sample-report-data.ts` — never AI-generated. 3-tree removal permit scenario (Coast Live Oak retain, Monterey Pine remove, Valley Oak heritage retain) at 1247 University Avenue, Palo Alto. Includes `certifier` object (Jane Rodriguez, WE-12345A, TRAQ Qualified, Peninsula Tree Consulting).
+- API route: `app/api/sample-report/route.ts` — GET returns cached PDF, POST generates + caches per-arborist. `?showcase=true` generates with Jane Rodriguez identity (shared cache at `showcase.pdf`).
+- `generateSamplePdfBuffer(arboristData)` extracted as shared function — used by both showcase and personalized modes. `SHOWCASE_ARBORIST` constant uses `SAMPLE_REPORT.certifier` data.
+- Onboarding Step 2 renders inline HTML preview (not PDF iframe). "View sample PDF" link opens showcase PDF in new tab. Sidebar "Sample Report" link also opens showcase PDF.
 
 ## Analytics Events
 - `AnalyticsEvent` model in `prisma/schema.prisma` — `id`, `arboristId?`, `eventType`, `metadata` (JSON string), `createdAt`. Indexed on arboristId, eventType, createdAt.

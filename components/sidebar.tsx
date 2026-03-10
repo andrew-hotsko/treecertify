@@ -10,6 +10,7 @@ import {
   User,
   Settings,
   Shield,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useConnectivity } from "@/lib/connectivity";
@@ -96,6 +97,19 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl, isAdmin }: 
           );
         })}
       </nav>
+
+      {/* Sample Report */}
+      <div className="px-3 mb-2">
+        <a
+          href="/api/sample-report?showcase=true"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-neutral-400 hover:bg-neutral-700 hover:text-neutral-50 transition-colors"
+        >
+          <FileText className="h-5 w-5" />
+          Sample Report
+        </a>
+      </div>
 
       {/* User section */}
       <div className="border-t border-neutral-700 p-4">

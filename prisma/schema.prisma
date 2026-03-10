@@ -30,7 +30,8 @@ model Arborist {
   traqCertified    Boolean  @default(false)
   additionalCerts  String   @default("[]") // JSON array: ["BCMA", "Utility Specialist", etc.]
   reportDefaults   String?  // JSON string for report template defaults
-  onboardingStep   Int      @default(0) // 0=not started, 1=credentials, 2=branding, 3=complete
+  onboardingStep         Int      @default(0) // 0=not started, 1=credentials, 2=sample, 3=complete
+  hasCompletedOnboarding Boolean  @default(false)
 
   // Invoice settings — DORMANT: Saved via API but no UI. Invoice feature paused.
   invoiceHourlyRate          Float?

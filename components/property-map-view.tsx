@@ -24,6 +24,7 @@ import { getReportTypeConfig, calcTpzRadius, calcSrzRadius } from "@/lib/report-
 import { VALUATION_PURPOSES, DEFAULT_BASIS_STATEMENT, formatCurrency } from "@/lib/valuation";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/status-badge";
+import { OnboardingHint } from "@/components/onboarding-hint";
 import {
   ChevronLeft,
   FileText,
@@ -1105,7 +1106,10 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                     <X className="h-4 w-4" />
                   </button>
                 </div>
-                <div className="flex items-center gap-2">
+                <OnboardingHint hintId="share_link" className="mb-1">
+                Share this link with your client. They&apos;ll see a plain-English summary and can download the PDF.
+              </OnboardingHint>
+              <div className="flex items-center gap-2">
                   <input
                     readOnly
                     value={`${typeof window !== "undefined" ? window.location.origin : ""}/share/${shareToken}`}
@@ -1559,6 +1563,13 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               </button>
             ))}
         </div>
+      )}
+
+      {/* First-use hint for tree placement */}
+      {trees.length === 0 && (
+        <OnboardingHint hintId="assessment_first_tree" className="mb-3">
+          Tap the map to place a tree, or use + Add Tree to enter data manually.
+        </OnboardingHint>
       )}
 
       {/* Main Area: Tree List + Map + Side Panel */}
