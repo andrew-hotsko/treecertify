@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/db";
 import {
   Clock,
@@ -28,27 +29,30 @@ const REPORT_TYPE_META: Record<string, string> = {
   real_estate_package: "Certified Tree Canopy Report",
 };
 
+const getSharedProperty = cache(async (token: string) => {
+  return prisma.property.findUnique({
+    where: { shareToken: token },
+    include: {
+      trees: {
+        orderBy: { treeNumber: "asc" },
+      },
+      reports: {
+        orderBy: { updatedAt: "desc" },
+        take: 1,
+        include: {
+          arborist: true,
+        },
+      },
+    },
+  });
+});
+
 export async function generateMetadata({
   params,
 }: {
   params: { token: string };
 }): Promise<Metadata> {
-  const property = await prisma.property.findUnique({
-    where: { shareToken: params.token },
-    select: {
-      address: true,
-      city: true,
-      reports: {
-        orderBy: { updatedAt: "desc" },
-        take: 1,
-        select: {
-          reportType: true,
-          status: true,
-          arborist: { select: { companyName: true, name: true } },
-        },
-      },
-    },
-  });
+  const property = await getSharedProperty(params.token);
 
   if (!property) {
     return { title: "Report Not Found | TreeCertify" };
@@ -292,21 +296,7 @@ export default async function SharedPropertyPage({
 }) {
   const { token } = params;
 
-  const property = await prisma.property.findUnique({
-    where: { shareToken: token },
-    include: {
-      trees: {
-        orderBy: { treeNumber: "asc" },
-      },
-      reports: {
-        orderBy: { updatedAt: "desc" },
-        take: 1,
-        include: {
-          arborist: true,
-        },
-      },
-    },
-  });
+  const property = await getSharedProperty(token);
 
   if (!property) {
     return (
