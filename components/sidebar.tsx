@@ -85,9 +85,9 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl, isAdmin }: 
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium font-display transition-colors",
                 isActive
-                  ? "bg-forest/10 text-forest-muted border-l-[3px] border-forest-muted pl-[9px]"
+                  ? "bg-forest text-neutral-50"
                   : "text-neutral-400 hover:bg-neutral-700 hover:text-neutral-50"
               )}
             >
@@ -104,7 +104,7 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl, isAdmin }: 
           href="/api/sample-report?showcase=true"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-neutral-400 hover:bg-neutral-700 hover:text-neutral-50 transition-colors"
+          className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium font-display text-neutral-400 hover:bg-neutral-700 hover:text-neutral-50 transition-colors"
         >
           <FileText className="h-5 w-5" />
           Sample Report
