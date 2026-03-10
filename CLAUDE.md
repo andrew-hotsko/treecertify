@@ -168,7 +168,7 @@
 - **Client note**: arborist can write a personal note in the report page (certified view only) via `clientNote` field on Report model. Displayed at top of share page in forest-tinted card with "FROM YOUR ARBORIST" label.
 - **Plain-language summary**: template-based stats (not AI) per report type — removal (removal/retention/protected counts), health (good/fair/needs attention), valuation (total appraised value parsed from `typeSpecificData`), construction (protection/removal counts). 2×2 stat grid with explanation paragraph.
 - **Enhanced tree cards**: condition color dot, species common + scientific name, measurements row (DBH/height/spread in font-mono), condition in plain English, action text, protected badge with ShieldCheck icon.
-- **City-specific "What Happens Next"**: static submission guides in `lib/city-submission-guides.ts` for 5 Peninsula cities. 4-step numbered flow (submit, documents, review, after approval) with tips and city website link. Generic fallback for unsupported cities. Simpler guidance for non-removal report types.
+- **City-specific "What Happens Next"**: powered by `lib/city-contacts.ts` for 21 jurisdictions. Handles 5 cases: no_permit (emerald card), regional (amber warning + standard steps), city/county (standard steps), unsupported city fallback, non-removal generic guidance.
 - **PDF download**: contextual text per report type ("Submit this PDF with your permit application to [City] [Department]"). Full-width button on mobile.
 - **Arborist contact card**: tap-to-call and tap-to-email buttons in forest-tinted style, website link.
 - Not-certified state: shows only branded header (DRAFT badge), amber in-progress banner, tree count, arborist contact. Hides summary, tree details, next steps, PDF.
@@ -372,6 +372,73 @@
 - **Loading skeletons**: Added `loading.tsx` for 4 routes (dashboard, properties, properties/[id], settings). Uses `Skeleton` component from `components/ui/skeleton.tsx`. Previously zero loading files — users saw blank screens during server rendering.
 - **Bundle sizes (post-optimization)**: Dashboard 5.95 kB (121 kB first load), Properties 7.69 kB (134 kB), Property detail 48.5 kB (200 kB), Report 53.9 kB (199 kB), Settings 27.3 kB (133 kB), Share 3.71 kB (103 kB). Shared chunks 87.9 kB.
 - **Remaining bottlenecks (not addressed)**: Property detail/report pages are ~200 kB first load — driven by Mapbox GL + rich editor bundles, already dynamically imported. No further easy wins without feature removal.
+
+## Onboarding Rewrite (Session 35)
+- **Redesigned first-run experience**: 3-step flow targeting <3 minutes to first "aha" moment. Step 1 (Your Info): 3 fields only (name, ISA cert#, service area). Step 2 (See It In Action): inline sample report preview + callout cards. Step 3 (First Assessment): create property or skip.
+- **Schema**: Added `hasCompletedOnboarding Boolean @default(false)` to Arborist model. Layout guard checks this field (not just arborist existence).
+- **Sample report fixture**: Rewrote `lib/sample-report-data.ts` with 3-tree removal permit at 1247 University Avenue, Palo Alto (Coast Live Oak retain, Monterey Pine remove, Valley Oak heritage retain). Added `certifier` object for showcase identity.
+- **Showcase PDF**: `app/api/sample-report/route.ts` refactored with `generateSamplePdfBuffer(arboristData)` shared function. `?showcase=true` uses Jane Rodriguez identity. Sidebar and mobile nav link to showcase PDF.
+- **Contextual hints**: `components/onboarding-hint.tsx` — dismissable banners stored in `localStorage`. Placed on: first tree placement (assessment page), first report generation (report page), share link popover.
+- **Migration**: `scripts/migrate-onboarding.ts` sets `hasCompletedOnboarding = true` for existing arborists (by onboardingStep ≥ 3 OR having properties).
+- **Build fixes**: Added `isaExpirationDate` default (1 year out) for new arborist creation. Fixed `Buffer` → `Uint8Array` type conversion in sample report API.
+
+---
+
+## Current Status (as of 2026-03-09)
+
+### What's Built and Working
+- **Full assessment workflow**: Property → trees → AI report → certification → PDF → share
+- **5 report types**: removal_permit, health_assessment, tree_valuation, real_estate_package, construction_encroachment
+- **21 jurisdictions**: Ordinance database with species-specific thresholds (5 verified Peninsula, 9 expansion Peninsula, 7 North Bay/Tahoe/Reno)
+- **AI report generation**: Claude-powered narrative with ISA-quality prose, voice dictation, per-tree regeneration
+- **CTLA valuation**: Full Trunk Formula Technique engine with 100+ species ratings
+- **Mobile field mode**: Full-screen assessment flow with haptic feedback, camera integration
+- **PDF output**: Professional Puppeteer-rendered PDFs with cover page, TOC, QR code, photo documentation
+- **Share page**: Homeowner-friendly public view with permit timeline, next steps, city contacts
+- **Onboarding**: 3-step flow (credentials → sample report preview → first property)
+- **Settings**: 12+ customization cards (observations, species, valuation, writing style, PDF preferences)
+- **Admin dashboard**: Analytics, per-arborist activity, usage stats
+
+### Known Issues / Gaps
+- **`.next` cache corruption**: OneDrive symlink conflicts cause `EINVAL: readlink` errors on build. Fix: `rm -rf .next` before `npm run build`. Not a code bug.
+- **North Bay/Tahoe/Reno contacts UNVERIFIED**: All phone numbers, office hours, and fee amounts marked `// VERIFY` in `lib/city-contacts.ts`. DO NOT rely on these for production.
+- **City of Napa**: Only ~7 of 14 protected species confirmed with specific thresholds. Full species list incomplete.
+- **No MunicipalOrdinance data** for North Bay, Tahoe, or Reno in database — `checkTreeProtection()` returns "protection status unknown" for these cities. Ordinance data only in `lib/city-contacts.ts` (share page), not in `prisma/seed.ts` (protection checker).
+- **TreeRecord.photos field DEPRECATED**: Legacy JSON string field still in schema. All writes use TreePhoto model. Safe to drop column.
+- **5 Arborist invoice fields DORMANT**: `invoiceHourlyRate`, `invoiceDefaultFee`, `invoicePaymentInstructions`, `invoicePrefix`, `invoiceNetTerms` — no UI, invoice feature paused.
+- **`lib/city-submission-guides.ts` still exists**: 159 lines, not imported anywhere. Replaced by `lib/city-contacts.ts`. Safe to delete.
+- **Largest page bundles**: property detail (200 kB first load) and report editor (199 kB first load) — driven by Mapbox GL + rich editor. Already dynamically imported; no easy wins without feature removal.
+
+### Architecture Decisions
+- **Prisma `db push`** (not migrations) for schema changes — project uses Neon PostgreSQL
+- **JSON strings** for complex data (observations, billing line items, report defaults, etc.) rather than separate tables — trade-off: simpler schema, harder to query
+- **Static sample data** in `lib/sample-report-data.ts` — never AI-generated, ensures consistent quality
+- **`hasCompletedOnboarding` boolean** gates app access (not just arborist record existence) — allows incomplete onboarding resume
+- **Showcase PDF** shared globally (not per-arborist) via `SHOWCASE_ARBORIST` constant — avoids Puppeteer overhead per visitor
+- **localStorage** for contextual hints (not database) — no API calls, survives page refreshes, no data needed server-side
+
+### File Structure Summary
+| Directory | Purpose | Key Files |
+|-----------|---------|-----------|
+| `app/(app)/` | Protected pages (dashboard, properties, settings, admin) | 10 page files + 4 loading skeletons |
+| `app/api/` | 40+ API routes | AI generation, CRUD, PDF, auth, feedback |
+| `app/onboarding/` | First-run experience | `page.tsx` (3-step flow) |
+| `app/share/[token]/` | Public homeowner view | `page.tsx` (RSC) |
+| `components/` | 58 components | UI primitives (shadcn), business components, type-specific fields |
+| `lib/` | Business logic | Ordinances, valuation, report templates, city contacts, analytics |
+| `prisma/` | Database | `schema.prisma` (13 models), `seed.ts` (21 cities) |
+| `scripts/` | Utilities | `smoke-test.ts`, `test-ordinances.ts`, `migrate-onboarding.ts` |
+
+### Environment Variables
+```
+DATABASE_URL                          # PostgreSQL (Neon)
+NEXT_PUBLIC_MAPBOX_TOKEN              # Mapbox GL + Static Images
+OPENAI_API_KEY                        # Whisper transcription
+ANTHROPIC_API_KEY                     # Claude report generation
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY     # Clerk auth (public)
+CLERK_SECRET_KEY                      # Clerk auth (server)
+ADMIN_ARBORIST_ID                     # Comma-separated admin IDs
+```
 
 ## Session Completion
 - When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.
