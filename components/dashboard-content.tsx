@@ -447,7 +447,7 @@ function PropertyCard({ property }: { property: DashboardProperty }) {
   return (
     <Link
       href={`/properties/${property.id}`}
-      className="group block rounded-xl bg-card border border-border p-4 transition-all hover:shadow-sm hover:border-forest/20"
+      className="group block rounded-xl bg-card border border-border p-4 card-hover hover:border-forest/20"
     >
       {/* Top row: icon + address + badge */}
       <div className="flex items-start justify-between gap-2">

@@ -907,6 +907,7 @@ export function TreeSidePanel({
                           type="button"
                           onClick={() => setTrunkDiameters(trunkDiameters.filter((_, j) => j !== i))}
                           className="text-neutral-400 hover:text-red-500 text-xs"
+                          aria-label={`Remove trunk ${i + 1}`}
                         >
                           ×
                         </button>

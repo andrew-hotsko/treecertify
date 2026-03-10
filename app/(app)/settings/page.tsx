@@ -163,7 +163,7 @@ function SortableObservationItem({
       ref={setNodeRef}
       style={style}
       className={`flex items-center gap-2 px-3 py-2 rounded-md border ${
-        obs.enabled ? "bg-white border-neutral-200" : "bg-neutral-50 border-neutral-100 opacity-60"
+        obs.enabled ? "bg-card border-neutral-200" : "bg-muted border-neutral-100 opacity-60"
       }`}
     >
       {/* Drag handle — hidden on mobile */}
@@ -1197,7 +1197,7 @@ export default function SettingsPage() {
                     <span
                       className={`h-2.5 w-2.5 rounded-full ${
                         rating === 0
-                          ? "bg-gray-700"
+                          ? "bg-neutral-700"
                           : rating === 1
                           ? "bg-red-500"
                           : rating === 2
@@ -1588,7 +1588,7 @@ export default function SettingsPage() {
               onChange={(e) => setSpeciesSearch(e.target.value)}
             />
             {speciesSearch.length >= 2 && (
-              <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-white border border-neutral-200 rounded-md shadow-lg">
+              <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-popover border border-border rounded-md shadow-lg">
                 {PENINSULA_SPECIES.filter(
                   (sp) =>
                     (sp.common.toLowerCase().includes(speciesSearch.toLowerCase()) ||

@@ -121,6 +121,7 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
             : "text-muted-foreground hover:text-foreground"
         }`}
         title={recording ? "Stop recording" : "Voice input"}
+        aria-label={recording ? "Stop recording" : "Voice input"}
       >
         {transcribing ? (
           <Loader2 className="h-4 w-4 animate-spin" />

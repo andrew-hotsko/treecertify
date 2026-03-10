@@ -538,7 +538,7 @@ export function TreePhotos({
           <span className="text-sm">Tap to add photos</span>
         </button>
       ) : (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {photos.map((photo, idx) => (
             <div key={photo.id} className="group relative">
               {/* Thumbnail */}

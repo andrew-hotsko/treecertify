@@ -511,7 +511,7 @@ export function PropertiesList({
               <div key={property.id} className="group relative">
                 <Link
                   href={`/properties/${property.id}`}
-                  className="block rounded-xl bg-card border border-border p-4 transition-all hover:shadow-sm hover:border-forest/20"
+                  className="block rounded-xl bg-card border border-border p-4 card-hover hover:border-forest/20"
                 >
                   {/* Top row */}
                   <div className="flex items-start justify-between gap-2">

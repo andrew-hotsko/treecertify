@@ -70,7 +70,7 @@ export function Sidebar({
             <span className="text-forest-muted">Tree</span>
             <span className="text-neutral-50">Certify</span>
           </h1>
-          <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-500">
+          <p className="font-mono text-[11px] uppercase tracking-widest text-neutral-500">
             Arborist OS
           </p>
         </div>
@@ -157,7 +157,7 @@ export function Sidebar({
               ISA {isaCertNum}
             </p>
             {pendingCount > 0 && (
-              <p className="text-[10px] text-orange-400 font-medium">
+              <p className="text-[11px] text-orange-400 font-medium">
                 {pendingCount} pending
               </p>
             )}

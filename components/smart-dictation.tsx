@@ -253,7 +253,7 @@ export function SmartDictation({ onApply }: SmartDictationProps) {
             </p>
           )}
 
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm">
             {Object.entries(parsed).map(([key, value]) => {
               if (value === undefined || value === null || value === "")
                 return null;
