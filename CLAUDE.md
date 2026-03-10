@@ -233,9 +233,12 @@
 - Share page fallback for uncovered cities: 3-step generic guidance (contact city, get application, submit with PDF) instead of bare "contact your planning department" text.
 - **VERIFY**: All North Bay, Reno, and expansion city contact info marked `// VERIFY` — phone confirmation needed before beta launch.
 - **GAP**: No `MunicipalOrdinance` data seeded for North Bay, Tahoe, or Reno cities — `checkTreeProtection()` does not cover these regions yet. Future session needed to add ordinance data.
-- `lib/city-submission-guides.ts` still exists (legacy, not imported anywhere). Can be removed in future cleanup.
 - All expansion city entries NEED VERIFICATION before GA — phone numbers, office hours, and thresholds are approximate. Marked with `// VERIFY` comments.
 - Note: Redwood City measures circumference at 24" above grade (non-standard); San Carlos on 4/10 schedule (closed Fridays) — both surfaced in tips.
+- **Permit Processing Timeline**: `PermitTimeline` and `PermitTimelineStage` interfaces in `lib/city-contacts.ts`. `getPermitTimeline(city)` returns city-specific stage data, never null (falls back to generic 4-stage timeline).
+- Timeline data for 5 verified Peninsula cities: Palo Alto (5 stages, public notice for heritage), Menlo Park (4 stages, streamlined), Atherton (5 stages, Planning Commission), Woodside (4 stages), Portola Valley (5 stages, Conservation Committee). Generic fallback: 4 stages, 4-8 weeks.
+- Share page renders a vertical timeline between `PermitStatusPipeline` and PDF download. Shows for `removal_permit` and `construction_encroachment` only. Status-aware styling: forest (completed), ring glow (active), red (denied), amber (revision). Dates calculated from `submittedAt + typicalDaysFromSubmission`. Disclaimer with city contact info at bottom.
+- `computeTimelineProgress()` maps `permitStatus` to completed/active/terminal stage sets. `getStageDate()` returns actual dates for past stages, estimated dates for future stages. Both are inline helpers in the share page RSC.
 
 ## Sample Report (Onboarding)
 - After onboarding step 2 (branding), a sample PDF is generated using the arborist's branding and the same Puppeteer pipeline as production PDFs.

@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { prisma } from "@/lib/db";
 import {
+  Check,
   Clock,
   Download,
   TreePine,
@@ -17,7 +18,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { PermitStatusPipeline } from "@/components/permit-status-pipeline";
-import { getCityContact, getNextStepsText } from "@/lib/city-contacts";
+import { getCityContact, getNextStepsText, getPermitTimeline } from "@/lib/city-contacts";
+import type { PermitTimelineStage } from "@/lib/city-contacts";
 import type { Metadata } from "next";
 import { logEvent } from "@/lib/analytics";
 
@@ -286,6 +288,112 @@ function buildSummaryStats(
 }
 
 // ---------------------------------------------------------------------------
+// Permit timeline helpers
+// ---------------------------------------------------------------------------
+
+interface TimelineProgress {
+  completedKeys: Set<string>;
+  activeKey: string | null;
+  terminalStatus: "denied" | "revision_requested" | null;
+}
+
+function computeTimelineProgress(
+  permitStatus: string | null,
+  stages: PermitTimelineStage[]
+): TimelineProgress {
+  if (!permitStatus) {
+    return { completedKeys: new Set(), activeKey: null, terminalStatus: null };
+  }
+
+  switch (permitStatus) {
+    case "submitted":
+      return {
+        completedKeys: new Set(["submitted"]),
+        activeKey: stages.find((s) => s.key === "under_review")?.key ?? stages[1]?.key ?? null,
+        terminalStatus: null,
+      };
+
+    case "under_review": {
+      const idx = stages.findIndex((s) => s.key === "under_review");
+      const nextKey = stages[idx + 1]?.key ?? null;
+      return {
+        completedKeys: new Set(["submitted", "under_review"]),
+        activeKey: nextKey,
+        terminalStatus: null,
+      };
+    }
+
+    case "approved":
+      return {
+        completedKeys: new Set(stages.map((s) => s.key)),
+        activeKey: null,
+        terminalStatus: null,
+      };
+
+    case "denied":
+      return {
+        completedKeys: new Set(["submitted", "under_review"]),
+        activeKey: "decision",
+        terminalStatus: "denied",
+      };
+
+    case "revision_requested":
+      return {
+        completedKeys: new Set(["submitted", "under_review"]),
+        activeKey: "decision",
+        terminalStatus: "revision_requested",
+      };
+
+    default:
+      return { completedKeys: new Set(), activeKey: null, terminalStatus: null };
+  }
+}
+
+function formatTimelineDate(date: Date): string {
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function getStageDate(
+  stage: PermitTimelineStage,
+  permitStatus: string | null,
+  submittedAt: Date | null,
+  approvedAt: Date | null,
+  isCompleted: boolean
+): string | null {
+  // Submitted stage: use actual date
+  if (stage.key === "submitted" && submittedAt) {
+    return formatTimelineDate(submittedAt);
+  }
+
+  // Decision/active stage when approved: use actual approvedAt
+  if ((stage.key === "decision" || stage.key === "active") && permitStatus === "approved" && approvedAt) {
+    return formatTimelineDate(approvedAt);
+  }
+
+  // Completed stages without a specific date — skip
+  if (isCompleted) return null;
+
+  // Future stages with a submittedAt: show estimated date
+  if (submittedAt && stage.typicalDaysFromSubmission > 0) {
+    const estimated = new Date(submittedAt.getTime() + stage.typicalDaysFromSubmission * 86400000);
+    return `Expected by ${formatTimelineDate(estimated)}`;
+  }
+
+  // No submittedAt: show relative text
+  if (stage.typicalDaysFromSubmission > 0) {
+    const weeks = Math.round(stage.typicalDaysFromSubmission / 7);
+    if (weeks <= 1) return `Typically ${stage.typicalDaysFromSubmission} days after submission`;
+    return `Typically ${weeks} weeks after submission`;
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -387,6 +495,16 @@ export default async function SharedPropertyPage({
     isCertified && report && !cityContact && !isValuationType && report.reportType !== "removal_permit"
       ? getNextStepsText(report.reportType)
       : null;
+
+  // Permit processing timeline — only for permit-requiring report types once submitted
+  const isPermitType = report?.reportType === "removal_permit" || report?.reportType === "construction_encroachment";
+  const timeline =
+    isCertified && report && report.permitStatus && isPermitType
+      ? getPermitTimeline(property.city)
+      : null;
+  const timelineProgress = timeline
+    ? computeTimelineProgress(report?.permitStatus ?? null, timeline.stages)
+    : null;
 
   // Compute canopy/valuation total for valuation types
   const canopyTotal = isValuationType
@@ -1339,6 +1457,147 @@ export default async function SharedPropertyPage({
               mode="readonly"
               friendlyLabels
             />
+          </section>
+        )}
+
+        {/* ==== G2. Permit Processing Timeline ==== */}
+        {isCertified &&
+         report &&
+         isPermitType &&
+         report.permitStatus &&
+         cityContact?.jurisdictionType !== "no_permit" &&
+         timeline &&
+         timelineProgress && (
+          <section>
+            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3">
+              Permit Processing Timeline
+            </p>
+            <div className="bg-white rounded-lg border p-5">
+              <div className="space-y-0">
+                {timeline.stages.map((stage, idx) => {
+                  const isCompleted = timelineProgress.completedKeys.has(stage.key);
+                  const isActive = timelineProgress.activeKey === stage.key;
+                  const isFuture = !isCompleted && !isActive;
+                  const isTerminalNegative = isActive && timelineProgress.terminalStatus !== null;
+                  const isLast = idx === timeline.stages.length - 1;
+
+                  // Hide "Permit Active" stage for denied/revision outcomes
+                  if (stage.key === "active" && timelineProgress.terminalStatus) return null;
+
+                  const stageDate = getStageDate(
+                    stage,
+                    report.permitStatus,
+                    report.submittedAt,
+                    report.approvedAt,
+                    isCompleted
+                  );
+
+                  return (
+                    <div key={stage.key} className="flex gap-3">
+                      {/* Left column: circle + vertical line */}
+                      <div className="flex flex-col items-center w-4 shrink-0">
+                        {/* Circle */}
+                        <div
+                          className={[
+                            "w-3.5 h-3.5 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center",
+                            isCompleted ? "bg-forest border-forest" : "",
+                            isActive && !isTerminalNegative ? "bg-forest border-forest ring-4 ring-forest/20" : "",
+                            isActive && timelineProgress.terminalStatus === "denied" ? "bg-red-500 border-red-500 ring-4 ring-red-100" : "",
+                            isActive && timelineProgress.terminalStatus === "revision_requested" ? "bg-amber-500 border-amber-500 ring-4 ring-amber-100" : "",
+                            isFuture ? "bg-white border-neutral-300" : "",
+                          ].filter(Boolean).join(" ")}
+                        >
+                          {isCompleted && (
+                            <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
+                          )}
+                        </div>
+                        {/* Connector line */}
+                        {!isLast && !(stage.key === "active" && timelineProgress.terminalStatus) && (
+                          <div
+                            className={[
+                              "w-0.5 flex-1 min-h-[24px]",
+                              isCompleted && !isFuture ? "bg-forest" : "bg-neutral-200",
+                            ].filter(Boolean).join(" ")}
+                          />
+                        )}
+                      </div>
+
+                      {/* Right column: content */}
+                      <div className={isLast || (stage.key === "decision" && timelineProgress.terminalStatus) ? "pb-0" : "pb-5"}>
+                        <p
+                          className={[
+                            "text-sm",
+                            isCompleted ? "font-medium text-neutral-900" : "",
+                            isActive && !isTerminalNegative ? "font-medium text-forest" : "",
+                            isActive && timelineProgress.terminalStatus === "denied" ? "font-medium text-red-700" : "",
+                            isActive && timelineProgress.terminalStatus === "revision_requested" ? "font-medium text-amber-700" : "",
+                            isFuture ? "text-neutral-400" : "",
+                          ].filter(Boolean).join(" ")}
+                        >
+                          {isTerminalNegative && timelineProgress.terminalStatus === "denied"
+                            ? "Permit Denied"
+                            : isTerminalNegative && timelineProgress.terminalStatus === "revision_requested"
+                            ? "Revision Requested"
+                            : stage.label}
+                        </p>
+                        {stageDate && (
+                          <p className={`text-xs mt-0.5 ${isFuture ? "text-neutral-300" : "text-neutral-500"}`}>
+                            {stageDate}
+                          </p>
+                        )}
+                        {(isActive || isCompleted) && stage.description && (
+                          <p className="text-sm text-neutral-500 mt-1 leading-relaxed">
+                            {stage.description}
+                          </p>
+                        )}
+                        {/* Terminal negative detail */}
+                        {isTerminalNegative && timelineProgress.terminalStatus === "denied" && report.denialReason && (
+                          <div className="mt-2 p-3 bg-red-50 border border-red-100 rounded-lg">
+                            <p className="text-sm text-red-800">{report.denialReason}</p>
+                          </div>
+                        )}
+                        {isTerminalNegative && timelineProgress.terminalStatus === "revision_requested" && report.reviewerNotes && (
+                          <div className="mt-2 p-3 bg-amber-50 border border-amber-100 rounded-lg">
+                            <p className="text-sm text-amber-800">{report.reviewerNotes}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Total estimate + notes */}
+              <div className="mt-4 pt-3 border-t border-neutral-100">
+                <p className="text-xs text-neutral-500">
+                  Estimated total processing time:{" "}
+                  <span className="font-medium">{timeline.totalEstimate}</span>
+                </p>
+                {timeline.notes && (
+                  <p className="text-xs text-neutral-400 mt-1 italic">
+                    {timeline.notes}
+                  </p>
+                )}
+              </div>
+
+              {/* Disclaimer */}
+              <p className="text-xs text-neutral-400 mt-3 leading-relaxed italic">
+                Processing times are estimates based on typical {property.city} permit
+                timelines and may vary.
+                {cityContact?.phone && (
+                  <>
+                    {" "}Contact {cityContact.department} at{" "}
+                    <a
+                      href={`tel:${cityContact.phone.replace(/[^\d+]/g, "")}`}
+                      className="text-forest hover:text-forest-light font-medium not-italic"
+                    >
+                      {cityContact.phone}
+                    </a>{" "}
+                    for current status.
+                  </>
+                )}
+              </p>
+            </div>
           </section>
         )}
 

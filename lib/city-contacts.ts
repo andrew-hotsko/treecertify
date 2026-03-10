@@ -58,6 +58,23 @@ export interface CityContact {
 }
 
 // ---------------------------------------------------------------------------
+// Permit Processing Timeline — city-specific stage data for share page
+// ---------------------------------------------------------------------------
+
+export interface PermitTimelineStage {
+  key: string;              // "submitted" | "under_review" | "public_notice" | "decision" | "active"
+  label: string;
+  description: string;
+  typicalDaysFromSubmission: number;  // Cumulative calendar days from submittedAt
+}
+
+export interface PermitTimeline {
+  stages: PermitTimelineStage[];
+  totalEstimate: string;     // "4-6 weeks" — human-readable overall estimate
+  notes?: string;            // City-specific caveat, e.g. heritage tree extra time
+}
+
+// ---------------------------------------------------------------------------
 // City alias map — multiple city names resolve to a single canonical key
 // ---------------------------------------------------------------------------
 
@@ -856,4 +873,178 @@ export function getNextStepsText(
   reportType: string
 ): { title: string; description: string } | null {
   return NON_REMOVAL_NEXT_STEPS[reportType] ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Permit Processing Timelines — per-city stage data with estimated timing
+// ---------------------------------------------------------------------------
+
+const COMMON_SUBMITTED: PermitTimelineStage = {
+  key: "submitted",
+  label: "Application Submitted",
+  description: "Your permit application and certified arborist report have been filed.",
+  typicalDaysFromSubmission: 0,
+};
+
+const COMMON_ACTIVE: PermitTimelineStage = {
+  key: "active",
+  label: "Permit Active",
+  description: "Your removal permit is active. Work must be completed within the permit validity period.",
+  typicalDaysFromSubmission: 0, // Overridden per city
+};
+
+const PERMIT_TIMELINES: Record<string, PermitTimeline> = {
+  "Palo Alto": {
+    stages: [
+      { ...COMMON_SUBMITTED, description: "Your permit application has been filed with the City of Palo Alto Planning & Development Services." },
+      {
+        key: "under_review",
+        label: "Staff Review",
+        description: "A city planner or urban forester reviews your arborist report, application, and may conduct a site visit.",
+        typicalDaysFromSubmission: 7,
+      },
+      {
+        key: "public_notice",
+        label: "Public Notice Period",
+        description: "Adjacent property owners are notified and have 14 days to submit comments. Required for heritage and protected trees.",
+        typicalDaysFromSubmission: 21,
+      },
+      {
+        key: "decision",
+        label: "Decision Issued",
+        description: "The city issues its decision — approval with conditions, denial, or request for additional information.",
+        typicalDaysFromSubmission: 35,
+      },
+      { ...COMMON_ACTIVE, typicalDaysFromSubmission: 35 },
+    ],
+    totalEstimate: "5–6 weeks",
+    notes: "Heritage-designated trees may require a public hearing before the Architectural Review Board, extending the timeline to 60–90 days.",
+  },
+
+  "Menlo Park": {
+    stages: [
+      { ...COMMON_SUBMITTED, description: "Your permit application has been filed with the City of Menlo Park Planning Division." },
+      {
+        key: "under_review",
+        label: "Staff Review",
+        description: "Planning staff review the arborist report and assess whether mitigation or replanting is required.",
+        typicalDaysFromSubmission: 7,
+      },
+      {
+        key: "decision",
+        label: "Decision Issued",
+        description: "Staff decision on your permit application, including any replanting or in-lieu fee conditions.",
+        typicalDaysFromSubmission: 20,
+      },
+      { ...COMMON_ACTIVE, typicalDaysFromSubmission: 20 },
+    ],
+    totalEstimate: "2–4 weeks",
+  },
+
+  "Atherton": {
+    stages: [
+      { ...COMMON_SUBMITTED, description: "Your permit application has been filed with the Town of Atherton Planning Department." },
+      {
+        key: "under_review",
+        label: "Staff Review",
+        description: "The town arborist or planning staff reviews your report and may schedule a site inspection.",
+        typicalDaysFromSubmission: 10,
+      },
+      {
+        key: "public_notice",
+        label: "Planning Commission Review",
+        description: "Heritage oak and redwood removals require Planning Commission review at a regularly scheduled meeting.",
+        typicalDaysFromSubmission: 30,
+      },
+      {
+        key: "decision",
+        label: "Decision Issued",
+        description: "The town issues its decision with any required mitigation, replanting, or tree protection plan conditions.",
+        typicalDaysFromSubmission: 45,
+      },
+      { ...COMMON_ACTIVE, typicalDaysFromSubmission: 45 },
+    ],
+    totalEstimate: "3–8 weeks",
+    notes: "Heritage oak and coast redwood removals require Planning Commission review, which can extend the timeline to 30–60 days.",
+  },
+
+  "Woodside": {
+    stages: [
+      { ...COMMON_SUBMITTED, description: "Your permit application has been filed with the Town of Woodside Planning & Building Department." },
+      {
+        key: "under_review",
+        label: "Staff Review",
+        description: "Town staff review your application, site sketch, and photos. A site visit may be scheduled.",
+        typicalDaysFromSubmission: 10,
+      },
+      {
+        key: "decision",
+        label: "Decision Issued",
+        description: "The town issues its decision on your permit application.",
+        typicalDaysFromSubmission: 20,
+      },
+      { ...COMMON_ACTIVE, typicalDaysFromSubmission: 20 },
+    ],
+    totalEstimate: "3–4 weeks",
+    notes: "Eucalyptus, Acacia, and Monterey Pine are generally exempt from permit fees.",
+  },
+
+  "Portola Valley": {
+    stages: [
+      { ...COMMON_SUBMITTED, description: "Your permit application has been filed with the Town of Portola Valley Planning Department." },
+      {
+        key: "under_review",
+        label: "Staff Review",
+        description: "Planning staff conduct an initial review of your application and arborist report.",
+        typicalDaysFromSubmission: 10,
+      },
+      {
+        key: "public_notice",
+        label: "Conservation Committee Review",
+        description: "The Conservation Committee may review the application and conduct a site inspection.",
+        typicalDaysFromSubmission: 25,
+      },
+      {
+        key: "decision",
+        label: "Decision Issued",
+        description: "The town issues its decision, including any replanting or site development permit conditions.",
+        typicalDaysFromSubmission: 35,
+      },
+      { ...COMMON_ACTIVE, typicalDaysFromSubmission: 35 },
+    ],
+    totalEstimate: "3–6 weeks",
+    notes: "The Conservation Committee meets regularly and may schedule a site visit before making a recommendation.",
+  },
+};
+
+const GENERIC_TIMELINE: PermitTimeline = {
+  stages: [
+    { ...COMMON_SUBMITTED, description: "Your permit application has been filed with your local planning department." },
+    {
+      key: "under_review",
+      label: "Under Review",
+      description: "City or county staff review your arborist report and application materials.",
+      typicalDaysFromSubmission: 10,
+    },
+    {
+      key: "decision",
+      label: "Decision Issued",
+      description: "The city or county issues its decision on your permit application.",
+      typicalDaysFromSubmission: 35,
+    },
+    { ...COMMON_ACTIVE, typicalDaysFromSubmission: 35 },
+  ],
+  totalEstimate: "4–8 weeks",
+  notes: "Processing times vary by jurisdiction. Contact your local planning department for current timelines.",
+};
+
+/**
+ * Get the permit processing timeline for a city.
+ * Always returns a timeline (falls back to generic for unknown cities).
+ */
+export function getPermitTimeline(city: string): PermitTimeline {
+  if (!city) return GENERIC_TIMELINE;
+  const normalized = toTitleCase(city);
+  const resolvedCity = CITY_ALIASES[normalized] ?? normalized;
+  return PERMIT_TIMELINES[resolvedCity] ?? GENERIC_TIMELINE;
 }
