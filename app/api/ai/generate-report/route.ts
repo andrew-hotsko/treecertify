@@ -373,7 +373,7 @@ function generateMockReport(
         : t.conditionRating >= 3
         ? "The tree exhibits moderate signs of stress consistent with its assigned condition rating. Further monitoring is recommended."
         : t.conditionRating >= 1
-        ? "The tree exhibits signs of decline consistent with its assigned condition rating. Further diagnostic evaluation may be warranted."
+        ? "The tree exhibits signs of decline consistent with its assigned condition rating. Further diagnostic assessment may be warranted."
         : "The tree is dead with no viable foliage or cambial activity detected.";
 
       const structuralLine = t.structuralNotes
@@ -383,7 +383,7 @@ function generateMockReport(
         : t.conditionRating >= 3
         ? "Minor structural concerns were noted. These should be addressed through maintenance pruning per ANSI A300 standards."
         : t.conditionRating >= 1
-        ? "Structural defects were observed that warrant further evaluation and may require corrective action."
+        ? "Structural defects were observed that warrant further assessment and may require corrective action."
         : "Structural assessment is not applicable for a dead tree.";
 
       const bottomLine =
@@ -671,7 +671,7 @@ REAL ESTATE PACKAGE — LANGUAGE OVERRIDES:
 This report is for a REAL ESTATE TRANSACTION, not a municipal permit application. Override the general voice instructions as follows:
 - The audience is homebuyers and realtors, NOT city planners or attorneys.
 - Frame trees as PROPERTY ASSETS and AMENITIES. Use words like "specimen," "asset," "amenity," "canopy," "mature landscaping."
-- AVOID alarming language: do NOT use "hazard," "hazardous," "failure," "risk of failure," "target zone," "mitigation." Instead use: "may benefit from structural pruning," "recommend professional evaluation," "routine maintenance will address."
+- AVOID alarming language: do NOT use "hazard," "hazardous," "failure," "risk of failure," "target zone," "mitigation." Instead use: "may benefit from structural pruning," "recommend professional assessment," "routine maintenance will address."
 - For trees recommended for removal: frame diplomatically. Explain why, suggest replacement: "Replacement planting would restore canopy coverage in this area." Never say "removal recommended" as a standalone phrase — provide context.
 - Condition descriptions: "good health with a full canopy" (not "no defects observed"); "showing moderate stress that responds well to maintenance" (not "declining health, poor prognosis").
 - This report will NOT be submitted to city planners. Do NOT reference municipal code, permit requirements, or compliance language unless specifically relevant to the property.
@@ -760,13 +760,13 @@ DATA INTEGRITY RULES:
 - When the arborist provided health notes, use them. When health notes say "None provided by arborist," write "No specific health concerns were noted during the Level 2 visual assessment" for trees rated 4-5/5, or note decline consistent with the rating for lower-rated trees. Do NOT fabricate specific diseases, pests, or symptoms that were not reported.
 - When the arborist provided structural notes, use them. When structural notes say "None provided by arborist," write "No significant structural defects were observed during the visual assessment" for trees rated 4-5/5. Do NOT fabricate specific structural defects that were not reported.
 - When type-specific assessment data is provided (TRAQ ratings, risk factors, retention feasibility, valuation data, TPZ/SRZ values), use those values directly — they are arborist-provided measurements.
-- When field audio notes are provided, incorporate them naturally as "Per field observations..." or "The arborist noted during field inspection that..." Do not mention audio recordings.
-- When property-level field notes are provided, weave them into Site Observations as "Site conditions noted during the field inspection include..."
+- When field audio notes are provided, incorporate them naturally as "Per field observations..." or "The arborist noted during the field assessment that..." Do not mention audio recordings.
+- When property-level field notes are provided, weave them into Site Observations as "Site conditions noted during the field assessment include..."
 - When photos are on file, reference them: "See Photo 1."
 
 SCOPE OF ASSIGNMENT HANDLING:
 - Use the arborist's Scope of Assignment as the foundation for Section 1 (Assignment and Purpose / Introduction)
-- Expand into a formal scope paragraph including the date of the field inspection, assessment methodology (Level 2 basic assessment per ISA Best Management Practices), applicable municipal ordinance, and assessment objectives
+- Expand into a formal scope paragraph including the date of the field assessment, assessment methodology (Level 2 basic assessment per ISA Best Management Practices), applicable municipal ordinance, and assessment objectives
 - Do NOT contradict the arborist's stated scope — enhance and formalize it
 - If scope is "Not specified," compose Section 1 from the property data, tree count, and report type context
 

@@ -327,5 +327,13 @@
 - **Property API**: `GET /api/properties/[id]` now includes `treePhotos` relation on each tree (select: id, url, caption, category, sortOrder).
 - **Files changed**: `components/report-preview.tsx` (complete rewrite), `app/(app)/properties/[id]/report/page.tsx` (ArboristInfo + TreeRecord interfaces, reportOptions prop), `app/api/properties/[id]/route.ts` (treePhotos include).
 
+## Premium Details (Session 31)
+- **PDF cover page: QR code** linking to share page when available. Uses `qrcode` npm package, renders as 80×80px image in cover footer with forest-green color (#1D4E3E). Only shown when `property.shareToken` exists. Caption: "Scan to view online report" in 7pt #888.
+- **PDF filenames: smart naming pattern** (`TreeReport-Address-City-Date.pdf`). `buildSmartFilename()` helper in PDF route. Report type prefix varies: `TreeReport` (removal_permit), `HealthAssessment`, `TreeValuation`, `RealEstatePackage`, `ConstructionImpact`. Share page downloads prepend company name. Max 100 chars, date always preserved.
+- **Certification: completion modal** with Share + Download actions. `showCertifyCompletion` state in report page. Shows BadgeCheck icon, ISA credential line, "Share with Client" (creates share link + copies to clipboard) and "Download PDF" buttons. Full-screen sheet on mobile, centered dialog on desktop. Only appears on the moment of certification, not on revisit.
+- **Error states**: Branded "report link is no longer available" page for invalid share links (TreeCertify wordmark, contact arborist guidance). "This report is still being prepared" for uncertified share links. Amber error card with retry button for AI generation failures. Amber error bar (not red) with retry for save failures.
+- **TOC: cleaned up** — removed TODO comment about two-pass rendering. TOC section titles now use Instrument Sans font. Dot leaders hidden. Clean section list with descriptions.
+- **Terminology: standardized** to Assessment/Report/Property/Certified/Submitted/Property Owner. Changes: status badge "Filed" → "Submitted", report-types.ts "evaluation" → "assessment", share page RE action text, AI prompt instructions ("field inspection" → "field assessment", "evaluation" → "assessment" in mock text and prompt instructions), amend route error message.
+
 ## Session Completion
 - When all tasks are complete, always end with **SESSION COMPLETE** in bold, followed by a numbered list of what was done and what was changed.

@@ -23,7 +23,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
     className: "bg-forest/5 text-forest border-forest/20",
   },
   filed: {
-    label: "Filed",
+    label: "Submitted",
     className: "bg-teal-50 text-teal-700 border-teal-200",
   },
   amendment_in_progress: {

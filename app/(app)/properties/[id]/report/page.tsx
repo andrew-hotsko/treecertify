@@ -56,6 +56,7 @@ import {
   Home,
   Mail,
   FileEdit,
+  BadgeCheck,
 } from "lucide-react";
 import { parseReportSections, replaceTreeSection } from "@/lib/report-sections";
 import {
@@ -298,6 +299,7 @@ export default function PropertyReportPage() {
   const [certifyStep, setCertifyStep] = useState(1); // 1=Review, 2=Attest, 3=Sign
   const [reviewChecked, setReviewChecked] = useState(false);
   const [certifySuccess, setCertifySuccess] = useState(false);
+  const [showCertifyCompletion, setShowCertifyCompletion] = useState(false);
 
   // UI state
   const [loading, setLoading] = useState(true);
@@ -539,8 +541,9 @@ export default function PropertyReportPage() {
         setLastSaved(now);
         lastSavedRef.current = now;
       } catch (err) {
+        console.error("Save failed:", err);
         if (!silent) {
-          setError(err instanceof Error ? err.message : "Save failed");
+          setError("Couldn\u2019t save \u2014 check your connection and try again");
         }
       } finally {
         if (!silent) setSaving(false);
@@ -956,12 +959,10 @@ export default function PropertyReportPage() {
       setCertifySuccess(true);
       savedContentRef.current = content;
       setHasUnsavedChanges(false);
-      // Auto-close after 3 seconds
-      setTimeout(() => {
-        setShowCertifyPanel(false);
-        setViewMode("preview");
-        setCertifySuccess(false);
-      }, 3000);
+      // Close ceremony dialog and show completion modal
+      setShowCertifyPanel(false);
+      setViewMode("preview");
+      setShowCertifyCompletion(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Certification failed");
     } finally {
@@ -1220,6 +1221,36 @@ export default function PropertyReportPage() {
                 <p className="text-sm text-amber-600 text-center">
                   Add at least one tree before generating a report.
                 </p>
+              )}
+
+              {error && !generating && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-amber-900">
+                        Report generation encountered an issue
+                      </p>
+                      <p className="text-sm text-amber-700 mt-1">
+                        This is usually temporary. Check your connection and try again.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-amber-300 text-amber-800 hover:bg-amber-100"
+                      onClick={() => {
+                        setError(null);
+                        generateReport();
+                      }}
+                    >
+                      <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                      Try Again
+                    </Button>
+                  </div>
+                </div>
               )}
 
               {/* Data Quality Check Dialog */}
@@ -1802,16 +1833,28 @@ export default function PropertyReportPage() {
       </div>
 
       {/* ---- Error Bar ---- */}
-      {error && (
-        <div className="flex-none border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
+      {error && report && (
+        <div className="flex-none border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
           {error}
-          <button
-            onClick={() => setError(null)}
-            className="ml-auto text-red-500 hover:text-red-700"
-          >
-            Dismiss
-          </button>
+          {error.includes("save") || error.includes("connection") ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="ml-auto h-7 text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+              onClick={() => { setError(null); saveReport(); }}
+            >
+              <RefreshCw className="h-3.5 w-3.5 mr-1" />
+              Retry
+            </Button>
+          ) : (
+            <button
+              onClick={() => setError(null)}
+              className="ml-auto text-amber-600 hover:text-amber-800"
+            >
+              Dismiss
+            </button>
+          )}
         </div>
       )}
 
@@ -2744,6 +2787,83 @@ export default function PropertyReportPage() {
               )}
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* ---- Certification Completion Modal ---- */}
+      {showCertifyCompletion && report && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 animate-in fade-in duration-200">
+          <div className="w-full sm:max-w-md sm:mx-4 bg-white sm:rounded-xl rounded-t-2xl shadow-2xl p-8 sm:p-10 text-center space-y-5 animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#1D4E3E]/10">
+              <BadgeCheck className="h-7 w-7 text-[#1D4E3E]" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold font-display text-foreground">
+                Report Certified
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Your ISA certification has been applied to this report.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 pt-2">
+              <Button
+                className="w-full bg-[#1D4E3E] hover:bg-[#2A6B55] text-white"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`/api/properties/${propertyId}/share`, { method: "POST" });
+                    if (res.ok) {
+                      const { shareToken } = await res.json();
+                      const shareUrl = `${window.location.origin}/share/${shareToken}`;
+                      await navigator.clipboard.writeText(shareUrl);
+                      toast({ title: "Share link copied", description: "The link has been copied to your clipboard." });
+                    }
+                  } catch {
+                    toast({ title: "Could not create share link", variant: "destructive" });
+                  }
+                  setShowCertifyCompletion(false);
+                }}
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share with Client
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`/api/reports/${report.id}/pdf`);
+                    if (!res.ok) throw new Error();
+                    const blob = await res.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = blobUrl;
+                    a.download = `report.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(blobUrl);
+                  } catch {
+                    toast({ title: "PDF download failed", description: "Please try again.", variant: "destructive" });
+                  }
+                  setShowCertifyCompletion(false);
+                }}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download PDF
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground pt-1">
+              Certified {report.certifiedAt ? new Date(report.certifiedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "just now"}
+              {arborist ? ` · ISA #${arborist.isaCertificationNum}` : ""}
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowCertifyCompletion(false)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Close
+            </button>
+          </div>
         </div>
       )}
 

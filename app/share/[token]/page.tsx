@@ -104,7 +104,7 @@ const ACTION_FRIENDLY: Record<string, string> = {
 // Buyer-friendly action text for real estate packages — no "removal" language
 const RE_ACTION_FRIENDLY: Record<string, string> = {
   retain: "Healthy — no action needed",
-  remove: "This tree's condition warrants further professional evaluation",
+  remove: "This tree's condition warrants further professional assessment",
   prune: "Minor maintenance pruning recommended",
   monitor: "Routine monitoring recommended",
 };
@@ -310,15 +310,18 @@ export default async function SharedPropertyPage({
 
   if (!property) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50">
         <div className="text-center max-w-md px-6">
-          <div className="text-5xl mb-4">🔗</div>
+          <div className="inline-flex items-center gap-2 mb-6">
+            <TreePine className="h-6 w-6 text-[#1D4E3E]" />
+            <span className="font-semibold text-[#1D4E3E] tracking-tight">TreeCertify</span>
+          </div>
           <h1 className="text-xl font-semibold text-neutral-800 mb-2">
-            This link is no longer active
+            This report link is no longer available
           </h1>
-          <p className="text-neutral-500 text-sm">
-            The property owner may have revoked sharing access, or this link may
-            have expired.
+          <p className="text-neutral-500 text-sm leading-relaxed">
+            The link may have been revoked or is no longer active.
+            If you need access to this report, please contact your arborist directly.
           </p>
         </div>
       </div>
@@ -495,11 +498,11 @@ export default async function SharedPropertyPage({
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center">
               <Clock className="h-8 w-8 text-amber-500 mx-auto mb-2" />
               <h2 className="text-lg font-semibold text-amber-800">
-                Assessment In Progress
+                This report is still being prepared
               </h2>
               <p className="text-sm text-amber-700 mt-1 max-w-md mx-auto">
-                Your arborist is still working on this tree assessment report.
-                Check back soon.
+                Your arborist is finalizing the assessment.
+                You&apos;ll be able to view the full report once it has been certified.
               </p>
               {property.trees.length > 0 && (
                 <p className="text-sm text-amber-600 mt-3 font-medium">

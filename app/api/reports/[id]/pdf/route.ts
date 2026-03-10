@@ -6,6 +6,7 @@ import { logEvent } from "@/lib/analytics";
 import puppeteer from "puppeteer";
 import fs from "fs";
 import path from "path";
+import QRCode from "qrcode";
 
 // ---------------------------------------------------------------------------
 // Professional report-type titles (formal, uppercase style)
@@ -147,6 +148,24 @@ export async function GET(
     if (arborist.companyLogoUrl) {
       const b64 = photoToBase64(arborist.companyLogoUrl);
       if (b64) logoBase64 = b64;
+    }
+
+    // =========================================================================
+    // QR CODE (share page link)
+    // =========================================================================
+    let qrCodeBase64 = "";
+    if (property.shareToken) {
+      try {
+        const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://treecertify.com"}/share/${property.shareToken}`;
+        qrCodeBase64 = await QRCode.toDataURL(shareUrl, {
+          width: 160,
+          margin: 1,
+          color: { dark: "#1D4E3E", light: "#FFFFFF" },
+          errorCorrectionLevel: "M",
+        });
+      } catch (err) {
+        console.warn("QR code generation failed:", err);
+      }
     }
 
     // =========================================================================
@@ -1409,6 +1428,21 @@ export async function GET(
       letter-spacing: 2px;
       margin-top: 8px;
     }
+    .cover-qr-block {
+      position: absolute;
+      bottom: 24px;
+      right: 0;
+      text-align: center;
+    }
+    .cover-qr-img {
+      width: 80px;
+      height: 80px;
+    }
+    .cover-qr-caption {
+      font-size: 7pt;
+      color: #888;
+      margin-top: 4px;
+    }
 
     /* =========================================================================
        TABLE OF CONTENTS
@@ -1443,13 +1477,14 @@ export async function GET(
       font-weight: 600;
       font-size: 10pt;
     }
-    .toc-table .toc-title-cell {
+    .toc-table .toc-title {
+      font-family: 'Instrument Sans', sans-serif;
       font-size: 10.5pt;
       color: #3A3A36;
       font-weight: 500;
     }
     .toc-dots {
-      display: inline;
+      display: none;
     }
     .toc-desc {
       text-align: right;
@@ -2035,6 +2070,11 @@ export async function GET(
 
     <!-- Cover footer -->
     <div class="cover-footer">
+      ${qrCodeBase64 ? `
+      <div class="cover-qr-block">
+        <img src="${qrCodeBase64}" alt="QR Code" class="cover-qr-img" />
+        <div class="cover-qr-caption">Scan to view online report</div>
+      </div>` : ""}
       ${!isCertified ? '<div class="cover-draft-badge">DRAFT</div><br/>' : ""}
       <div class="cover-credentials-line">${esc(arborist.name)} &nbsp;&bull;&nbsp; ISA Certified Arborist #${esc(arborist.isaCertificationNum)}</div>
       ${arborist.traqCertified ? '<div class="cover-credentials-line">ISA Tree Risk Assessment Qualified</div>' : ""}
@@ -2057,8 +2097,7 @@ export async function GET(
       ${tocRows}
     </table>
     <p class="toc-note">
-      <!-- TODO: Exact page numbers require a two-pass PDF render. Section titles are listed for reference. -->
-      This report contains ${trees.length} trees assessed across ${tocSections.length} sections.
+      This report contains ${trees.length} tree${trees.length !== 1 ? "s" : ""} assessed across ${tocSections.length} sections.
     </p>
   </div>
 
@@ -2190,7 +2229,13 @@ export async function GET(
       ...(shareToken ? { source: "share_page" } : {}),
     });
 
-    const filename = `Arborist_Report_${property.address.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
+    const filename = buildSmartFilename(
+      report.reportType,
+      property.address,
+      property.city,
+      report.certifiedAt ? new Date(report.certifiedAt) : new Date(),
+      shareToken ? arborist.companyName : null, // Include company name for share page downloads
+    );
 
     return new NextResponse(Buffer.from(pdfBuffer), {
       headers: {
@@ -2255,6 +2300,58 @@ function esc(text: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+/**
+ * Build a smart, human-readable PDF filename.
+ * Pattern: [Company]-[TypePrefix]-[Address]-[City]-[Date].pdf
+ */
+function buildSmartFilename(
+  reportType: string,
+  address: string,
+  city: string,
+  date: Date,
+  companyName?: string | null,
+): string {
+  const TYPE_PREFIXES: Record<string, string> = {
+    removal_permit: "TreeReport",
+    health_assessment: "HealthAssessment",
+    tree_valuation: "TreeValuation",
+    construction_encroachment: "ConstructionImpact",
+    real_estate_package: "RealEstatePackage",
+  };
+  const prefix = TYPE_PREFIXES[reportType] || "TreeReport";
+
+  const sanitize = (str: string) =>
+    str
+      .replace(/[^a-zA-Z0-9\s-]/g, "") // Remove special chars
+      .trim()
+      .split(/\s+/)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join("-");
+
+  const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD
+
+  const parts: string[] = [];
+  if (companyName) parts.push(sanitize(companyName));
+  parts.push(prefix);
+
+  const sanitizedAddr = sanitize(address);
+  const sanitizedCity = sanitize(city);
+
+  // Truncate address if total would exceed 100 chars
+  // Reserve space for: company (if any) + prefix + city + date + separators + .pdf
+  const fixedLen = parts.join("-").length + 1 + sanitizedCity.length + 1 + dateStr.length + 4; // ".pdf"
+  const maxAddrLen = Math.max(20, 100 - fixedLen);
+  const truncAddr = sanitizedAddr.length > maxAddrLen
+    ? sanitizedAddr.slice(0, maxAddrLen).replace(/-$/, "")
+    : sanitizedAddr;
+
+  parts.push(truncAddr);
+  parts.push(sanitizedCity);
+  parts.push(dateStr);
+
+  return parts.join("-") + ".pdf";
 }
 
 function fmtEnum(value: string | undefined | null): string {

@@ -19,7 +19,7 @@ export const REPORT_TYPES: ReportTypeConfig[] = [
   {
     id: "health_assessment",
     label: "Health Assessment / Inventory",
-    description: "Tree condition evaluation with maintenance recommendations and risk prognosis",
+    description: "Tree condition assessment with maintenance recommendations and risk prognosis",
     icon: "Stethoscope",
     color: "green",
   },

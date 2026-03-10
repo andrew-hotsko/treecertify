@@ -40,7 +40,7 @@ export async function POST(
 
     if (existing.status !== "certified" && existing.status !== "filed") {
       return NextResponse.json(
-        { error: "Only certified or filed reports can be amended" },
+        { error: "Only certified or submitted reports can be amended" },
         { status: 400 }
       );
     }

@@ -53,7 +53,7 @@ VOICE AND STANDARDS:
 SECTION-BY-SECTION INSTRUCTIONS:
 
 1. **Assignment and Purpose**
-   Write 2-3 paragraphs stating what was requested, the date of field inspection, the assessment method (Level 2 — Basic visual assessment per ISA TRAQ methodology), and the specific municipal ordinance under which the permit is sought. Use the Scope of Assignment if provided. Include the property address, city, county, and parcel number.
+   Write 2-3 paragraphs stating what was requested, the date of field assessment, the assessment method (Level 2 — Basic visual assessment per ISA TRAQ methodology), and the specific municipal ordinance under which the permit is sought. Use the Scope of Assignment if provided. Include the property address, city, county, and parcel number.
 
 2. **Site Observations**
    Describe the property setting, topography, soil conditions (if noted), proximity to structures, and any relevant environmental factors. If property-level field notes are provided, incorporate them naturally. If site observations are provided by the arborist, use them. Do not fabricate site details not supported by the data.
@@ -138,7 +138,7 @@ VOICE AND STANDARDS:
 SECTION-BY-SECTION INSTRUCTIONS:
 
 1. **Assignment and Purpose**
-   State the purpose (health and risk assessment), date of inspection, assessment level (Level 2 — Basic), property details, and who requested the assessment. Use Scope of Assignment if provided.
+   State the purpose (health and risk assessment), date of assessment, assessment level (Level 2 — Basic), property details, and who requested the assessment. Use Scope of Assignment if provided.
 
 2. **Assessment Methodology**
    Describe the TRAQ assessment process: Level 2 Basic assessment consisting of a 360-degree visual inspection from ground level. Note tools used (if any): diameter tape, clinometer, mallet for sounding. State that no invasive testing (resistograph, sonic tomography) was performed unless noted otherwise.
@@ -202,7 +202,7 @@ VOICE AND STANDARDS:
 SECTION-BY-SECTION INSTRUCTIONS:
 
 1. **Assignment and Purpose**
-   State the purpose (tree valuation for insurance, damage assessment, or ordinance compliance), property details, date of inspection, and appraisal standard used (CTLA Trunk Formula Method, 10th Edition).
+   State the purpose (tree valuation for insurance, damage assessment, or ordinance compliance), property details, date of assessment, and appraisal standard used (CTLA Trunk Formula Method, 10th Edition).
 
 2. **Site Observations**
    Property description, landscape context, and factors that affect tree location rating (proximity to structures, visibility, contribution to property aesthetics).
@@ -440,7 +440,7 @@ RAW DICTATION TRANSFORMATION:
 The health notes, structural notes, and site observations fields contain RAW FIELD DICTATION captured via voice recording during on-site assessment. This dictation is informal shorthand — it must NEVER appear verbatim in the report. Transform every instance into polished professional prose.
 
 Examples of required transformation:
-- Raw: "big crack in the main trunk, looks like it could split" → Report: "A significant longitudinal crack was observed in the primary trunk, indicating a potential failure point that warrants further evaluation."
+- Raw: "big crack in the main trunk, looks like it could split" → Report: "A significant longitudinal crack was observed in the primary trunk, indicating a potential failure point that warrants further assessment."
 - Raw: "tree is leaning pretty bad toward the house" → Report: "The specimen exhibits a pronounced lean toward the adjacent residential structure, with an estimated departure from vertical of approximately 15 degrees."
 - Raw: "lots of dead branches up top, maybe 30 percent" → Report: "Approximately 30% crown dieback was observed in the upper canopy, with dead scaffold branches distributed throughout the crown periphery."
 - Raw: "roots are all messed up from the construction" → Report: "Significant root zone disturbance was observed, consistent with recent construction activity. Exposed and severed lateral roots were noted within the critical root zone."
