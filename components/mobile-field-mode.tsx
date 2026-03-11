@@ -477,11 +477,12 @@ export function MobileFieldMode({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span
-              className={`h-2 w-2 rounded-full shrink-0 ${
-                isOnline ? "bg-green-500" : "bg-red-500"
-              }`}
-            />
+            {!isOnline && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 border border-red-200 text-red-700 text-xs font-medium">
+                <span className="h-2 w-2 rounded-full bg-red-500 shrink-0" />
+                Offline
+              </span>
+            )}
             <h2 className="text-lg font-semibold font-display">
               Tree{" "}
               <span className="font-mono">#{treeNumber}</span>
@@ -494,17 +495,21 @@ export function MobileFieldMode({
           </div>
           <div className="flex items-center gap-2">
             {/* Progress dots */}
-            <div className="flex gap-1.5">
+            <div className="flex gap-0">
               {SECTIONS.map((s, i) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => scrollToSection(i)}
-                  className={`h-2.5 w-2.5 rounded-full transition-colors ${
-                    i === activeSection ? "bg-forest" : "bg-neutral-300"
-                  }`}
-                  style={{ minWidth: 10, minHeight: 10 }}
-                />
+                  className="flex items-center justify-center"
+                  style={{ minWidth: 44, minHeight: 44, padding: 0 }}
+                >
+                  <span
+                    className={`block h-2.5 w-2.5 rounded-full transition-colors ${
+                      i === activeSection ? "bg-forest" : "bg-neutral-300"
+                    }`}
+                  />
+                </button>
               ))}
             </div>
             <button
