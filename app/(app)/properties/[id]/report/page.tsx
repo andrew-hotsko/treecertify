@@ -369,11 +369,6 @@ export default function PropertyReportPage() {
   const [regeneratingTree, setRegeneratingTree] = useState<number | null>(null);
   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState<number | null>(null);
 
-  // Confirm dialog states (replacing window.confirm)
-  const [showFullRegenConfirm, setShowFullRegenConfirm] = useState(false);
-  const [showUnlockConfirm, setShowUnlockConfirm] = useState(false);
-  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
-
   // Amendment state
   const [showAmendDialog, setShowAmendDialog] = useState(false);
   const [amendmentReason, setAmendmentReason] = useState("");
@@ -861,11 +856,12 @@ export default function PropertyReportPage() {
   };
 
   const regenerateReport = () => {
-    setShowFullRegenConfirm(true);
-  };
-
-  const confirmRegenerateReport = () => {
-    setShowFullRegenConfirm(false);
+    if (
+      !window.confirm(
+        "Regenerating will replace the current AI draft. Your edits will be lost. Continue?"
+      )
+    )
+      return;
     generateReport();
   };
 
@@ -999,11 +995,13 @@ export default function PropertyReportPage() {
   // -------------------------------------------------------------------------
 
   const unlockReport = async () => {
-    setShowUnlockConfirm(true);
-  };
+    if (
+      !window.confirm(
+        "Unlocking will revert the report to review status. The certification will be removed. Continue?"
+      )
+    )
+      return;
 
-  const confirmUnlockReport = async () => {
-    setShowUnlockConfirm(false);
     if (!report) return;
     setUnlocking(true);
     try {
@@ -1471,7 +1469,7 @@ export default function PropertyReportPage() {
                   </button>
                   <button
                     onClick={() => setViewMode("preview")}
-                    className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                    className={`hidden sm:flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                       viewMode === "preview"
                         ? "bg-background text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
@@ -2539,74 +2537,6 @@ export default function PropertyReportPage() {
         </AlertDialog>
       )}
 
-      {/* ---- Full Report Regeneration Confirm ---- */}
-      <AlertDialog open={showFullRegenConfirm} onOpenChange={setShowFullRegenConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Regenerate entire report?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Regenerating will replace the current AI draft. Your edits will be lost.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmRegenerateReport}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-              Regenerate
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* ---- Unlock Report Confirm ---- */}
-      <AlertDialog open={showUnlockConfirm} onOpenChange={setShowUnlockConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Unlock this report?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Unlocking will revert the report to review status. The certification will be removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmUnlockReport}
-              className="bg-amber-600 hover:bg-amber-700"
-            >
-              <Unlock className="h-3.5 w-3.5 mr-1.5" />
-              Unlock Report
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* ---- Restore Version Confirm ---- */}
-      <AlertDialog open={showRestoreConfirm} onOpenChange={setShowRestoreConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Restore this version?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Your current content will be replaced with the &ldquo;{previewVersion?.label}&rdquo; version.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setShowRestoreConfirm(false);
-                if (previewVersion) restoreVersion(previewVersion);
-              }}
-            >
-              <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-              Restore Version
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       {/* ---- Amendment Dialog ---- */}
       <Dialog open={showAmendDialog} onOpenChange={setShowAmendDialog}>
         <DialogContent className="max-w-lg">
@@ -3353,8 +3283,13 @@ export default function PropertyReportPage() {
             {(!isCertified || isAmending) && (
               <Button
                 onClick={() => {
-                  if (previewVersion) {
-                    setShowRestoreConfirm(true);
+                  if (
+                    previewVersion &&
+                    window.confirm(
+                      `Restore this version? Your current content will be replaced with the "${previewVersion.label}" version.`
+                    )
+                  ) {
+                    restoreVersion(previewVersion);
                   }
                 }}
                 disabled={restoring}

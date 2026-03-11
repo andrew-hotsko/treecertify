@@ -113,7 +113,6 @@ export default function NewPropertyPage() {
   const [homeownerName, setHomeownerName] = useState("");
   const [homeownerEmail, setHomeownerEmail] = useState("");
   const [homeownerPhone, setHomeownerPhone] = useState("");
-  const [state, setState] = useState("CA");
 
   // Construction encroachment project fields
   const [projectDescription, setProjectDescription] = useState("");
@@ -148,7 +147,7 @@ export default function NewPropertyPage() {
         const geoRes = await fetch("/api/geocode", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ address: address.trim(), city, state }),
+          body: JSON.stringify({ address: address.trim(), city, state: "CA" }),
         });
         if (geoRes.ok) {
           const geoData = await geoRes.json();
@@ -167,7 +166,6 @@ export default function NewPropertyPage() {
         body: JSON.stringify({
           address: address.trim(),
           city,
-          state,
           county,
           zip: zip.trim() || undefined,
           parcelNumber: parcelNumber.trim() || undefined,
@@ -282,7 +280,7 @@ export default function NewPropertyPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>City *</Label>
                 <Input
@@ -291,17 +289,6 @@ export default function NewPropertyPage() {
                   onChange={(e) => handleCityChange(e.target.value)}
                   className="mt-1"
                 />
-              </div>
-              <div>
-                <Label>State</Label>
-                <select
-                  value={state}
-                  onChange={(e) => setState(e.target.value)}
-                  className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <option value="CA">California</option>
-                  <option value="NV">Nevada</option>
-                </select>
               </div>
               <div>
                 <Label>County</Label>
