@@ -41,16 +41,11 @@
 - Streaming via SSE to the report editor UI. Excluded sections: "Tree Inventory" and "Arborist Certification Statement" (handled by PDF template).
 
 ## Brand Guide
-- Colors: Forest #1D4E3E (primary), Forest Light #2A6B55 (hover), Forest Muted #3D7D68 (accents). Warm neutral scale #FEFDFB–#0A0A09.
-- **Theme: Light default + dark mode available in Settings.** Field mode (mobile < 768px) always forces light mode regardless of setting — arborists work outdoors in daylight.
-- **Light mode surfaces:** page bg neutral-50 (#FEFDFB), card bg neutral-100 (#FAF9F6), text neutral-700 (#3A3A36), headings neutral-900 (#0A0A09).
-- **Dark mode surfaces:** page bg neutral-900 (#0A0A09), card bg neutral-800 (#222220), text neutral-200 (#F2F1EC), headings neutral-50 (#FEFDFB). Forest green remains the primary accent in both modes — it has sufficient contrast on dark backgrounds.
-- **Theme implementation:** CSS variables with `[data-theme="dark"]` selector. Theme preference stored in Arborist model (not localStorage). Field mode component checks viewport width and overrides to light.
+- Colors: Forest #1D4E3E (primary), Forest Light #2A6B55 (hover), Forest Muted #3D7D68 (accents). Warm neutral scale #FEFDFB–#0A0A09. No dark mode.
 - Fonts: Instrument Sans (`font-display`) for headings, Roboto (`font-body`, default) for UI, IBM Plex Mono (`font-mono`) for data/measurements/ISA numbers.
 - Tailwind: `forest.DEFAULT`/`.light`/`.muted` + brand `neutral` scale in `tailwind.config.ts`. CSS variables in `globals.css` use HSL format.
 - Instrument Sans loaded via CSS `@import` in `globals.css`. Roboto + IBM Plex Mono via `next/font/google` in `app/layout.tsx`.
 - Condition dot colors (emerald-500, gray-400/700, etc.) in `CONDITION_DOT_COLOR` maps are data visualization — do NOT change to brand colors.
-- **PDF is always light mode** — professional documents should not render in dark theme regardless of user preference.
 
 ## PDF Generation
 - PDF route: `app/api/reports/[id]/pdf/route.ts` — Puppeteer renders HTML template to PDF.
@@ -387,35 +382,9 @@
 - **Migration**: `scripts/migrate-onboarding.ts` sets `hasCompletedOnboarding = true` for existing arborists (by onboardingStep ≥ 3 OR having properties).
 - **Build fixes**: Added `isaExpirationDate` default (1 year out) for new arborist creation. Fixed `Buffer` → `Uint8Array` type conversion in sample report API.
 
-## UI/UX Redesign (In Progress)
-- **Scope:** Full ground-up redesign of every screen and flow. Not a color swap — rethinking layouts, information hierarchy, component design, and interactions.
-- **Approach:** 4 phases, each a separate Claude Code session.
-  - Phase 1: UX Audit & Information Architecture (analysis only, produces `UX_AUDIT.md`)
-  - Phase 2: Design System & Component Library (Tailwind config, shadcn overrides, shared components, dark mode tokens)
-  - Phase 3: Screen-by-Screen Redesign (all 14 screens rebuilt)
-  - Phase 4: Animation, Polish & QA (micro-interactions, loading states, accessibility, responsive testing)
-- **Agents:** UX Architect, UX Researcher, UI Designer, Frontend Developer, Accessibility Auditor (installed at `~/.claude/agents/`).
-- **Key decisions:**
-  - Light default + dark mode in settings. Field mode always light.
-  - ISA-standard vocabulary only — no user-customizable field labels.
-  - Minimum 44px touch targets on all interactive elements.
-  - Skeleton loaders for all data-fetching states (no spinners).
-  - Navigation: dark sidebar on desktop, bottom tab bar on mobile.
-  - Dashboard redesign: personalized greeting, status pipeline, "Next Action Needed" card, property card grid.
-  - Share page: standalone public page, no app chrome, optimized for mobile sharing, print-friendly.
-- **Files being modified in Phase 2:** `tailwind.config.ts`, `globals.css`, all files in `components/ui/`, `app/layout.tsx`. Treat these as unstable during the redesign.
-- **Files being modified in Phase 3:** All page files in `app/(app)/`, all business components in `components/`, `app/share/[token]/page.tsx`, `app/onboarding/page.tsx`.
-- **DO NOT preserve old layout patterns** during the redesign — the goal is a complete visual overhaul. Preserve all business logic, API routes, data models, and validation.
-
-## Agency Agents
-- 68 specialized agent prompts installed at `~/.claude/agents/` (from github.com/msitarzewski/agency-agents).
-- Reference an agent by name in your prompt to activate it (e.g., "Use the Frontend Developer agent").
-- **Most relevant to TreeCertify:** Frontend Developer, Backend Architect, AI Engineer, Security Engineer, UX Architect, UX Researcher, UI Designer, Accessibility Auditor, DevOps Automator, Performance Benchmarker.
-- Agents are additive context — they don't override CLAUDE.md rules. If an agent's default behavior conflicts with a locked decision (e.g., UX Architect defaults to adding dark/light/system toggle), CLAUDE.md takes precedence.
-
 ---
 
-## Current Status (as of 2026-03-10)
+## Current Status (as of 2026-03-09)
 
 ### What's Built and Working
 - **Full assessment workflow**: Property → trees → AI report → certification → PDF → share
@@ -431,7 +400,6 @@
 - **Admin dashboard**: Analytics, per-arborist activity, usage stats
 
 ### Known Issues / Gaps
-- **UI/UX redesign in progress** — see "UI/UX Redesign" section above. Design system, component library, and screen layouts are being rebuilt. Do not treat current visual patterns as stable.
 - **`.next` cache corruption**: OneDrive symlink conflicts cause `EINVAL: readlink` errors on build. Fix: `rm -rf .next` before `npm run build`. Not a code bug.
 - **North Bay/Tahoe/Reno contacts UNVERIFIED**: All phone numbers, office hours, and fee amounts marked `// VERIFY` in `lib/city-contacts.ts`. DO NOT rely on these for production.
 - **City of Napa**: Only ~7 of 14 protected species confirmed with specific thresholds. Full species list incomplete.

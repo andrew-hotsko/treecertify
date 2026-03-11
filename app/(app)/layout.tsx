@@ -34,7 +34,7 @@ export default async function AppLayout({
         <Sidebar arboristName={arborist.name} isaCertNum={arborist.isaCertificationNum} profilePhotoUrl={arborist.profilePhotoUrl ?? undefined} isAdmin={process.env.ADMIN_ARBORIST_ID?.split(",").includes(arborist.id)} />
         <MobileNav arboristName={arborist.name} isaCertNum={arborist.isaCertificationNum} profilePhotoUrl={arborist.profilePhotoUrl ?? undefined} />
         <main className="pl-0 md:pl-64">
-          <div className="mx-auto max-w-7xl px-4 md:px-6 pt-6 md:pt-8 pb-24 md:pb-8 animate-page-in">{children}</div>
+          <div className="mx-auto max-w-7xl px-4 md:px-6 pt-16 md:pt-8 pb-8">{children}</div>
         </main>
         <FeedbackButton />
       </div>

@@ -147,7 +147,7 @@ const CONDITION_LABELS: Record<number, string> = {
 };
 
 const CONDITION_DOT_COLOR: Record<number, string> = {
-  0: "bg-neutral-700",
+  0: "bg-gray-700",
   1: "bg-red-500",
   2: "bg-orange-500",
   3: "bg-amber-500",
@@ -1637,7 +1637,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                               <span className="flex items-center gap-0.5">
                                 <span
                                   className={`inline-block w-1.5 h-1.5 rounded-full ${
-                                    CONDITION_DOT_COLOR[tree.conditionRating] ?? "bg-neutral-400"
+                                    CONDITION_DOT_COLOR[tree.conditionRating] ?? "bg-gray-400"
                                   }`}
                                 />
                                 {CONDITION_LABELS[tree.conditionRating]}
@@ -1742,14 +1742,14 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                   <div className="border-t pt-1 mt-1">
                     <div className="flex items-center gap-2">
                       <span
-                        className="w-3 h-3 rounded-full bg-neutral-400 border-2 border-white outline outline-2 outline-[#22c55e]"
+                        className="w-3 h-3 rounded-full bg-gray-400 border-2 border-white outline outline-2 outline-[#22c55e]"
                         style={{ outlineOffset: "1px" }}
                       />
                       <span>Protected</span>
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span
-                        className="w-3 h-3 rounded-full bg-neutral-400 border-2 border-white outline outline-2 outline-[#eab308]"
+                        className="w-3 h-3 rounded-full bg-gray-400 border-2 border-white outline outline-2 outline-[#eab308]"
                         style={{ outlineOffset: "1px" }}
                       />
                       <span>Heritage</span>

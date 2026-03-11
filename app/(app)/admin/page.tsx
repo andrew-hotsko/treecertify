@@ -211,7 +211,7 @@ export default async function AdminDashboard() {
           { label: "Share Links Opened", v7: sharesOpened7d, vAll: sharesOpenedAll },
           { label: "PDFs Downloaded", v7: pdfsDownloaded7d, vAll: pdfsDownloadedAll },
         ].map((stat) => (
-          <div key={stat.label} className="bg-card rounded-lg border p-4">
+          <div key={stat.label} className="bg-white rounded-lg border p-4">
             <p className="text-xs text-neutral-500 uppercase tracking-wider font-medium">{stat.label}</p>
             <div className="flex items-baseline gap-3 mt-1">
               <span className="text-2xl font-bold font-mono text-neutral-900">{stat.v7}</span>
@@ -224,9 +224,9 @@ export default async function AdminDashboard() {
       </div>
 
       {/* ===== Arborist Activity ===== */}
-      <div className="bg-card rounded-lg border overflow-hidden">
-        <div className="px-4 py-3 border-b bg-muted/50">
-          <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
+      <div className="bg-white rounded-lg border overflow-hidden">
+        <div className="px-4 py-3 border-b bg-neutral-50">
+          <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider">
             Arborist Activity (Last 30 Days)
           </h2>
         </div>
@@ -273,7 +273,7 @@ export default async function AdminDashboard() {
       {/* ===== Metrics Grid ===== */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Report Type Distribution */}
-        <div className="bg-card rounded-lg border p-4">
+        <div className="bg-white rounded-lg border p-4">
           <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">
             Report Type Distribution
           </h2>
@@ -295,7 +295,7 @@ export default async function AdminDashboard() {
         </div>
 
         {/* AI Edit Rate */}
-        <div className="bg-card rounded-lg border p-4">
+        <div className="bg-white rounded-lg border p-4">
           <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">
             AI Edit Rate
           </h2>
@@ -319,7 +319,7 @@ export default async function AdminDashboard() {
         </div>
 
         {/* Share Link Performance */}
-        <div className="bg-card rounded-lg border p-4">
+        <div className="bg-white rounded-lg border p-4">
           <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">
             Share Link Performance
           </h2>
@@ -351,9 +351,9 @@ export default async function AdminDashboard() {
       </div>
 
       {/* ===== Recent Events ===== */}
-      <div className="bg-card rounded-lg border overflow-hidden">
-        <div className="px-4 py-3 border-b bg-muted/50">
-          <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
+      <div className="bg-white rounded-lg border overflow-hidden">
+        <div className="px-4 py-3 border-b bg-neutral-50">
+          <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider">
             Recent Events (Last 50)
           </h2>
         </div>

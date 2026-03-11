@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useTheme } from "@/components/theme-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,9 +31,6 @@ import {
   RotateCcw,
   ChevronUp,
   ChevronDown,
-  Sun,
-  Moon,
-  Monitor,
 } from "lucide-react";
 import {
   DndContext,
@@ -109,7 +105,6 @@ interface ArboristProfile {
   aiStandardDisclaimer?: string | null;
   aiTonePreference?: string | null;
   aiCustomInstructions?: string | null;
-  themePreference?: string | null;
 }
 
 interface ReportDefaults {
@@ -163,7 +158,7 @@ function SortableObservationItem({
       ref={setNodeRef}
       style={style}
       className={`flex items-center gap-2 px-3 py-2 rounded-md border ${
-        obs.enabled ? "bg-card border-neutral-200" : "bg-muted border-neutral-100 opacity-60"
+        obs.enabled ? "bg-white border-neutral-200" : "bg-neutral-50 border-neutral-100 opacity-60"
       }`}
     >
       {/* Drag handle — hidden on mobile */}
@@ -276,7 +271,6 @@ export default function SettingsPage() {
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const { theme, setTheme } = useTheme();
 
   // Usage data state
   interface UsageData {
@@ -740,9 +734,9 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-2xl font-semibold tracking-tight font-display text-foreground">Settings</h1>
-      <p className="text-sm text-muted-foreground mt-0.5 mb-8">
-        Manage your profile, branding, and report preferences
+      <h1 className="text-2xl font-semibold tracking-tight font-display mb-1">Settings</h1>
+      <p className="text-muted-foreground mb-6">
+        Manage your arborist profile and company branding
       </p>
 
       {message && (
@@ -756,13 +750,6 @@ export default function SettingsPage() {
           {message.text}
         </div>
       )}
-
-      {/* ── Section: Profile & Credentials ── */}
-      <div className="mb-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Profile &amp; Credentials
-        </h2>
-      </div>
 
       {/* Profile Photo */}
       <Card className="mb-6">
@@ -894,51 +881,6 @@ export default function SettingsPage() {
                 JPG, PNG, WebP, or SVG &bull; Max 10 MB
               </p>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ── Section: Appearance ── */}
-      <div className="mb-2 mt-10">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Appearance
-        </h2>
-      </div>
-
-      {/* Appearance */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base font-display">
-            <Sun className="h-5 w-5 text-forest" />
-            Theme
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
-            Choose your preferred color mode. Field mode on mobile always uses light theme for outdoor visibility.
-          </p>
-          <div className="grid grid-cols-3 gap-3">
-            {([
-              { value: "light" as const, label: "Light", icon: Sun },
-              { value: "dark" as const, label: "Dark", icon: Moon },
-              { value: "system" as const, label: "System", icon: Monitor },
-            ]).map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setTheme(option.value)}
-                className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all ${
-                  theme === option.value
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-primary/40"
-                }`}
-              >
-                <option.icon className={`h-5 w-5 ${theme === option.value ? "text-primary" : "text-muted-foreground"}`} />
-                <span className={`text-sm font-medium ${theme === option.value ? "text-primary" : "text-foreground"}`}>
-                  {option.label}
-                </span>
-              </button>
-            ))}
           </div>
         </CardContent>
       </Card>
@@ -1089,13 +1031,6 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* ── Section: Report Preferences ── */}
-      <div className="mb-2 mt-10">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Report Preferences
-        </h2>
-      </div>
-
       {/* Report Defaults */}
       <Card className="mb-6">
         <CardHeader>
@@ -1197,7 +1132,7 @@ export default function SettingsPage() {
                     <span
                       className={`h-2.5 w-2.5 rounded-full ${
                         rating === 0
-                          ? "bg-neutral-700"
+                          ? "bg-gray-700"
                           : rating === 1
                           ? "bg-red-500"
                           : rating === 2
@@ -1588,7 +1523,7 @@ export default function SettingsPage() {
               onChange={(e) => setSpeciesSearch(e.target.value)}
             />
             {speciesSearch.length >= 2 && (
-              <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-popover border border-border rounded-md shadow-lg">
+              <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-white border border-neutral-200 rounded-md shadow-lg">
                 {PENINSULA_SPECIES.filter(
                   (sp) =>
                     (sp.common.toLowerCase().includes(speciesSearch.toLowerCase()) ||
@@ -1807,13 +1742,6 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* ── Section: Billing ── */}
-      <div className="mb-2 mt-10">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Billing
-        </h2>
-      </div>
-
       {/* Client Billing */}
       <Card className="mb-6">
         <CardHeader>
@@ -1872,13 +1800,6 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* ── Section: AI & Writing ── */}
-      <div className="mb-2 mt-10">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          AI &amp; Writing
-        </h2>
-      </div>
 
       {/* Report Writing Style */}
       <Card className="mb-6">

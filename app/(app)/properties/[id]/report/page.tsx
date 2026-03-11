@@ -2920,8 +2920,8 @@ export default function PropertyReportPage() {
 
       {/* ---- Certification Completion Modal ---- */}
       {showCertifyCompletion && report && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 animate-backdrop-in">
-          <div className="w-full sm:max-w-md sm:mx-4 bg-card sm:rounded-xl rounded-t-2xl shadow-2xl p-8 sm:p-10 text-center space-y-5 animate-slide-up">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 animate-in fade-in duration-200">
+          <div className="w-full sm:max-w-md sm:mx-4 bg-white sm:rounded-xl rounded-t-2xl shadow-2xl p-8 sm:p-10 text-center space-y-5 animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#1D4E3E]/10">
               <BadgeCheck className="h-7 w-7 text-[#1D4E3E]" />
             </div>

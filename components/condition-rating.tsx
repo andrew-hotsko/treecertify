@@ -20,7 +20,7 @@ function getButtonClasses(rating: number, isSelected: boolean): string {
 
   switch (rating) {
     case 0:
-      return "border-neutral-700 bg-neutral-100 text-neutral-800";
+      return "border-gray-700 bg-gray-100 text-gray-800";
     case 1:
       return "border-red-500 bg-red-50 text-red-700";
     case 2:
@@ -44,13 +44,12 @@ export function ConditionRating({
   const isSm = size === "sm";
 
   return (
-    <div className="flex gap-1.5" role="radiogroup" aria-label="Condition rating">
+    <div className="flex gap-1.5">
       {[0, 1, 2, 3, 4, 5].map((rating) => (
         <button
           key={rating}
           type="button"
           onClick={() => onChange(rating)}
-          aria-label={`${CONDITION_LABELS[rating]} (${rating})`}
           className={`flex flex-1 flex-col items-center gap-0.5 rounded-lg border-2 transition-colors ${
             isSm ? "px-1 py-2 text-xs" : "px-1.5 py-3 text-sm"
           } ${getButtonClasses(rating, value === rating)}`}
@@ -61,7 +60,7 @@ export function ConditionRating({
           </span>
           <span
             className={`leading-tight font-medium ${
-              isSm ? "text-[9px]" : "text-[10px]"
+              isSm ? "text-[8px]" : "text-[9px]"
             }`}
           >
             {CONDITION_LABELS[rating]}

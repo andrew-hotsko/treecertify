@@ -84,7 +84,6 @@ export async function PUT(request: NextRequest) {
       "aiStandardDisclaimer",
       "aiTonePreference",
       "aiCustomInstructions",
-      "themePreference",
     ];
 
     const updateData: Record<string, string | boolean | number | null> = {};

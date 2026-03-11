@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-    darkMode: ["selector", '[data-theme="dark"]'],
+    darkMode: ["class"],
     content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -67,20 +67,6 @@ const config: Config = {
   				800: '#222220',
   				900: '#0A0A09',
   			},
-
-  			// Theme-aware semantic colors (CSS custom properties)
-  			page: 'var(--bg-page)',
-  			'card-surface': 'var(--bg-card)',
-  			elevated: 'var(--bg-elevated)',
-  		},
-  		textColor: {
-  			heading: 'var(--text-heading)',
-  			'body-primary': 'var(--text-primary)',
-  			'body-secondary': 'var(--text-secondary)',
-  			'body-muted': 'var(--text-muted)',
-  		},
-  		borderColor: {
-  			'theme': 'var(--border-color)',
   		},
   		fontFamily: {
   			display: ['var(--font-instrument-sans)', 'Instrument Sans', 'sans-serif'],
@@ -91,7 +77,7 @@ const config: Config = {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
-  		},
+  		}
   	}
   },
   plugins: [require("tailwindcss-animate")],

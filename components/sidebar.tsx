@@ -45,21 +45,9 @@ interface SidebarProps {
   isAdmin?: boolean;
 }
 
-export function Sidebar({
-  arboristName,
-  isaCertNum,
-  profilePhotoUrl,
-  isAdmin,
-}: SidebarProps) {
+export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl, isAdmin }: SidebarProps) {
   const pathname = usePathname();
   const { isOnline, pendingCount } = useConnectivity();
-
-  const allNavItems = [
-    ...navItems,
-    ...(isAdmin
-      ? [{ label: "Admin", href: "/admin", icon: Shield }]
-      : []),
-  ];
 
   return (
     <aside className="hidden md:flex fixed inset-y-0 left-0 z-50 w-64 flex-col bg-neutral-800 text-neutral-100">
@@ -70,7 +58,7 @@ export function Sidebar({
             <span className="text-forest-muted">Tree</span>
             <span className="text-neutral-50">Certify</span>
           </h1>
-          <p className="font-mono text-[11px] uppercase tracking-widest text-neutral-500">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-500">
             Arborist OS
           </p>
         </div>
@@ -80,7 +68,7 @@ export function Sidebar({
       <div className="px-4 py-4">
         <Link
           href="/properties/new"
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-forest px-4 py-2.5 text-sm font-medium text-neutral-50 transition-colors hover:bg-forest-light active:scale-[0.98]"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-forest px-4 py-2.5 text-sm font-medium text-neutral-50 transition-colors hover:bg-forest-light"
         >
           <Plus className="h-4 w-4" />
           New Property
@@ -89,7 +77,7 @@ export function Sidebar({
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-3">
-        {allNavItems.map((item) => {
+        {[...navItems, ...(isAdmin ? [{ label: "Admin", href: "/admin", icon: Shield }] : [])].map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
           return (
@@ -97,9 +85,9 @@ export function Sidebar({
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium font-display transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-forest text-neutral-50"
+                  ? "bg-forest/10 text-forest-muted border-l-[3px] border-forest-muted pl-[9px]"
                   : "text-neutral-400 hover:bg-neutral-700 hover:text-neutral-50"
               )}
             >
@@ -116,7 +104,7 @@ export function Sidebar({
           href="/api/sample-report?showcase=true"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium font-display text-neutral-400 hover:bg-neutral-700 hover:text-neutral-50 transition-colors"
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-neutral-400 hover:bg-neutral-700 hover:text-neutral-50 transition-colors"
         >
           <FileText className="h-5 w-5" />
           Sample Report
@@ -125,17 +113,14 @@ export function Sidebar({
 
       {/* User section */}
       <div className="border-t border-neutral-700 p-4">
-        <Link
-          href="/settings"
-          className="flex items-center gap-3 rounded-lg p-1 -m-1 hover:bg-neutral-700/50 transition-colors"
-        >
+        <div className="flex items-center gap-3">
           <div className="relative">
             {profilePhotoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={profilePhotoUrl}
                 alt={arboristName}
-                className="h-9 w-9 rounded-full object-cover"
+                className="h-8 w-8 rounded-full object-cover"
               />
             ) : (
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-700">
@@ -150,19 +135,17 @@ export function Sidebar({
             />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-neutral-300 truncate">
-              {arboristName}
-            </p>
+            <p className="text-sm font-medium text-neutral-300 truncate">{arboristName}</p>
             <p className="font-mono text-xs text-neutral-500 truncate">
               ISA {isaCertNum}
             </p>
             {pendingCount > 0 && (
-              <p className="text-[11px] text-orange-400 font-medium">
+              <p className="text-[10px] text-orange-400 font-medium">
                 {pendingCount} pending
               </p>
             )}
           </div>
-        </Link>
+        </div>
       </div>
     </aside>
   );
