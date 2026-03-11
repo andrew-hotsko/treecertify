@@ -69,9 +69,8 @@
     "tailwindcss": "^3.4.1",
     "tsx": "^4.21.0",
     "typescript": "^5"
-      "overrides": {
+  },
+  "overrides": {
     "@types/mapbox__point-geometry": "npm:@mapbox/point-geometry@^1.1.0"
-  }
-
   }
 }
