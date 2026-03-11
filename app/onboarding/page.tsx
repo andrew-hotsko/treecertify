@@ -77,6 +77,22 @@ const SUPPORTED_CITIES = [
   "Atherton",
   "Woodside",
   "Portola Valley",
+  "Redwood City",
+  "San Mateo",
+  "Los Altos",
+  "Los Altos Hills",
+  "Mountain View",
+  "Hillsborough",
+  "San Carlos",
+  "Burlingame",
+  "San Mateo County",
+  "Sonoma County",
+  "Santa Rosa",
+  "City Of Napa",
+  "Windsor",
+  "Healdsburg",
+  "Tahoe Basin",
+  "Reno",
 ];
 
 const COUNTY_MAP: Record<string, string> = {
