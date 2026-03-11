@@ -16,6 +16,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.2.2",
+    "@mapbox/point-geometry": "^1.1.0",
     "@prisma/client": "^5.22.0",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-avatar": "^1.1.11",
@@ -58,7 +59,6 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@mapbox/point-geometry": "^1.1.0",
     "@types/mapbox-gl": "^3.4.1",
     "@types/node": "^20",
     "@types/react": "^18",
@@ -69,5 +69,9 @@
     "tailwindcss": "^3.4.1",
     "tsx": "^4.21.0",
     "typescript": "^5"
+      "overrides": {
+    "@types/mapbox__point-geometry": "npm:@mapbox/point-geometry@^1.1.0"
+  }
+
   }
 }
