@@ -1,0 +1,285 @@
+diff --git a/app/(app)/properties/[id]/report/page.tsx b/app/(app)/properties/[id]/report/page.tsx
+index 30666ae..9b4702b 100644
+--- a/app/(app)/properties/[id]/report/page.tsx
++++ b/app/(app)/properties/[id]/report/page.tsx
+@@ -369,6 +369,11 @@ export default function PropertyReportPage() {
+   const [regeneratingTree, setRegeneratingTree] = useState<number | null>(null);
+   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState<number | null>(null);
+ 
++  // Confirm dialog states (replacing window.confirm)
++  const [showFullRegenConfirm, setShowFullRegenConfirm] = useState(false);
++  const [showUnlockConfirm, setShowUnlockConfirm] = useState(false);
++  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
++
+   // Amendment state
+   const [showAmendDialog, setShowAmendDialog] = useState(false);
+   const [amendmentReason, setAmendmentReason] = useState("");
+@@ -856,12 +861,11 @@ export default function PropertyReportPage() {
+   };
+ 
+   const regenerateReport = () => {
+-    if (
+-      !window.confirm(
+-        "Regenerating will replace the current AI draft. Your edits will be lost. Continue?"
+-      )
+-    )
+-      return;
++    setShowFullRegenConfirm(true);
++  };
++
++  const confirmRegenerateReport = () => {
++    setShowFullRegenConfirm(false);
+     generateReport();
+   };
+ 
+@@ -995,13 +999,11 @@ export default function PropertyReportPage() {
+   // -------------------------------------------------------------------------
+ 
+   const unlockReport = async () => {
+-    if (
+-      !window.confirm(
+-        "Unlocking will revert the report to review status. The certification will be removed. Continue?"
+-      )
+-    )
+-      return;
++    setShowUnlockConfirm(true);
++  };
+ 
++  const confirmUnlockReport = async () => {
++    setShowUnlockConfirm(false);
+     if (!report) return;
+     setUnlocking(true);
+     try {
+@@ -1469,7 +1471,7 @@ export default function PropertyReportPage() {
+                   </button>
+                   <button
+                     onClick={() => setViewMode("preview")}
+-                    className={`hidden sm:flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
++                    className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                       viewMode === "preview"
+                         ? "bg-background text-foreground shadow-sm"
+                         : "text-muted-foreground hover:text-foreground"
+@@ -2537,6 +2539,74 @@ export default function PropertyReportPage() {
+         </AlertDialog>
+       )}
+ 
++      {/* ---- Full Report Regeneration Confirm ---- */}
++      <AlertDialog open={showFullRegenConfirm} onOpenChange={setShowFullRegenConfirm}>
++        <AlertDialogContent>
++          <AlertDialogHeader>
++            <AlertDialogTitle>Regenerate entire report?</AlertDialogTitle>
++            <AlertDialogDescription>
++              Regenerating will replace the current AI draft. Your edits will be lost.
++            </AlertDialogDescription>
++          </AlertDialogHeader>
++          <AlertDialogFooter>
++            <AlertDialogCancel>Cancel</AlertDialogCancel>
++            <AlertDialogAction
++              onClick={confirmRegenerateReport}
++              className="bg-blue-600 hover:bg-blue-700"
++            >
++              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
++              Regenerate
++            </AlertDialogAction>
++          </AlertDialogFooter>
++        </AlertDialogContent>
++      </AlertDialog>
++
++      {/* ---- Unlock Report Confirm ---- */}
++      <AlertDialog open={showUnlockConfirm} onOpenChange={setShowUnlockConfirm}>
++        <AlertDialogContent>
++          <AlertDialogHeader>
++            <AlertDialogTitle>Unlock this report?</AlertDialogTitle>
++            <AlertDialogDescription>
++              Unlocking will revert the report to review status. The certification will be removed.
++            </AlertDialogDescription>
++          </AlertDialogHeader>
++          <AlertDialogFooter>
++            <AlertDialogCancel>Cancel</AlertDialogCancel>
++            <AlertDialogAction
++              onClick={confirmUnlockReport}
++              className="bg-amber-600 hover:bg-amber-700"
++            >
++              <Unlock className="h-3.5 w-3.5 mr-1.5" />
++              Unlock Report
++            </AlertDialogAction>
++          </AlertDialogFooter>
++        </AlertDialogContent>
++      </AlertDialog>
++
++      {/* ---- Restore Version Confirm ---- */}
++      <AlertDialog open={showRestoreConfirm} onOpenChange={setShowRestoreConfirm}>
++        <AlertDialogContent>
++          <AlertDialogHeader>
++            <AlertDialogTitle>Restore this version?</AlertDialogTitle>
++            <AlertDialogDescription>
++              Your current content will be replaced with the &ldquo;{previewVersion?.label}&rdquo; version.
++            </AlertDialogDescription>
++          </AlertDialogHeader>
++          <AlertDialogFooter>
++            <AlertDialogCancel>Cancel</AlertDialogCancel>
++            <AlertDialogAction
++              onClick={() => {
++                setShowRestoreConfirm(false);
++                if (previewVersion) restoreVersion(previewVersion);
++              }}
++            >
++              <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
++              Restore Version
++            </AlertDialogAction>
++          </AlertDialogFooter>
++        </AlertDialogContent>
++      </AlertDialog>
++
+       {/* ---- Amendment Dialog ---- */}
+       <Dialog open={showAmendDialog} onOpenChange={setShowAmendDialog}>
+         <DialogContent className="max-w-lg">
+@@ -3283,13 +3353,8 @@ export default function PropertyReportPage() {
+             {(!isCertified || isAmending) && (
+               <Button
+                 onClick={() => {
+-                  if (
+-                    previewVersion &&
+-                    window.confirm(
+-                      `Restore this version? Your current content will be replaced with the "${previewVersion.label}" version.`
+-                    )
+-                  ) {
+-                    restoreVersion(previewVersion);
++                  if (previewVersion) {
++                    setShowRestoreConfirm(true);
+                   }
+                 }}
+                 disabled={restoring}
+diff --git a/app/(app)/properties/new/page.tsx b/app/(app)/properties/new/page.tsx
+index 52a57e9..745cb70 100644
+--- a/app/(app)/properties/new/page.tsx
++++ b/app/(app)/properties/new/page.tsx
+@@ -113,6 +113,7 @@ export default function NewPropertyPage() {
+   const [homeownerName, setHomeownerName] = useState("");
+   const [homeownerEmail, setHomeownerEmail] = useState("");
+   const [homeownerPhone, setHomeownerPhone] = useState("");
++  const [state, setState] = useState("CA");
+ 
+   // Construction encroachment project fields
+   const [projectDescription, setProjectDescription] = useState("");
+@@ -147,7 +148,7 @@ export default function NewPropertyPage() {
+         const geoRes = await fetch("/api/geocode", {
+           method: "POST",
+           headers: { "Content-Type": "application/json" },
+-          body: JSON.stringify({ address: address.trim(), city, state: "CA" }),
++          body: JSON.stringify({ address: address.trim(), city, state }),
+         });
+         if (geoRes.ok) {
+           const geoData = await geoRes.json();
+@@ -166,6 +167,7 @@ export default function NewPropertyPage() {
+         body: JSON.stringify({
+           address: address.trim(),
+           city,
++          state,
+           county,
+           zip: zip.trim() || undefined,
+           parcelNumber: parcelNumber.trim() || undefined,
+@@ -280,7 +282,7 @@ export default function NewPropertyPage() {
+               />
+             </div>
+ 
+-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
++            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+               <div>
+                 <Label>City *</Label>
+                 <Input
+@@ -290,6 +292,17 @@ export default function NewPropertyPage() {
+                   className="mt-1"
+                 />
+               </div>
++              <div>
++                <Label>State</Label>
++                <select
++                  value={state}
++                  onChange={(e) => setState(e.target.value)}
++                  className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
++                >
++                  <option value="CA">California</option>
++                  <option value="NV">Nevada</option>
++                </select>
++              </div>
+               <div>
+                 <Label>County</Label>
+                 <Input
+diff --git a/app/onboarding/page.tsx b/app/onboarding/page.tsx
+index c3dbdf7..2ebf038 100644
+--- a/app/onboarding/page.tsx
++++ b/app/onboarding/page.tsx
+@@ -77,6 +77,22 @@ const SUPPORTED_CITIES = [
+   "Atherton",
+   "Woodside",
+   "Portola Valley",
++  "Redwood City",
++  "San Mateo",
++  "Los Altos",
++  "Los Altos Hills",
++  "Mountain View",
++  "Hillsborough",
++  "San Carlos",
++  "Burlingame",
++  "San Mateo County",
++  "Sonoma County",
++  "Santa Rosa",
++  "City Of Napa",
++  "Windsor",
++  "Healdsburg",
++  "Tahoe Basin",
++  "Reno",
+ ];
+ 
+ const COUNTY_MAP: Record<string, string> = {
+diff --git a/components/mobile-field-mode.tsx b/components/mobile-field-mode.tsx
+index fd7c626..f3212bb 100644
+--- a/components/mobile-field-mode.tsx
++++ b/components/mobile-field-mode.tsx
+@@ -477,11 +477,12 @@ export function MobileFieldMode({
+       >
+         <div className="flex items-center justify-between">
+           <div className="flex items-center gap-2">
+-            <span
+-              className={`h-2 w-2 rounded-full shrink-0 ${
+-                isOnline ? "bg-green-500" : "bg-red-500"
+-              }`}
+-            />
++            {!isOnline && (
++              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 border border-red-200 text-red-700 text-xs font-medium">
++                <span className="h-2 w-2 rounded-full bg-red-500 shrink-0" />
++                Offline
++              </span>
++            )}
+             <h2 className="text-lg font-semibold font-display">
+               Tree{" "}
+               <span className="font-mono">#{treeNumber}</span>
+@@ -494,17 +495,21 @@ export function MobileFieldMode({
+           </div>
+           <div className="flex items-center gap-2">
+             {/* Progress dots */}
+-            <div className="flex gap-1.5">
++            <div className="flex gap-0">
+               {SECTIONS.map((s, i) => (
+                 <button
+                   key={s}
+                   type="button"
+                   onClick={() => scrollToSection(i)}
+-                  className={`h-2.5 w-2.5 rounded-full transition-colors ${
+-                    i === activeSection ? "bg-forest" : "bg-neutral-300"
+-                  }`}
+-                  style={{ minWidth: 10, minHeight: 10 }}
+-                />
++                  className="flex items-center justify-center"
++                  style={{ minWidth: 44, minHeight: 44, padding: 0 }}
++                >
++                  <span
++                    className={`block h-2.5 w-2.5 rounded-full transition-colors ${
++                      i === activeSection ? "bg-forest" : "bg-neutral-300"
++                    }`}
++                  />
++                </button>
+               ))}
+             </div>
+             <button
