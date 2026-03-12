@@ -107,17 +107,21 @@
 - "Site Audio Notes" card has been removed from property page. Existing PropertyAudioNote transcriptions are lazily migrated into siteObservations on page load.
 
 ## Mobile Field Mode
-- Full-screen mobile assessment flow at `components/mobile-field-mode.tsx`. Opens instead of TreeSidePanel when viewport < 768px.
-- Single vertical scroll with 5 sections: Species, Measurements, Condition, Observations, Action & Photos.
-- Progress dots track viewport section via IntersectionObserver. Tappable for jump navigation.
-- "Save & Next Tree" creates continuous entry flow — saves current tree, auto-creates next pin at map center, resets form.
-- Field/Desktop toggle in top bar lets arborist switch between modes. Mobile defaults to Field Mode.
-- Shared observation utilities extracted to `lib/observation-helpers.ts` (used by both tree-side-panel and mobile-field-mode).
+- **5-screen wizard** at `components/mobile-field-mode.tsx`. Opens instead of TreeSidePanel when viewport < 768px.
+- **Screen 1 — Pin Drop** (new trees only): `components/pin-drop-map.tsx` (dynamic import, SSR disabled). Satellite map with centered CSS crosshair pin, GPS accuracy indicator, existing tree context dots, "Confirm Location" button. User drags map — pin stays centered. Returns coordinates via `onConfirm(lat, lng)`.
+- **Screen 2 — Species & Measurements**: Full-screen species selector via `components/species-sheet.tsx` (shadcn Sheet, bottom, 100dvh). Search + recent species chips + arborist presets + native/non-native grouped list. DBH large input (h-14, text-2xl, font-mono), height/spread side-by-side. 6 condition circles (52px), 4 action pills. "Copy from Tree #N" for repeat species. Ordinance check auto-fires on species + DBH change (debounced 500ms).
+- **Screen 3 — Health & Structural**: 2-column observation checkbox grid with 44px+ tap targets. Abbreviated labels for mobile fit (display-only — canonical terms stored unchanged). VoiceInput mic button on each section. "No significant concerns" exclusive toggle.
+- **Screen 4 — Photos & Notes**: Camera button with `capture="environment"`. "Add from Library" button. Photo thumbnails in 72px horizontal scroll. For new trees: photos queued as local File[] state, uploaded after save. Required photo checklist from `getCategoriesForReportType()`. Additional notes textarea with mic dictation.
+- **Screen 5 — Review & Save**: Summary cards (tappable → jump back to edit). Protection status check prominently displayed. "Save & Add Next Tree" (forest green, h-14) + "Save & Finish" (outline, h-14).
+- **Pin coordinates flow**: Extended `TreeFormData & { pinLat?: number; pinLng?: number }`. `property-map-view.tsx` handleSave prefers wizard pin coords, falls back to `pendingPin` for backward compat. `key` prop forces remount on tree change.
+- **New props**: `propertyCenter`, `existingPins` passed from property-map-view.
+- Shared observation utilities in `lib/observation-helpers.ts` (used by both tree-side-panel and mobile-field-mode).
 - Touch targets minimum 44px (Apple HIG). Numeric inputs use inputMode="decimal" for mobile keypad.
 - Haptic feedback (navigator.vibrate) on condition select, save success, photo capture.
-- Ordinance protection banner auto-shows when species + DBH entered.
-- Camera button uses capture="environment" for back-facing camera on mobile.
-- Desktop TreeSidePanel unchanged.
+- **Light mode enforced**: `color-scheme: light` + explicit white/neutral colors on wizard container.
+- Auto-save draft to localStorage every 30s. Restore on mount (if < 1 hour old).
+- Offline: amber "Offline — data will sync" bar when disconnected. Saves queue via existing api-queue.ts.
+- Desktop TreeSidePanel completely unaffected.
 
 ## Map Snapshot
 - PDF site map uses Mapbox Static Images API with colored pin overlays matching the interactive map's condition-based color scheme.

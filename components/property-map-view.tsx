@@ -594,18 +594,20 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   );
 
   const handleSave = useCallback(
-    async (data: TreeFormData) => {
+    async (data: TreeFormData & { pinLat?: number; pinLng?: number }) => {
       setSaving(true);
       try {
-        if (pendingPin) {
-          // Create new tree
+        if (pendingPin || data.pinLat != null) {
+          // Create new tree — prefer pin coords from wizard, fall back to pendingPin
+          const treeLat = data.pinLat ?? pendingPin?.lat;
+          const treeLng = data.pinLng ?? pendingPin?.lng;
           const res = await fetch(`/api/properties/${property.id}/trees`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               ...data,
-              pinLat: pendingPin.lat,
-              pinLng: pendingPin.lng,
+              pinLat: treeLat,
+              pinLng: treeLng,
               treeNumber: trees.length + 1,
             }),
           });
@@ -634,8 +636,8 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             // Quick Add: create new pending pin at map center, reset panel
             const mapCenter = mapGetCenterRef.current?.();
             const nextCenter = mapCenter ?? {
-              lat: pendingPin.lat + 0.00002,
-              lng: pendingPin.lng + 0.00002,
+              lat: (treeLat ?? 0) + 0.00002,
+              lng: (treeLng ?? 0) + 0.00002,
             };
             setPendingPin(nextCenter);
             setSelectedTreeId(null);
@@ -680,11 +682,13 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         console.error("Save failed:", err);
 
         // ---- OFFLINE FALLBACK: Queue the request + optimistic update ----
-        if (pendingPin) {
+        if (pendingPin || data.pinLat != null) {
+          const offlineLat = data.pinLat ?? pendingPin?.lat ?? 0;
+          const offlineLng = data.pinLng ?? pendingPin?.lng ?? 0;
           const body = {
             ...data,
-            pinLat: pendingPin.lat,
-            pinLng: pendingPin.lng,
+            pinLat: offlineLat,
+            pinLng: offlineLng,
             treeNumber: trees.length + 1,
           };
           const treeLocalId = `offline_${Date.now()}`;
@@ -703,8 +707,8 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           const tempTree: TreeData = {
             id: treeLocalId,
             treeNumber: trees.length + 1,
-            pinLat: pendingPin.lat,
-            pinLng: pendingPin.lng,
+            pinLat: offlineLat,
+            pinLng: offlineLng,
             speciesCommon: data.speciesCommon,
             speciesScientific: data.speciesScientific,
             dbhInches: data.dbhInches,
@@ -741,8 +745,8 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           if (quickAddMode) {
             const mapCenter = mapGetCenterRef.current?.();
             const nextCenter = mapCenter ?? {
-              lat: pendingPin.lat + 0.00002,
-              lng: pendingPin.lng + 0.00002,
+              lat: offlineLat + 0.00002,
+              lng: offlineLng + 0.00002,
             };
             setPendingPin(nextCenter);
             setSelectedTreeId(null);
@@ -853,7 +857,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   }, []);
 
   const handleSaveAndNext = useCallback(
-    async (data: TreeFormData) => {
+    async (data: TreeFormData & { pinLat?: number; pinLng?: number }) => {
       if (!quickAddMode) setQuickAddMode(true);
       await handleSave(data);
     },
@@ -1986,10 +1990,19 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         {showSidePanel && (
           fieldMode ? (
             <MobileFieldMode
+              key={'id' in (sidePanelTree ?? {}) ? (sidePanelTree as TreeData).id : `new-${pendingPin?.lat}-${pendingPin?.lng}`}
               tree={sidePanelTree}
               treeNumber={sidePanelTreeNumber}
               propertyId={property.id}
               propertyCity={property.city}
+              propertyCenter={center}
+              existingPins={trees
+                .filter((t) => t.pinLat != null && t.pinLng != null)
+                .map((t) => ({
+                  lat: t.pinLat,
+                  lng: t.pinLng,
+                  treeNumber: t.treeNumber,
+                }))}
               reportType={reportType}
               onSave={handleSave}
               onSaveAndNext={handleSaveAndNext}
