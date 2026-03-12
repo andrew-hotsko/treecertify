@@ -787,49 +787,49 @@ export default function PropertyReportPage() {
 
           for (const line of lines) {
             if (!line.startsWith("data: ")) continue;
+            let payload;
             try {
-              const payload = JSON.parse(line.slice(6));
-              if (payload.type === "text") {
-                accumulated += payload.text;
-                setStreamingText(accumulated);
-              } else if (payload.type === "done") {
-                // Report saved on server — set it locally
-                setReport({
-                  id: payload.reportId,
-                  propertyId,
-                  reportType,
-                  aiDraftContent: accumulated,
-                  finalContent: null,
-                  eSignatureText: null,
-                  certifiedAt: null,
-                  status: "draft",
-                  clientNote: null,
-                  permitStatus: null,
-                  submittedAt: null,
-                  submittedTo: null,
-                  reviewerName: null,
-                  reviewerNotes: null,
-                  conditionsOfApproval: null,
-                  denialReason: null,
-                  approvedAt: null,
-                  permitExpiresAt: null,
-                  submissionChecklist: null,
-                  reviewFlags: null,
-                  amendmentReason: null,
-                  amendmentNumber: 0,
-                  originalCertifiedAt: null,
-                });
-                setContent(accumulated);
-                savedContentRef.current = accumulated;
-                setPreviewHtml(renderMarkdownToHtml(accumulated));
-                setViewMode("split");
-              } else if (payload.type === "error") {
-                throw new Error(payload.error || "Streaming error");
-              }
-            } catch (parseErr) {
+              payload = JSON.parse(line.slice(6));
+            } catch {
               // Skip malformed SSE lines
-              if (parseErr instanceof Error && parseErr.message !== "Streaming error") continue;
-              throw parseErr;
+              continue;
+            }
+            if (payload.type === "text") {
+              accumulated += payload.text;
+              setStreamingText(accumulated);
+            } else if (payload.type === "done") {
+              // Report saved on server — set it locally
+              setReport({
+                id: payload.reportId,
+                propertyId,
+                reportType,
+                aiDraftContent: accumulated,
+                finalContent: null,
+                eSignatureText: null,
+                certifiedAt: null,
+                status: "draft",
+                clientNote: null,
+                permitStatus: null,
+                submittedAt: null,
+                submittedTo: null,
+                reviewerName: null,
+                reviewerNotes: null,
+                conditionsOfApproval: null,
+                denialReason: null,
+                approvedAt: null,
+                permitExpiresAt: null,
+                submissionChecklist: null,
+                reviewFlags: null,
+                amendmentReason: null,
+                amendmentNumber: 0,
+                originalCertifiedAt: null,
+              });
+              setContent(accumulated);
+              savedContentRef.current = accumulated;
+              setPreviewHtml(renderMarkdownToHtml(accumulated));
+              setViewMode("split");
+            } else if (payload.type === "error") {
+              throw new Error(payload.error || "Report generation failed");
             }
           }
         }

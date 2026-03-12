@@ -21,7 +21,9 @@ export async function GET(
             },
           },
         },
-        reports: true,
+        reports: {
+          orderBy: { createdAt: "desc" },
+        },
       },
     });
 
@@ -100,7 +102,9 @@ export async function PUT(
             },
           },
         },
-        reports: true,
+        reports: {
+          orderBy: { createdAt: "desc" },
+        },
       },
     });
 

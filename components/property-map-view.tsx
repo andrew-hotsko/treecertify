@@ -1075,14 +1075,6 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           </div>
           <div className="flex items-center gap-2">
             {/* Primary action — changes per lifecycle state */}
-            {lifecycleState === "assessing" && (
-              <Link href={`/properties/${property.id}/report`}>
-                <Button className="bg-forest hover:bg-forest-light active:scale-[0.98] transition-all">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Generate Report
-                </Button>
-              </Link>
-            )}
             {lifecycleState === "report_draft" && (
               <Link href={`/properties/${property.id}/report`}>
                 <Button className="bg-forest hover:bg-forest-light active:scale-[0.98] transition-all">

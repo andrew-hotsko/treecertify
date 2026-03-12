@@ -894,9 +894,13 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
               )
             );
           } catch (err) {
+            console.error("AI generation streaming error:", err);
+            const errorMessage = err instanceof Error
+              ? err.message
+              : String(err);
             controller.enqueue(
               encoder.encode(
-                `data: ${JSON.stringify({ type: "error", error: String(err) })}\n\n`
+                `data: ${JSON.stringify({ type: "error", error: errorMessage })}\n\n`
               )
             );
           }
