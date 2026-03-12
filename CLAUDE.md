@@ -167,9 +167,17 @@
 - Requires `OPENAI_API_KEY` in `.env`. If empty, voice input shows a destructive toast explaining the missing key.
 - Session 15 fixed error surfacing — the transcription code was fully functional, but VoiceInput and SmartDictation silently swallowed API errors.
 
-## Properties Page Filtering
-- Properties list accepts `initialPermitFilter` prop (from `?permitStatus=` param) and shows a filter banner with clear button.
-- Properties list accepts `initialDashboardFilter` prop (from `?filter=` param) for dashboard action card navigation. Supported values: `needs-trees`, `ready-to-generate`, `ready-to-certify`, `awaiting-payment`.
+## Properties List
+- `components/properties-list.tsx` — client component with 5 status tabs: All, Needs Trees, In Progress, Ready, Certified.
+- **Tab categories**: `needsTrees` (0 trees), `inProgress` (has trees, no report), `ready` (report in draft/review/amendment), `certified` (report certified). Each tab shows count. Active tab has forest green underline.
+- **Dashboard filter mapping**: `?filter=` param from dashboard action cards maps to initial tab: `needs-trees` → Needs Trees, `ready-to-generate` → In Progress, `ready-to-certify` → Ready. `awaiting-payment` shown as secondary banner (doesn't map to a tab).
+- **Legacy filter mapping**: `?status=` param from older links maps: `inProgress` → In Progress, `draft` → Ready, `certified` → Certified.
+- **Permit filter**: `?permitStatus=` param shown as secondary banner with clear button.
+- **Search**: Filters within active tab by address or city. No sort controls — fixed to most recent first.
+- **Property cards**: 3-line layout — address + city, report type + tree count + status dot, relative timestamp + chevron. Delete button appears on hover (desktop).
+- **Per-tab empty states**: Contextual messages per tab. "All" empty shows + New Property button.
+- **Mobile FAB**: Fixed bottom-right forest green + icon for new property.
+- **Removed**: Sort dropdown, city/type filter dropdowns, map pin icons, badge chips. Simplified from ~600 lines to ~340 lines.
 
 ## Smart Share Page
 - Share page (`app/share/[token]/page.tsx`) is a public RSC — fetches property + latest report + arborist via share token.
@@ -380,7 +388,7 @@
 - **Property detail optimization**: Removed `arborist: true` include (data fetched client-side via `/api/arborist/profile`). Added `select` clause to reports include to reduce over-fetching.
 - **Ordinance caching**: `getOrdinanceByCity()` in `lib/ordinances.ts` now uses in-memory `Map` cache with 1-hour TTL. Null results also cached to avoid repeated lookups for unsupported cities.
 - **Loading skeletons**: Added `loading.tsx` for 4 routes (dashboard, properties, properties/[id], settings). Uses `Skeleton` component from `components/ui/skeleton.tsx`. Previously zero loading files — users saw blank screens during server rendering.
-- **Bundle sizes (post-optimization)**: Dashboard 2.52 kB (104 kB first load), Properties 11.8 kB (134 kB), Property detail 49.1 kB (200 kB), Report 54.1 kB (199 kB), Settings 29.8 kB (133 kB), Share 3.71 kB (103 kB). Shared chunks 87.9 kB.
+- **Bundle sizes (post-optimization)**: Dashboard 2.72 kB (103 kB first load), Properties 6.86 kB (129 kB), Property detail 49.2 kB (199 kB), Report 54 kB (198 kB), Settings 29.8 kB (133 kB), Share 3.71 kB (103 kB). Shared chunks 87.9 kB.
 - **Remaining bottlenecks (not addressed)**: Property detail/report pages are ~200 kB first load — driven by Mapbox GL + rich editor bundles, already dynamically imported. No further easy wins without feature removal.
 
 ## Onboarding Rewrite (Session 35)

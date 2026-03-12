@@ -27,21 +27,15 @@ export default async function PropertiesPage({
     orderBy: { updatedAt: "desc" },
   });
 
-  // Serialize for client component
   const serialized = JSON.parse(JSON.stringify(properties));
 
   return (
     <div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight font-display text-foreground">
-            Properties
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {properties.length} propert{properties.length !== 1 ? "ies" : "y"}
-          </p>
-        </div>
-        <Link href="/properties/new" className="self-start sm:self-auto">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight font-display text-foreground">
+          Properties
+        </h1>
+        <Link href="/properties/new" className="hidden sm:block">
           <Button className="bg-forest hover:bg-forest-light">
             <Plus className="h-4 w-4 mr-2" />
             New Property
@@ -49,9 +43,12 @@ export default async function PropertiesPage({
         </Link>
       </div>
 
-      <div className="space-y-4">
-        <PropertiesList properties={serialized} initialFilter={searchParams.status} initialPermitFilter={searchParams.permitStatus} initialDashboardFilter={searchParams.filter} />
-      </div>
+      <PropertiesList
+        properties={serialized}
+        initialFilter={searchParams.status}
+        initialPermitFilter={searchParams.permitStatus}
+        initialDashboardFilter={searchParams.filter}
+      />
     </div>
   );
 }
