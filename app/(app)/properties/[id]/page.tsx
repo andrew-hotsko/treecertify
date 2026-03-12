@@ -24,7 +24,7 @@ export default async function PropertyDetailPage({
       },
       reports: {
         orderBy: { updatedAt: "desc" },
-        select: { id: true, status: true, reportType: true, permitStatus: true, certifiedAt: true, updatedAt: true, billingAmount: true, billingIncluded: true, billingPaidAt: true, clientNote: true, submissionChecklist: true, amendmentNumber: true, reportOptions: true },
+        select: { id: true, status: true, reportType: true, permitStatus: true, submittedAt: true, submittedTo: true, reviewerNotes: true, conditionsOfApproval: true, denialReason: true, approvedAt: true, permitExpiresAt: true, certifiedAt: true, updatedAt: true, billingAmount: true, billingIncluded: true, billingPaidAt: true, clientNote: true, submissionChecklist: true, amendmentNumber: true, reportOptions: true },
       },
       // arborist data fetched client-side via /api/arborist/profile — no need to include here
     },

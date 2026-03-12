@@ -25,6 +25,7 @@ import { VALUATION_PURPOSES, DEFAULT_BASIS_STATEMENT, formatCurrency } from "@/l
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/status-badge";
 import { OnboardingHint } from "@/components/onboarding-hint";
+import { PermitTracker, type PermitUpdateData } from "@/components/permit-tracker";
 import {
   ArrowLeft,
   FileText,
@@ -118,7 +119,23 @@ interface PropertyData {
   scopeOfAssignment?: string | null;
   neededByDate?: string | null;
   trees: TreeData[];
-  reports: { id: string; status: string; reportType: string; certifiedAt?: string | null; valuationPurpose?: string | null; valuationBasisStatement?: string | null; valuationTotalValue?: number | null }[];
+  reports: {
+    id: string;
+    status: string;
+    reportType: string;
+    permitStatus?: string | null;
+    submittedAt?: string | null;
+    submittedTo?: string | null;
+    reviewerNotes?: string | null;
+    conditionsOfApproval?: string | null;
+    denialReason?: string | null;
+    approvedAt?: string | null;
+    permitExpiresAt?: string | null;
+    certifiedAt?: string | null;
+    valuationPurpose?: string | null;
+    valuationBasisStatement?: string | null;
+    valuationTotalValue?: number | null;
+  }[];
 }
 
 interface PropertyMapViewProps {
@@ -259,6 +276,19 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   const [showSharePopover, setShowSharePopover] = useState(false);
   const [sharingLoading, setSharingLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+
+  // Permit tracking state (local for optimistic updates)
+  const report0 = property.reports?.[0];
+  const [permitData, setPermitData] = useState({
+    permitStatus: report0?.permitStatus ?? null,
+    submittedAt: report0?.submittedAt ?? null,
+    submittedTo: report0?.submittedTo ?? null,
+    reviewerNotes: report0?.reviewerNotes ?? null,
+    conditionsOfApproval: report0?.conditionsOfApproval ?? null,
+    denialReason: report0?.denialReason ?? null,
+    approvedAt: report0?.approvedAt ?? null,
+    permitExpiresAt: report0?.permitExpiresAt ?? null,
+  });
 
   // Construction encroachment project fields
   const [projectOpen, setProjectOpen] = useState(false);
@@ -1291,6 +1321,33 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           )}
         </div>
       </div>
+
+      {/* Permit Tracker — certified/shared, permit-relevant report types */}
+      {(lifecycleState === "certified" || lifecycleState === "shared") &&
+        (reportType === "removal_permit" || reportType === "construction_encroachment") &&
+        report0 && (
+          <PermitTracker
+            reportId={report0.id}
+            permitStatus={permitData.permitStatus}
+            submittedAt={permitData.submittedAt}
+            submittedTo={permitData.submittedTo}
+            reviewerNotes={permitData.reviewerNotes}
+            conditionsOfApproval={permitData.conditionsOfApproval}
+            denialReason={permitData.denialReason}
+            approvedAt={permitData.approvedAt}
+            permitExpiresAt={permitData.permitExpiresAt}
+            city={property.city}
+            reportType={reportType}
+            onUpdate={(data: PermitUpdateData) => {
+              setPermitData((prev) => ({
+                ...prev,
+                ...Object.fromEntries(
+                  Object.entries(data).filter(([, v]) => v !== undefined)
+                ),
+              }));
+            }}
+          />
+        )}
 
       {/* Sample property banner */}
       {property.address === "123 Sample Street" && (

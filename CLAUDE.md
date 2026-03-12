@@ -74,10 +74,13 @@
 - Version History UI: Sheet in report editor toolbar with preview Dialog and restore. Restore creates a new "Edit" version of the previous content automatically (via PUT route).
 
 ## Permit Lifecycle Tracking
-- Report model has 9 permit fields: `permitStatus` (submitted/under_review/approved/denied/revision_requested), `submittedAt`, `submittedTo`, `reviewerName`, `reviewerNotes`, `conditionsOfApproval`, `denialReason`, `approvedAt`, `permitExpiresAt`. All nullable.
-- `PermitStatusPipeline` component (`components/permit-status-pipeline.tsx`) — reusable horizontal stepper with interactive (arborist) and readonly (homeowner) modes. Supports `friendlyLabels` prop for homeowner-facing text.
-- Report page shows the pipeline after certification with forms to advance permit status.
-- Dashboard shows a "Permit Pipeline" card with counts: pending submission, submitted/under review, approved, needing revision.
+- Report model has 9 permit fields: `permitStatus` (submitted/under_review/approved/approved_with_conditions/denied/revision_requested), `submittedAt`, `submittedTo`, `reviewerName`, `reviewerNotes`, `conditionsOfApproval`, `denialReason`, `approvedAt`, `permitExpiresAt`. All nullable.
+- `PermitStatusPipeline` component (`components/permit-status-pipeline.tsx`) — reusable horizontal stepper with interactive (arborist) and readonly (homeowner) modes. Supports `friendlyLabels` prop for homeowner-facing text. Renders on report page and share page.
+- `PermitTracker` component (`components/permit-tracker.tsx`) — simplified permit tracking card for the property overview page. 4-step horizontal indicator (Not Submitted → Submitted → Under Review → Decision) with colored dots (forest green = completed, amber = current, neutral = upcoming, red = denied). Status detail line, city contact info block (when submitted/under_review), and "Update Status" dialog with conditional fields per status.
+- PermitTracker renders on property overview only for certified `removal_permit` or `construction_encroachment` reports. Uses optimistic local state (`permitData` in `property-map-view.tsx`) — updates via PUT `/api/reports/[id]`.
+- Report page shows the `PermitStatusPipeline` after certification with forms to advance permit status.
+- **Dashboard**: 2 permit-related action cards (shown only when count > 0): "N permits awaiting city review" (teal, Send icon) links to `/properties?permitStatus=submitted`; "N mitigation deadlines approaching" (orange, Clock icon) links to `/properties?filter=mitigation-due`.
+- **Properties list**: Certified cards with active `permitStatus` show a third line: "Permit: {Status} · {date}". Supports `?filter=mitigation-due` and `?permitStatus=submitted` query params from dashboard links.
 - PDF route (`/api/reports/[id]/pdf`) supports public access via `?token=` query param validated against `property.shareToken`. Middleware allows `/api/reports/(.*)/pdf` as a public route.
 
 ## Client Share Page

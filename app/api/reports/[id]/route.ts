@@ -74,7 +74,7 @@ export async function PUT(
     }
 
     // Validate permitStatus if provided
-    const VALID_PERMIT_STATUSES = [null, "submitted", "under_review", "approved", "denied", "revision_requested"];
+    const VALID_PERMIT_STATUSES = [null, "submitted", "under_review", "approved", "approved_with_conditions", "denied", "revision_requested"];
     if (body.permitStatus !== undefined && !VALID_PERMIT_STATUSES.includes(body.permitStatus)) {
       return NextResponse.json({ error: "Invalid permit status" }, { status: 400 });
     }

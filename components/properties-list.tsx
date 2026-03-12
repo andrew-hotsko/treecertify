@@ -40,6 +40,8 @@ interface PropertyReport {
   id: string;
   status: string;
   permitStatus?: string | null;
+  submittedAt?: string | null;
+  approvedAt?: string | null;
   billingIncluded?: boolean;
   billingAmount?: number | null;
   billingPaidAt?: string | null;
@@ -130,6 +132,28 @@ function formatReportType(reportType: string) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+const PERMIT_STATUS_LABELS: Record<string, string> = {
+  submitted: "Submitted",
+  under_review: "Under Review",
+  approved: "Approved",
+  approved_with_conditions: "Approved w/ Conditions",
+  denied: "Denied",
+  revision_requested: "Revision Requested",
+};
+
+function formatPermitStatus(report: PropertyReport): string | null {
+  const ps = report.permitStatus;
+  if (!ps || report.status !== "certified") return null;
+  const label = PERMIT_STATUS_LABELS[ps] ?? ps;
+  const date = report.approvedAt ?? report.submittedAt;
+  if (date) {
+    const d = new Date(date);
+    const formatted = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return `Permit: ${label} \u00b7 ${formatted}`;
+  }
+  return `Permit: ${label}`;
+}
+
 // ---------------------------------------------------------------------------
 // Empty state messages per tab
 // ---------------------------------------------------------------------------
@@ -175,9 +199,13 @@ export function PropertiesList({
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
-  // awaiting-payment doesn't map to a tab — show as secondary banner
+  // awaiting-payment and mitigation-due don't map to tabs — show as secondary banners
   const [awaitingPaymentFilter, setAwaitingPaymentFilter] = useState(
     initialDashboardFilter === "awaiting-payment"
+  );
+
+  const [mitigationDueFilter, setMitigationDueFilter] = useState(
+    initialDashboardFilter === "mitigation-due"
   );
 
   const [permitFilter, setPermitFilter] = useState<string | null>(
@@ -217,6 +245,19 @@ export function PropertiesList({
       });
     }
 
+    // Mitigation deadline filter (permits expiring within 30 days)
+    if (mitigationDueFilter) {
+      const now = new Date();
+      const thirtyDaysOut = new Date();
+      thirtyDaysOut.setDate(thirtyDaysOut.getDate() + 30);
+      result = result.filter((p) => {
+        const r = p.reports[0] as PropertyReport & { permitExpiresAt?: string | null } | undefined;
+        if (!r?.permitExpiresAt) return false;
+        const exp = new Date(r.permitExpiresAt);
+        return exp > now && exp <= thirtyDaysOut;
+      });
+    }
+
     // Permit filter (from older ?permitStatus= links)
     if (permitFilter) {
       result = result.filter((p) => {
@@ -252,7 +293,7 @@ export function PropertiesList({
     );
 
     return result;
-  }, [properties, activeTab, awaitingPaymentFilter, permitFilter, search]);
+  }, [properties, activeTab, awaitingPaymentFilter, mitigationDueFilter, permitFilter, search]);
 
   const deleteTarget = properties.find((p) => p.id === deletePropertyId);
 
@@ -304,6 +345,22 @@ export function PropertiesList({
         </div>
       )}
 
+      {/* Mitigation deadline banner */}
+      {mitigationDueFilter && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-sm">
+          <span className="text-neutral-700">
+            Showing: <span className="font-semibold text-orange-700">Mitigation Deadlines (next 30 days)</span>
+          </span>
+          <button
+            onClick={() => setMitigationDueFilter(false)}
+            className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* Permit filter banner */}
       {permitFilter && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-forest/5 border border-forest/20 text-sm">
@@ -343,6 +400,7 @@ export function PropertiesList({
                 setActiveTab(tab.key);
                 // Clear secondary filters when switching tabs
                 if (awaitingPaymentFilter) setAwaitingPaymentFilter(false);
+                if (mitigationDueFilter) setMitigationDueFilter(false);
               }}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors shrink-0",
@@ -431,7 +489,14 @@ export function PropertiesList({
                     </div>
                   </div>
 
-                  {/* Row 3: Timestamp + chevron */}
+                  {/* Row 3: Permit status (certified cards with active permit only) */}
+                  {property.reports[0] && formatPermitStatus(property.reports[0]) && (
+                    <p className="text-xs text-teal-700 mt-1.5">
+                      {formatPermitStatus(property.reports[0])}
+                    </p>
+                  )}
+
+                  {/* Row 4: Timestamp + chevron */}
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-xs text-muted-foreground">
                       {category === "certified" && property.reports[0]?.status === "certified"

@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Clock,
   CheckCircle2,
+  Send,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -24,6 +25,8 @@ interface ActionCounts {
   readyToCertify: number;
   awaitingPayment: number;
   awaitingPaymentTotal: number;
+  permitsAwaitingReview: number;
+  mitigationDeadlinesSoon: number;
 }
 
 interface ActivityItem {
@@ -143,6 +146,34 @@ function buildActionCards(counts: ActionCounts): ActionCard[] {
       borderColor: "border-l-neutral-400",
       iconColor: "text-neutral-500",
       bgColor: "bg-neutral-50",
+    });
+  }
+
+  if (counts.permitsAwaitingReview > 0) {
+    cards.push({
+      key: "permits-awaiting",
+      count: counts.permitsAwaitingReview,
+      label: `${counts.permitsAwaitingReview} ${counts.permitsAwaitingReview === 1 ? "permit" : "permits"} awaiting city review`,
+      subtitle: "Submitted to city, pending decision",
+      href: "/properties?permitStatus=submitted",
+      icon: Send,
+      borderColor: "border-l-teal-500",
+      iconColor: "text-teal-600",
+      bgColor: "bg-teal-50",
+    });
+  }
+
+  if (counts.mitigationDeadlinesSoon > 0) {
+    cards.push({
+      key: "mitigation-deadlines",
+      count: counts.mitigationDeadlinesSoon,
+      label: `${counts.mitigationDeadlinesSoon} mitigation ${counts.mitigationDeadlinesSoon === 1 ? "deadline" : "deadlines"} approaching`,
+      subtitle: "Due within 30 days",
+      href: "/properties?filter=mitigation-due",
+      icon: Clock,
+      borderColor: "border-l-orange-500",
+      iconColor: "text-orange-600",
+      bgColor: "bg-orange-50",
     });
   }
 

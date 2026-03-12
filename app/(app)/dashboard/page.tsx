@@ -22,6 +22,8 @@ export default async function DashboardPage() {
             billingIncluded: true,
             billingAmount: true,
             billingPaidAt: true,
+            permitStatus: true,
+            permitExpiresAt: true,
           },
           orderBy: { updatedAt: "desc" },
           take: 1,
@@ -43,6 +45,10 @@ export default async function DashboardPage() {
   let needsTrees = 0;
   let readyToGenerate = 0;
   let readyToCertify = 0;
+  let permitsAwaitingReview = 0;
+  let mitigationDeadlinesSoon = 0;
+  const thirtyDaysFromNow = new Date();
+  thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
   for (const p of allProperties) {
     const r = p.reports[0];
@@ -54,6 +60,14 @@ export default async function DashboardPage() {
       readyToGenerate++;
     } else if (r.status === "draft" || r.status === "review" || r.status === "amendment_in_progress") {
       readyToCertify++;
+    }
+
+    // Permit tracking counts
+    if (r?.permitStatus === "submitted" || r?.permitStatus === "under_review") {
+      permitsAwaitingReview++;
+    }
+    if (r?.permitExpiresAt && new Date(r.permitExpiresAt) <= thirtyDaysFromNow && new Date(r.permitExpiresAt) > new Date()) {
+      mitigationDeadlinesSoon++;
     }
   }
 
@@ -83,6 +97,8 @@ export default async function DashboardPage() {
         readyToCertify,
         awaitingPayment,
         awaitingPaymentTotal,
+        permitsAwaitingReview,
+        mitigationDeadlinesSoon,
       }}
       activityFeed={activityFeed}
       hasProperties={allProperties.length > 0}

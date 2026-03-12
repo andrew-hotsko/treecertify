@@ -62,6 +62,7 @@ const STAGES: Stage[] = [
 
 const TERMINAL_STAGES: Record<string, { label: string; friendlyLabel: string; icon: React.ElementType; color: string }> = {
   approved: { label: "Approved", friendlyLabel: "Permit Approved", icon: ShieldCheck, color: "forest" },
+  approved_with_conditions: { label: "Approved w/ Conditions", friendlyLabel: "Approved with Conditions", icon: ShieldCheck, color: "forest" },
   denied: { label: "Denied", friendlyLabel: "Permit Denied", icon: XCircle, color: "red" },
   revision_requested: { label: "Revision Requested", friendlyLabel: "Revision Needed", icon: AlertTriangle, color: "amber" },
 };

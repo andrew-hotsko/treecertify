@@ -19,7 +19,7 @@ export default async function PropertiesPage({
         orderBy: { treeNumber: "asc" },
       },
       reports: {
-        select: { id: true, status: true, permitStatus: true, billingIncluded: true, billingAmount: true, billingPaidAt: true },
+        select: { id: true, status: true, permitStatus: true, submittedAt: true, approvedAt: true, permitExpiresAt: true, billingIncluded: true, billingAmount: true, billingPaidAt: true },
         orderBy: { updatedAt: "desc" },
         take: 1,
       },
