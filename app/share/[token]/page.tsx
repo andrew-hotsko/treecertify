@@ -519,14 +519,6 @@ export default async function SharedPropertyPage({
     report?.billingIncluded &&
     report?.billingAmount != null &&
     report.billingAmount > 0;
-  const billingLineItems = (() => {
-    try {
-      return report?.billingLineItems ? JSON.parse(report.billingLineItems) : [];
-    } catch {
-      return [];
-    }
-  })();
-
   const reportTypeLabel =
     REPORT_TYPE_LABELS[report?.reportType ?? ""] ?? "Arborist Report";
 
@@ -1677,25 +1669,6 @@ export default async function SharedPropertyPage({
                 </p>
               </div>
 
-              {/* Line Items */}
-              {billingLineItems.length > 0 && (
-                <div className="border-t pt-3 mb-4 space-y-1">
-                  {billingLineItems.map(
-                    (item: { description: string; amount: string }, i: number) =>
-                      item.description && (
-                        <div key={i} className="flex justify-between text-sm">
-                          <span className="text-neutral-600">{item.description}</span>
-                          {item.amount && (
-                            <span className="font-mono text-neutral-700">
-                              ${parseFloat(item.amount).toFixed(2)}
-                            </span>
-                          )}
-                        </div>
-                      )
-                  )}
-                </div>
-              )}
-
               {report.billingPaymentInstructions && (
                 <div className="bg-neutral-50 rounded-lg p-3">
                   <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-1">
@@ -1860,24 +1833,6 @@ export default async function SharedPropertyPage({
                   ${report.billingAmount!.toFixed(2)}
                 </p>
               </div>
-
-              {billingLineItems.length > 0 && (
-                <div className="border-t pt-3 mb-4 space-y-1">
-                  {billingLineItems.map(
-                    (item: { description: string; amount: string }, i: number) =>
-                      item.description && (
-                        <div key={i} className="flex justify-between text-sm">
-                          <span className="text-neutral-600">{item.description}</span>
-                          {item.amount && (
-                            <span className="font-mono text-neutral-700">
-                              ${parseFloat(item.amount).toFixed(2)}
-                            </span>
-                          )}
-                        </div>
-                      )
-                  )}
-                </div>
-              )}
 
               {report.billingPaymentInstructions && (
                 <div className="bg-neutral-50 rounded-lg p-3">

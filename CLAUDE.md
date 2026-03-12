@@ -191,21 +191,14 @@
 - **Arborist contact card**: tap-to-call and tap-to-email buttons in forest-tinted style, website link.
 - Not-certified state: shows only branded header (DRAFT badge), amber in-progress banner, tree count, arborist contact. Hides summary, tree details, next steps, PDF.
 
-## Invoice Infrastructure (Dormant)
-- `Invoice` model in `prisma/schema.prisma` — linked to Arborist, Report, and Property. Line items stored as JSON string. Status: unpaid/paid.
-- CRUD routes: `app/api/invoices/route.ts` (POST + GET), `app/api/invoices/[id]/route.ts` (GET + PUT + DELETE).
-- Invoice PDF route: `app/api/invoices/[id]/pdf/route.ts` — Puppeteer, same auth pattern as report PDF (share token + showOnSharePage, OR Clerk session).
-- Arborist model retains 5 invoice settings fields (`invoiceHourlyRate`, `invoiceDefaultFee`, `invoicePaymentInstructions`, `invoicePrefix`, `invoiceNetTerms`).
-- Middleware: `/api/invoices/(.*)/pdf` in public routes. Property cascade delete includes `prisma.invoice.deleteMany`.
-- **No UI surfaces** — `InvoiceDialog` removed. Invoice routes available as API infrastructure for future formal invoicing if needed.
-
 ## Client Billing (Simple)
-- Report model has 5 billing fields: `billingAmount` (Float?), `billingLineItems` (JSON string: `[{description, amount}]`), `billingPaymentInstructions` (String?), `billingIncluded` (Boolean, default false), `billingPaidAt` (DateTime?).
-- Arborist model has 3 billing settings: `showBillingOnShare` (Boolean, default true), `defaultReportFee` (Float?), `billingPaymentInstructions` (String?).
+- **Invoice model removed** (Session 37). Standalone invoice system (model, API routes, PDF route, 5 arborist settings fields) deleted. Only share-page billing remains.
+- Report model has 4 billing fields: `billingAmount` (Float?), `billingPaymentInstructions` (String?), `billingIncluded` (Boolean, default false), `billingPaidAt` (DateTime?).
+- Arborist model has 3 billing settings: `showBillingOnShare` (Boolean, default false), `defaultReportFee` (Float?), `billingPaymentInstructions` (String?).
 - NOT an invoicing product — just a "here's what you owe" section. No invoice numbers, no invoice PDFs, no payment processing.
-- Two-gate visibility: arborist-level `showBillingOnShare` controls whether billing card appears on report page; per-report `billingIncluded` controls whether billing shows on public share page.
-- Report page (certified view): collapsible billing card below client note. Amount, optional line items, payment instructions, "Include on share page" switch, "Mark as Paid" button.
-- Share page: billing section after PDF download (when `billingIncluded && billingAmount > 0`). Receipt-style card with amount, line items, paid status, payment instructions.
+- **Share Report dialog**: "Share with Client" button opens a dialog combining: client note textarea, billing toggle + fee + payment instructions. "Share & Copy Link" saves billing + note to report, creates share token, copies URL, closes dialog. Pre-fills billing from arborist defaults.
+- **Inline billing status bar**: shown in certified content area when `billingIncluded && billingAmount > 0`. Shows amount + paid/awaiting status + Mark Paid / Undo button. Compact single-line bar, not a collapsible card.
+- Share page: billing section after PDF download (when `billingIncluded && billingAmount > 0`). Receipt-style card with amount, paid status, payment instructions.
 - Dashboard: "Outstanding Payments" counter (count + $ total of unpaid billing). Only shows when unpaid billing exists.
 - Settings page: "Client Billing" card with Default Report Fee, Payment Instructions, "Show billing on share page" toggle.
 - Billing fields saved via report PUT route (`/api/reports/[id]`), not separate API.
@@ -423,7 +416,6 @@
 - **City of Napa**: Only ~7 of 14 protected species confirmed with specific thresholds. Full species list incomplete.
 - **No MunicipalOrdinance data** for North Bay, Tahoe, or Reno in database — `checkTreeProtection()` returns "protection status unknown" for these cities. Ordinance data only in `lib/city-contacts.ts` (share page), not in `prisma/seed.ts` (protection checker).
 - **TreeRecord.photos field DEPRECATED**: Legacy JSON string field still in schema. All writes use TreePhoto model. Safe to drop column.
-- **5 Arborist invoice fields DORMANT**: `invoiceHourlyRate`, `invoiceDefaultFee`, `invoicePaymentInstructions`, `invoicePrefix`, `invoiceNetTerms` — no UI, invoice feature paused.
 - **`lib/city-submission-guides.ts` still exists**: 159 lines, not imported anywhere. Replaced by `lib/city-contacts.ts`. Safe to delete.
 - **Largest page bundles**: property detail (200 kB first load) and report editor (199 kB first load) — driven by Mapbox GL + rich editor. Already dynamically imported; no easy wins without feature removal.
 

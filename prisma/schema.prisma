@@ -33,15 +33,8 @@ model Arborist {
   onboardingStep         Int      @default(0) // 0=not started, 1=credentials, 2=sample, 3=complete
   hasCompletedOnboarding Boolean  @default(false)
 
-  // Invoice settings — DORMANT: Saved via API but no UI. Invoice feature paused.
-  invoiceHourlyRate          Float?
-  invoiceDefaultFee          Float?
-  invoicePaymentInstructions String?
-  invoicePrefix              String   @default("INV-")
-  invoiceNetTerms            String   @default("Due on Receipt")
-
   // Client billing settings (simple billing on share page)
-  showBillingOnShare         Boolean  @default(true)
+  showBillingOnShare         Boolean  @default(false)
   defaultReportFee           Float?
   billingPaymentInstructions String?
 
@@ -76,7 +69,6 @@ model Arborist {
   reports         Report[]
   apiUsageLogs    ApiUsageLog[]
   feedbacks       Feedback[]
-  invoices        Invoice[]
   analyticsEvents AnalyticsEvent[]
 }
 
@@ -121,7 +113,6 @@ model Property {
   trees              TreeRecord[]
   reports            Report[]
   propertyAudioNotes PropertyAudioNote[]
-  invoices           Invoice[]
 
   @@index([arboristId])
   @@index([status])
@@ -280,7 +271,6 @@ model Report {
 
   // Simple billing (shown on share page)
   billingAmount              Float?
-  billingLineItems           String?   // JSON: [{description, amount}]
   billingPaymentInstructions String?
   billingIncluded            Boolean   @default(false)
   billingPaidAt              DateTime?
@@ -322,7 +312,6 @@ model Report {
   property Property @relation(fields: [propertyId], references: [id])
   arborist Arborist @relation(fields: [arboristId], references: [id])
   versions ReportVersion[]
-  invoices Invoice[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -388,31 +377,3 @@ model AnalyticsEvent {
   @@index([createdAt])
 }
 
-model Invoice {
-  id              String   @id @default(cuid())
-  arboristId      String
-  reportId        String
-  propertyId      String
-  invoiceNumber   String
-  invoiceDate     DateTime @default(now())
-  dueDate         DateTime
-  billToName      String?
-  billToAddress   String?
-  lineItems       String   // JSON array: [{description, quantity, rate, amount}]
-  subtotal        Float
-  tax             Float    @default(0)
-  total           Float
-  paymentInstructions String?
-  notes           String?
-  status          String   @default("unpaid") // unpaid, paid
-  paidAt          DateTime?
-  showOnSharePage Boolean  @default(false)
-  createdAt       DateTime @default(now())
-
-  arborist  Arborist @relation(fields: [arboristId], references: [id])
-  report    Report   @relation(fields: [reportId], references: [id])
-  property  Property @relation(fields: [propertyId], references: [id])
-
-  @@index([arboristId])
-  @@index([propertyId])
-}

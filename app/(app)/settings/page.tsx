@@ -77,11 +77,6 @@ interface ArboristProfile {
   additionalCerts: string | null;
   reportDefaults?: string | null;
   profilePhotoUrl?: string | null;
-  invoiceHourlyRate?: number | null;
-  invoiceDefaultFee?: number | null;
-  invoicePaymentInstructions?: string | null;
-  invoicePrefix?: string;
-  invoiceNetTerms?: string;
   showBillingOnShare?: boolean;
   defaultReportFee?: number | null;
   billingPaymentInstructions?: string | null;

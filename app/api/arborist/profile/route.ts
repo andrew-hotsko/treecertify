@@ -64,9 +64,6 @@ export async function PUT(request: NextRequest) {
       "signatureName",
       "additionalCerts",
       "reportDefaults",
-      "invoicePaymentInstructions",
-      "invoicePrefix",
-      "invoiceNetTerms",
       "billingPaymentInstructions",
       // Customization settings (JSON strings)
       "healthObservations",
@@ -106,12 +103,6 @@ export async function PUT(request: NextRequest) {
       updateData.pdfShowCityContacts = !!body.pdfShowCityContacts;
     }
     // Float fields
-    if ("invoiceHourlyRate" in body) {
-      updateData.invoiceHourlyRate = body.invoiceHourlyRate != null ? parseFloat(body.invoiceHourlyRate) : null;
-    }
-    if ("invoiceDefaultFee" in body) {
-      updateData.invoiceDefaultFee = body.invoiceDefaultFee != null ? parseFloat(body.invoiceDefaultFee) : null;
-    }
     if ("defaultReportFee" in body) {
       updateData.defaultReportFee = body.defaultReportFee != null ? parseFloat(body.defaultReportFee) : null;
     }

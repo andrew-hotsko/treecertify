@@ -54,10 +54,7 @@ import {
   RotateCcw,
   Trash2,
   DollarSign,
-  Plus,
   CheckCircle,
-  ChevronDown,
-  ChevronUp,
   Home,
   Mail,
   FileEdit,
@@ -337,8 +334,6 @@ export default function PropertyReportPage() {
 
   // Client note (shown on share page)
   const [clientNote, setClientNote] = useState("");
-  const [savingNote, setSavingNote] = useState(false);
-
   // Report options state (PDF appendix toggles)
   const [reportOptions, setReportOptions] = useState<ReportOptions>({});
 
@@ -347,13 +342,14 @@ export default function PropertyReportPage() {
   const [deletingReport, setDeletingReport] = useState(false);
 
   // Billing state
-  const [billingExpanded, setBillingExpanded] = useState(false);
   const [billingAmount, setBillingAmount] = useState("");
-  const [billingLineItems, setBillingLineItems] = useState<{ description: string; amount: string }[]>([]);
   const [billingPaymentInstructions, setBillingPaymentInstructions] = useState("");
   const [billingIncluded, setBillingIncluded] = useState(false);
   const [billingPaidAt, setBillingPaidAt] = useState<string | null>(null);
-  const [savingBilling, setSavingBilling] = useState(false);
+
+  // Share dialog state
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [savingShare, setSavingShare] = useState(false);
 
   // Listing info state (real_estate_package only)
   const [reListingAddress, setReListingAddress] = useState("");
@@ -461,10 +457,6 @@ export default function PropertyReportPage() {
           setRePackageNotes(r.rePackageNotes ?? "");
           // Initialize billing state
           setBillingAmount(r.billingAmount != null ? String(r.billingAmount) : "");
-          try {
-            const items = JSON.parse(r.billingLineItems || "[]");
-            setBillingLineItems(items.length > 0 ? items : []);
-          } catch { setBillingLineItems([]); }
           setBillingPaymentInstructions(r.billingPaymentInstructions ?? "");
           setBillingIncluded(r.billingIncluded ?? false);
           setBillingPaidAt(r.billingPaidAt ?? null);
@@ -598,30 +590,6 @@ export default function PropertyReportPage() {
     },
     [report]
   );
-
-  const saveClientNote = useCallback(async () => {
-    if (!report) return;
-    setSavingNote(true);
-    try {
-      const res = await fetch(`/api/reports/${report.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientNote }),
-      });
-      if (!res.ok) throw new Error("Failed to save note");
-      const updated = await res.json();
-      setReport(updated);
-      toast({ title: "Note saved" });
-    } catch (err) {
-      toast({
-        title: "Failed to save note",
-        description: err instanceof Error ? err.message : "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setSavingNote(false);
-    }
-  }, [report, clientNote, toast]);
 
   const saveListingInfo = useCallback(async () => {
     if (!report) return;
@@ -1053,22 +1021,50 @@ export default function PropertyReportPage() {
   // Share with Client (create share link + copy to clipboard)
   // -------------------------------------------------------------------------
 
-  const handleShareWithClient = useCallback(async () => {
-    if (!propertyId) return;
-    try {
-      const res = await fetch(`/api/properties/${propertyId}/share`, { method: "POST" });
-      if (res.ok) {
-        const { shareToken } = await res.json();
-        const shareUrl = `${window.location.origin}/share/${shareToken}`;
-        await navigator.clipboard.writeText(shareUrl);
-        toast({ title: "Share link copied", description: "Paste it in a message or email to send to your client." });
-      } else {
-        throw new Error("Failed to create share link");
-      }
-    } catch {
-      toast({ title: "Could not create share link", variant: "destructive" });
+  const handleShareWithClient = useCallback(() => {
+    // Pre-fill billing fields from arborist defaults if empty
+    if (!billingAmount && arborist?.defaultReportFee) {
+      setBillingAmount(String(arborist.defaultReportFee));
     }
-  }, [propertyId, toast]);
+    if (!billingPaymentInstructions && arborist?.billingPaymentInstructions) {
+      setBillingPaymentInstructions(arborist.billingPaymentInstructions);
+    }
+    if (arborist?.showBillingOnShare && !billingIncluded && !billingPaidAt) {
+      setBillingIncluded(true);
+    }
+    setShowShareDialog(true);
+  }, [arborist, billingAmount, billingPaymentInstructions, billingIncluded, billingPaidAt]);
+
+  const handleShareSubmit = useCallback(async () => {
+    if (!propertyId || !report) return;
+    setSavingShare(true);
+    try {
+      // Save client note + billing to report
+      const amt = billingAmount ? parseFloat(billingAmount) : null;
+      await fetch(`/api/reports/${report.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientNote: clientNote || null,
+          billingAmount: amt,
+          billingPaymentInstructions: billingPaymentInstructions || null,
+          billingIncluded,
+        }),
+      });
+      // Create share link
+      const res = await fetch(`/api/properties/${propertyId}/share`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to create share link");
+      const { shareToken } = await res.json();
+      const shareUrl = `${window.location.origin}/share/${shareToken}`;
+      await navigator.clipboard.writeText(shareUrl);
+      toast({ title: "Share link copied", description: "Paste it in a message or email to send to your client." });
+      setShowShareDialog(false);
+    } catch {
+      toast({ title: "Could not share report", variant: "destructive" });
+    } finally {
+      setSavingShare(false);
+    }
+  }, [propertyId, report, clientNote, billingAmount, billingPaymentInstructions, billingIncluded, toast]);
 
   // -------------------------------------------------------------------------
   // Download PDF helper
@@ -2247,244 +2243,69 @@ export default function PropertyReportPage() {
                   </div>
                 )}
 
-                {/* ---- Note to Client ---- */}
-                {isCertified && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                      Note to Client
-                    </p>
-                    <p className="text-xs text-neutral-500">
-                      This note appears at the top of the shared report page.
-                    </p>
-                    <Textarea
-                      value={clientNote}
-                      onChange={(e) => setClientNote(e.target.value)}
-                      placeholder="Add a personal note for the homeowner — e.g., recommended next steps, timeline, or anything they should know..."
-                      rows={3}
-                      className="resize-none"
-                    />
-                    <div className="flex justify-end">
-                      <Button
-                        size="sm"
-                        onClick={saveClientNote}
-                        disabled={
-                          savingNote ||
-                          clientNote === (report?.clientNote ?? "")
-                        }
-                      >
-                        {savingNote ? "Saving…" : "Save Note"}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* ---- Client Billing ---- */}
-                {isCertified && arborist?.showBillingOnShare !== false && (
-                  <div className="border border-forest/20 rounded-lg overflow-hidden">
-                    <button
-                      onClick={() => setBillingExpanded(!billingExpanded)}
-                      className="w-full flex items-center justify-between px-4 py-3 bg-forest/5 hover:bg-forest/10 transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-forest" />
-                        <span className="text-sm font-semibold text-forest">Client Billing</span>
-                        {billingPaidAt && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
-                            <CheckCircle className="h-3 w-3" />
-                            Paid
-                          </span>
-                        )}
-                        {!billingPaidAt && billingAmount && parseFloat(billingAmount) > 0 && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
-                            ${parseFloat(billingAmount).toFixed(2)} due
-                          </span>
-                        )}
-                      </div>
-                      {billingExpanded ? (
-                        <ChevronUp className="h-4 w-4 text-neutral-500" />
+                {/* ---- Inline Billing Status ---- */}
+                {isCertified && billingIncluded && billingAmount && parseFloat(billingAmount) > 0 && (
+                  <div className="flex items-center justify-between px-4 py-2.5 rounded-lg border border-neutral-200 bg-neutral-50">
+                    <div className="flex items-center gap-2 text-sm">
+                      <DollarSign className="h-4 w-4 text-neutral-500" />
+                      <span className="font-mono font-medium">${parseFloat(billingAmount).toFixed(2)}</span>
+                      <span className="text-neutral-500">—</span>
+                      {billingPaidAt ? (
+                        <span className="text-emerald-600 font-medium flex items-center gap-1">
+                          <CheckCircle className="h-3.5 w-3.5" />
+                          Paid {new Date(billingPaidAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </span>
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-neutral-500" />
+                        <span className="text-amber-600">Awaiting payment</span>
                       )}
-                    </button>
-                    {billingExpanded && (
-                      <div className="p-4 space-y-4">
-                        {/* Total Amount */}
-                        <div>
-                          <Label className="text-xs font-medium text-neutral-700">Total Amount ($)</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder={arborist?.defaultReportFee ? String(arborist.defaultReportFee) : "0.00"}
-                            value={billingAmount}
-                            onChange={(e) => setBillingAmount(e.target.value)}
-                            className="mt-1 font-mono"
-                          />
-                        </div>
-
-                        {/* Line Items */}
-                        <div>
-                          <Label className="text-xs font-medium text-neutral-700">Line Items (optional)</Label>
-                          <div className="mt-1 space-y-2">
-                            {billingLineItems.map((item, idx) => (
-                              <div key={idx} className="flex gap-2">
-                                <Input
-                                  placeholder="Description"
-                                  value={item.description}
-                                  onChange={(e) => {
-                                    const updated = [...billingLineItems];
-                                    updated[idx] = { ...updated[idx], description: e.target.value };
-                                    setBillingLineItems(updated);
-                                  }}
-                                  className="flex-1"
-                                />
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  placeholder="$"
-                                  value={item.amount}
-                                  onChange={(e) => {
-                                    const updated = [...billingLineItems];
-                                    updated[idx] = { ...updated[idx], amount: e.target.value };
-                                    setBillingLineItems(updated);
-                                  }}
-                                  className="w-28 font-mono"
-                                />
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setBillingLineItems(billingLineItems.filter((_, i) => i !== idx));
-                                  }}
-                                  className="px-2 text-neutral-400 hover:text-red-500"
-                                >
-                                  <X className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            ))}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setBillingLineItems([...billingLineItems, { description: "", amount: "" }])}
-                              className="text-xs"
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              Add line item
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Payment Instructions */}
-                        <div>
-                          <Label className="text-xs font-medium text-neutral-700">Payment Instructions</Label>
-                          <Textarea
-                            value={billingPaymentInstructions || (arborist?.billingPaymentInstructions ?? "")}
-                            onChange={(e) => setBillingPaymentInstructions(e.target.value)}
-                            placeholder="e.g., Make checks payable to... / Venmo: @handle"
-                            rows={2}
-                            className="mt-1 resize-none"
-                          />
-                        </div>
-
-                        {/* Include on share page */}
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <Label className="text-xs font-medium text-neutral-700">Include on share page</Label>
-                            <p className="text-xs text-neutral-500">Client sees billing when viewing the shared report</p>
-                          </div>
-                          <Switch
-                            checked={billingIncluded}
-                            onCheckedChange={(checked: boolean) => setBillingIncluded(checked)}
-                          />
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-2 pt-2 border-t">
-                          <Button
-                            size="sm"
-                            className="bg-forest hover:bg-forest-light"
-                            disabled={savingBilling}
-                            onClick={async () => {
-                              if (!report) return;
-                              setSavingBilling(true);
-                              try {
-                                const amt = billingAmount ? parseFloat(billingAmount) : null;
-                                const lineItemsJson = billingLineItems.length > 0
-                                  ? JSON.stringify(billingLineItems.filter(li => li.description || li.amount))
-                                  : null;
-                                const res = await fetch(`/api/reports/${report.id}`, {
-                                  method: "PUT",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({
-                                    billingAmount: amt,
-                                    billingLineItems: lineItemsJson,
-                                    billingPaymentInstructions: billingPaymentInstructions || null,
-                                    billingIncluded,
-                                  }),
-                                });
-                                if (!res.ok) throw new Error("Failed to save billing");
-                                toast({ title: "Billing saved" });
-                              } catch {
-                                toast({ title: "Failed to save billing", variant: "destructive" });
-                              } finally {
-                                setSavingBilling(false);
-                              }
-                            }}
-                          >
-                            {savingBilling ? "Saving..." : "Save Billing"}
-                          </Button>
-                          {!billingPaidAt && billingAmount && parseFloat(billingAmount) > 0 && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={async () => {
-                                if (!report) return;
-                                const now = new Date().toISOString();
-                                try {
-                                  const res = await fetch(`/api/reports/${report.id}`, {
-                                    method: "PUT",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ billingPaidAt: now }),
-                                  });
-                                  if (!res.ok) throw new Error("Failed");
-                                  setBillingPaidAt(now);
-                                  toast({ title: "Marked as paid" });
-                                } catch {
-                                  toast({ title: "Failed to mark as paid", variant: "destructive" });
-                                }
-                              }}
-                            >
-                              <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
-                              Mark as Paid
-                            </Button>
-                          )}
-                          {billingPaidAt && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={async () => {
-                                if (!report) return;
-                                try {
-                                  const res = await fetch(`/api/reports/${report.id}`, {
-                                    method: "PUT",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ billingPaidAt: null }),
-                                  });
-                                  if (!res.ok) throw new Error("Failed");
-                                  setBillingPaidAt(null);
-                                  toast({ title: "Payment status cleared" });
-                                } catch {
-                                  toast({ title: "Failed to update", variant: "destructive" });
-                                }
-                              }}
-                              className="text-xs text-neutral-500"
-                            >
-                              Undo paid
-                            </Button>
-                          )}
-                        </div>
-                      </div>
+                    </div>
+                    {!billingPaidAt ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={async () => {
+                          if (!report) return;
+                          const now = new Date().toISOString();
+                          try {
+                            const res = await fetch(`/api/reports/${report.id}`, {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ billingPaidAt: now }),
+                            });
+                            if (!res.ok) throw new Error("Failed");
+                            setBillingPaidAt(now);
+                            toast({ title: "Marked as paid" });
+                          } catch {
+                            toast({ title: "Failed to mark as paid", variant: "destructive" });
+                          }
+                        }}
+                      >
+                        Mark Paid
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs text-neutral-500"
+                        onClick={async () => {
+                          if (!report) return;
+                          try {
+                            const res = await fetch(`/api/reports/${report.id}`, {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ billingPaidAt: null }),
+                            });
+                            if (!res.ok) throw new Error("Failed");
+                            setBillingPaidAt(null);
+                            toast({ title: "Payment status cleared" });
+                          } catch {
+                            toast({ title: "Failed to update", variant: "destructive" });
+                          }
+                        }}
+                      >
+                        Undo
+                      </Button>
                     )}
                   </div>
                 )}
@@ -2528,6 +2349,88 @@ export default function PropertyReportPage() {
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      {/* ---- Share Report Dialog ---- */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Share2 className="h-5 w-5 text-forest" />
+              Share Report
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Client note */}
+            <div>
+              <Label className="text-xs font-medium text-neutral-700">Note for your client (optional)</Label>
+              <Textarea
+                value={clientNote}
+                onChange={(e) => setClientNote(e.target.value)}
+                placeholder="Add a personal note — e.g., recommended next steps, timeline..."
+                rows={2}
+                className="mt-1 resize-none"
+              />
+            </div>
+
+            {/* Billing section */}
+            <div className="border-t pt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Include billing on share page</Label>
+                <Switch
+                  checked={billingIncluded}
+                  onCheckedChange={(checked: boolean) => setBillingIncluded(checked)}
+                />
+              </div>
+
+              {billingIncluded && (
+                <div className="space-y-3 pl-0">
+                  <div>
+                    <Label className="text-xs font-medium text-neutral-700">Fee ($)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      value={billingAmount}
+                      onChange={(e) => setBillingAmount(e.target.value)}
+                      className="mt-1 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-neutral-700">Payment instructions</Label>
+                    <Textarea
+                      value={billingPaymentInstructions}
+                      onChange={(e) => setBillingPaymentInstructions(e.target.value)}
+                      placeholder="e.g., Make checks payable to... / Venmo: @handle"
+                      rows={2}
+                      className="mt-1 resize-none"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setShowShareDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="bg-forest hover:bg-forest-light"
+              disabled={savingShare}
+              onClick={handleShareSubmit}
+            >
+              {savingShare ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <Share2 className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              {savingShare ? "Sharing..." : "Share & Copy Link"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ---- Amendment Dialog ---- */}
       <Dialog open={showAmendDialog} onOpenChange={setShowAmendDialog}>
@@ -2928,19 +2831,9 @@ export default function PropertyReportPage() {
             <div className="flex flex-col gap-3 pt-2">
               <Button
                 className="w-full bg-[#1D4E3E] hover:bg-[#2A6B55] text-white"
-                onClick={async () => {
-                  try {
-                    const res = await fetch(`/api/properties/${propertyId}/share`, { method: "POST" });
-                    if (res.ok) {
-                      const { shareToken } = await res.json();
-                      const shareUrl = `${window.location.origin}/share/${shareToken}`;
-                      await navigator.clipboard.writeText(shareUrl);
-                      toast({ title: "Share link copied", description: "The link has been copied to your clipboard." });
-                    }
-                  } catch {
-                    toast({ title: "Could not create share link", variant: "destructive" });
-                  }
+                onClick={() => {
                   setShowCertifyCompletion(false);
+                  handleShareWithClient();
                 }}
               >
                 <Share2 className="h-4 w-4 mr-2" />

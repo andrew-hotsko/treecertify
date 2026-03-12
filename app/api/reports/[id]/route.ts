@@ -101,7 +101,6 @@ export async function PUT(
         ...(body.clientNote !== undefined && { clientNote: body.clientNote }),
         // Simple billing fields
         ...(body.billingAmount !== undefined && { billingAmount: body.billingAmount != null ? parseFloat(body.billingAmount) : null }),
-        ...(body.billingLineItems !== undefined && { billingLineItems: body.billingLineItems }),
         ...(body.billingPaymentInstructions !== undefined && { billingPaymentInstructions: body.billingPaymentInstructions }),
         ...(body.billingIncluded !== undefined && { billingIncluded: !!body.billingIncluded }),
         ...(body.billingPaidAt !== undefined && { billingPaidAt: body.billingPaidAt ? new Date(body.billingPaidAt) : null }),
