@@ -137,9 +137,19 @@
 - Feedback API: `POST /api/feedback` creates a `Feedback` record with auto-captured context (pageUrl, metadata JSON with userAgent, propertyId, viewport, timestamp).
 - `Feedback` model: id, arboristId, type, description, screenshotUrl, pageUrl, metadata, status (new/reviewed/resolved), createdAt.
 
-## Dashboard Welcome State
-- Dashboard computes `welcomeState`: `no_properties` | `no_trees` | `no_reports` | `normal`.
-- `WelcomeCard` component renders above stat cards for non-normal states with contextual CTA (dashed-border forest card).
+## Dashboard (Action-Oriented)
+- Dashboard redesigned as "What needs attention" view. No stats, no charts, no vanity metrics.
+- **Greeting + date**: Time-of-day greeting with arborist's first name, today's date on the right.
+- **Action cards**: 4 computed cards shown only when count > 0, ordered by urgency:
+  1. "Properties need tree assessments" (amber) — properties with 0 trees → `/properties?filter=needs-trees`
+  2. "Reports ready to generate" (blue) — trees entered, no report → `/properties?filter=ready-to-generate`
+  3. "Reports ready to certify" (forest green) — draft/review status → `/properties?filter=ready-to-certify`
+  4. "Reports awaiting payment" (neutral) — billing included, unpaid → `/properties?filter=awaiting-payment`
+- **"All caught up"** empty state when all counts are 0 and properties exist. Centered CheckCircle2 + "New Property" button.
+- **Recent activity feed**: Last 5 properties by `updatedAt`. Action description + address + city + relative timestamp. Tappable rows.
+- **New Property button**: Desktop button at bottom. Mobile FAB (fixed bottom-right, forest green, `+` icon).
+- **Properties page filters**: `?filter=` query param handled by `PropertiesList` via `initialDashboardFilter` prop. Shows filter banner with "Clear" button. Dashboard filters are: `needs-trees`, `ready-to-generate`, `ready-to-certify`, `awaiting-payment`.
+- Old `DashboardContent` component removed. New component: `components/dashboard-view.tsx` (client). Server page: `app/(app)/dashboard/page.tsx` queries properties + billing in parallel.
 
 ## Pre-Beta Stability (Session 12)
 - Smoke test script at `scripts/smoke-test.ts` — tests all API routes via `npx tsx scripts/smoke-test.ts`. Checks GET returns 200/401 (not 500), POST with empty body returns 400/401 (not 500).
@@ -157,9 +167,9 @@
 - Requires `OPENAI_API_KEY` in `.env`. If empty, voice input shows a destructive toast explaining the missing key.
 - Session 15 fixed error surfacing — the transcription code was fully functional, but VoiceInput and SmartDictation silently swallowed API errors.
 
-## Dashboard Pipeline Filtering
-- Permit pipeline cards in the dashboard are clickable when count > 0, linking to `/properties?permitStatus=X`.
-- Properties list accepts `initialPermitFilter` prop and shows a filter banner with clear button.
+## Properties Page Filtering
+- Properties list accepts `initialPermitFilter` prop (from `?permitStatus=` param) and shows a filter banner with clear button.
+- Properties list accepts `initialDashboardFilter` prop (from `?filter=` param) for dashboard action card navigation. Supported values: `needs-trees`, `ready-to-generate`, `ready-to-certify`, `awaiting-payment`.
 
 ## Smart Share Page
 - Share page (`app/share/[token]/page.tsx`) is a public RSC — fetches property + latest report + arborist via share token.
@@ -315,12 +325,12 @@
 ## UX Polish (Session 27)
 - **Typography system**: All page titles standardized to `text-2xl font-semibold tracking-tight font-display text-foreground` across 6 pages (dashboard, properties, settings, ordinances, new property, admin).
 - **Card foundation**: Base card shadow reduced from `shadow` to `shadow-sm` in `components/ui/card.tsx`. Card background CSS variable lightened (`--card: 40 15% 98%`).
-- **Dashboard refinement**: Stat card labels changed from ALL-CAPS mono font to sentence-case (`text-xs font-medium text-muted-foreground`). Values `font-bold` → `font-semibold`. Property row spacing increased to `py-4`. Workflow badges sized up from `text-[10px]` to `text-xs`. Color tokens standardized to `text-foreground`/`text-muted-foreground`.
+- **Dashboard**: Redesigned in Session 36 — stat cards and pipeline replaced with action-oriented "Needs Attention" cards + recent activity feed.
 - **Settings page**: All 12 card titles use `font-display` for Instrument Sans consistency. Loading spinner replaced with skeleton card layout matching settings structure.
 - **Report editor**: Toolbar title `font-bold` → `font-semibold`. Certified view content area narrowed from `max-w-4xl` to `max-w-3xl` with more padding for document-like feel. Loading spinner replaced with toolbar skeleton. Report preview line-height increased to 1.7, shadow reduced.
 - **Share page**: Header padding increased. Footer text changed from "Shared via" to "Powered by TreeCertify". Color tokens standardized.
 - **Skeleton component**: `components/ui/skeleton.tsx` created (standard shadcn pattern with `bg-neutral-200/70`).
-- **Skipped** (would take >30 min each): "Next Action Needed" with specific property addresses, dynamic summary sentence below greeting, full dashboard Suspense skeletons, comprehensive button loading audit, page fade-in transitions, certification "sealed" visual treatment.
+- **Skipped** (would take >30 min each): comprehensive button loading audit, page fade-in transitions, certification "sealed" visual treatment.
 
 ## Editor Preview / PDF Alignment (Session 30)
 - **Typography alignment**: Report preview in `components/report-preview.tsx` now uses the same font stack as the PDF: Roboto body (`10.5pt`, `line-height: 1.55`, `color: #3A3A36`), Instrument Sans headings. All #2d5016 olive green replaced with #1D4E3E forest brand color.
@@ -360,7 +370,7 @@
 - **Bottom action bar** (three states): No flags → "Certify Report" (forest green). Has flags → "Send Back for Revision (N flags)" (amber) + "Certify anyway" link. Certified → "Share with Client" + Download button.
 - **"Send Back for Revision"**: Saves flags to `Report.reviewFlags` JSON field and sets status to `"review"`. In the full editor, an amber banner shows "N sections flagged for revision" with section names and a "Clear flags" button.
 - **Report page integration**: `viewMode` expanded to `"edit" | "split" | "preview" | "quickReview"`. Quick Review button added to view mode toggle (visible on all screen sizes, but the only visible option on mobile since Edit/Split/Preview are `hidden sm:flex`). Certified reports also get a Quick Review button in the toolbar. Auto-opens via `?view=quickReview` query parameter.
-- **Dashboard integration**: "Next Action Needed" section shows per-property Quick Review links (address, city, tree count, revision status) for ≤3 certifiable properties. Links go to `/properties/[id]/report?view=quickReview`. Falls back to count-based link for >3 properties.
+- **Dashboard integration**: "Ready to certify" action card links to `/properties?filter=ready-to-certify` where arborists can open Quick Review for any draft report.
 - Schema: `Report.reviewFlags String?` — JSON array of `ReviewFlag` objects. API: `PUT /api/reports/[id]` accepts `reviewFlags`.
 
 ## Performance Optimization (Session 34)
@@ -370,7 +380,7 @@
 - **Property detail optimization**: Removed `arborist: true` include (data fetched client-side via `/api/arborist/profile`). Added `select` clause to reports include to reduce over-fetching.
 - **Ordinance caching**: `getOrdinanceByCity()` in `lib/ordinances.ts` now uses in-memory `Map` cache with 1-hour TTL. Null results also cached to avoid repeated lookups for unsupported cities.
 - **Loading skeletons**: Added `loading.tsx` for 4 routes (dashboard, properties, properties/[id], settings). Uses `Skeleton` component from `components/ui/skeleton.tsx`. Previously zero loading files — users saw blank screens during server rendering.
-- **Bundle sizes (post-optimization)**: Dashboard 5.95 kB (121 kB first load), Properties 7.69 kB (134 kB), Property detail 48.5 kB (200 kB), Report 53.9 kB (199 kB), Settings 27.3 kB (133 kB), Share 3.71 kB (103 kB). Shared chunks 87.9 kB.
+- **Bundle sizes (post-optimization)**: Dashboard 2.52 kB (104 kB first load), Properties 11.8 kB (134 kB), Property detail 49.1 kB (200 kB), Report 54.1 kB (199 kB), Settings 29.8 kB (133 kB), Share 3.71 kB (103 kB). Shared chunks 87.9 kB.
 - **Remaining bottlenecks (not addressed)**: Property detail/report pages are ~200 kB first load — driven by Mapbox GL + rich editor bundles, already dynamically imported. No further easy wins without feature removal.
 
 ## Onboarding Rewrite (Session 35)

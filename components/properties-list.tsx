@@ -45,6 +45,9 @@ interface PropertyReport {
   id: string;
   status: string;
   permitStatus?: string | null;
+  billingIncluded?: boolean;
+  billingAmount?: number | null;
+  billingPaidAt?: string | null;
 }
 
 interface PropertyItem {
@@ -59,10 +62,27 @@ interface PropertyItem {
   reports: PropertyReport[];
 }
 
+type DashboardFilter = "needs-trees" | "ready-to-generate" | "ready-to-certify" | "awaiting-payment";
+
+const VALID_DASHBOARD_FILTERS: DashboardFilter[] = [
+  "needs-trees",
+  "ready-to-generate",
+  "ready-to-certify",
+  "awaiting-payment",
+];
+
+const DASHBOARD_FILTER_LABELS: Record<DashboardFilter, string> = {
+  "needs-trees": "Needs Tree Assessments",
+  "ready-to-generate": "Ready to Generate",
+  "ready-to-certify": "Ready to Certify",
+  "awaiting-payment": "Awaiting Payment",
+};
+
 interface PropertiesListProps {
   properties: PropertyItem[];
   initialFilter?: string;
   initialPermitFilter?: string;
+  initialDashboardFilter?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,7 +151,7 @@ const PERMIT_FILTER_LABELS: Record<string, string> = {
   revision: "Needing Revision",
 };
 
-export function PropertiesList({ properties: initialProperties, initialFilter, initialPermitFilter }: PropertiesListProps) {
+export function PropertiesList({ properties: initialProperties, initialFilter, initialPermitFilter, initialDashboardFilter }: PropertiesListProps) {
   const { toast } = useToast();
   const [properties, setProperties] = useState(initialProperties);
   const [filter, setFilter] = useState<FilterStatus>(
@@ -139,6 +159,11 @@ export function PropertiesList({ properties: initialProperties, initialFilter, i
   );
   const [permitFilter, setPermitFilter] = useState<string | null>(
     initialPermitFilter && Object.keys(PERMIT_FILTER_LABELS).includes(initialPermitFilter) ? initialPermitFilter : null
+  );
+  const [dashboardFilter, setDashboardFilter] = useState<DashboardFilter | null>(
+    initialDashboardFilter && VALID_DASHBOARD_FILTERS.includes(initialDashboardFilter as DashboardFilter)
+      ? (initialDashboardFilter as DashboardFilter)
+      : null
   );
   const [sortKey, setSortKey] = useState<SortKey>("recent");
   const [search, setSearch] = useState("");
@@ -177,6 +202,21 @@ export function PropertiesList({ properties: initialProperties, initialFilter, i
   const filteredProperties = useMemo(() => {
     let result = properties;
 
+    // Filter by dashboard action card (from ?filter= param)
+    if (dashboardFilter) {
+      result = result.filter((p) => {
+        const r = p.reports[0];
+        const hasTrees = p.trees.length > 0;
+        switch (dashboardFilter) {
+          case "needs-trees": return !hasTrees;
+          case "ready-to-generate": return hasTrees && !r;
+          case "ready-to-certify": return r && (r.status === "draft" || r.status === "review" || r.status === "amendment_in_progress");
+          case "awaiting-payment": return r && r.billingIncluded && (r.billingAmount ?? 0) > 0 && !r.billingPaidAt;
+          default: return true;
+        }
+      });
+    }
+
     // Filter by permit status (from dashboard pipeline click)
     if (permitFilter) {
       result = result.filter((p) => {
@@ -191,8 +231,8 @@ export function PropertiesList({ properties: initialProperties, initialFilter, i
       });
     }
 
-    // Filter by status
-    if (filter !== "all") {
+    // Filter by status (skip if a dashboard filter is active — they're more specific)
+    if (filter !== "all" && !dashboardFilter) {
       result = result.filter((p) => getFilterCategory(p) === filter);
     }
 
@@ -244,7 +284,7 @@ export function PropertiesList({ properties: initialProperties, initialFilter, i
     });
 
     return result;
-  }, [properties, filter, permitFilter, search, sortKey, cityFilter, typeFilter]);
+  }, [properties, filter, dashboardFilter, permitFilter, search, sortKey, cityFilter, typeFilter]);
 
   const filters: { key: FilterStatus; label: string }[] = [
     { key: "all", label: `All (${counts.all})` },
@@ -289,6 +329,22 @@ export function PropertiesList({ properties: initialProperties, initialFilter, i
 
   return (
     <>
+      {/* Dashboard filter banner */}
+      {dashboardFilter && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-forest/5 border border-forest/20 text-sm">
+          <span className="text-neutral-700">
+            Showing: <span className="font-semibold text-forest">{DASHBOARD_FILTER_LABELS[dashboardFilter]}</span>
+          </span>
+          <button
+            onClick={() => setDashboardFilter(null)}
+            className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* Permit filter banner */}
       {permitFilter && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-forest/5 border border-forest/20 text-sm">
