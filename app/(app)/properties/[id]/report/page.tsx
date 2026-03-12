@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/status-badge";
-import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ReportPreview } from "@/components/report-preview";
 import { renderMarkdownToHtml } from "@/lib/markdown";
@@ -16,10 +15,16 @@ import { getReportTypeConfig } from "@/lib/report-types";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import {
   ArrowLeft,
@@ -59,6 +64,7 @@ import {
   BadgeCheck,
   Flag,
   Smartphone,
+  MoreVertical,
 } from "lucide-react";
 import { OnboardingHint } from "@/components/onboarding-hint";
 import { parseReportSections, replaceTreeSection } from "@/lib/report-sections";
@@ -1044,6 +1050,133 @@ export default function PropertyReportPage() {
   }, [property, report]);
 
   // -------------------------------------------------------------------------
+  // Share with Client (create share link + copy to clipboard)
+  // -------------------------------------------------------------------------
+
+  const handleShareWithClient = useCallback(async () => {
+    if (!propertyId) return;
+    try {
+      const res = await fetch(`/api/properties/${propertyId}/share`, { method: "POST" });
+      if (res.ok) {
+        const { shareToken } = await res.json();
+        const shareUrl = `${window.location.origin}/share/${shareToken}`;
+        await navigator.clipboard.writeText(shareUrl);
+        toast({ title: "Share link copied", description: "Paste it in a message or email to send to your client." });
+      } else {
+        throw new Error("Failed to create share link");
+      }
+    } catch {
+      toast({ title: "Could not create share link", variant: "destructive" });
+    }
+  }, [propertyId, toast]);
+
+  // -------------------------------------------------------------------------
+  // Download PDF helper
+  // -------------------------------------------------------------------------
+
+  const handleDownloadPdf = useCallback(async () => {
+    if (!report) return;
+    setPdfLoading(true);
+    try {
+      const res = await fetch(`/api/reports/${report.id}/pdf`);
+      if (!res.ok) throw new Error(`PDF generation failed (${res.status})`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `report-${report.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("PDF download failed:", err);
+      toast({
+        title: "PDF download failed",
+        description: "Could not generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setPdfLoading(false);
+    }
+  }, [report, toast]);
+
+  // -------------------------------------------------------------------------
+  // Download Word helper
+  // -------------------------------------------------------------------------
+
+  const handleDownloadWord = useCallback(async () => {
+    if (!report) return;
+    try {
+      const res = await fetch(`/api/reports/${report.id}/word`);
+      if (!res.ok) throw new Error(`Word export failed (${res.status})`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `report-${report.id}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Word download failed:", err);
+      toast({
+        title: "Word download failed",
+        description: "Could not generate Word document. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [report, toast]);
+
+  // -------------------------------------------------------------------------
+  // Share via native share or download
+  // -------------------------------------------------------------------------
+
+  const handleSharePdf = useCallback(async () => {
+    if (!report) return;
+    const pdfUrl = `/api/reports/${report.id}/pdf`;
+    if (navigator.share) {
+      try {
+        const res = await fetch(pdfUrl);
+        const blob = await res.blob();
+        const file = new File(
+          [blob],
+          `report-${report.id}.pdf`,
+          { type: "application/pdf" }
+        );
+        await navigator.share({
+          title: `Tree Report — ${property?.address ?? ""}`,
+          files: [file],
+        });
+      } catch {
+        // User cancelled share — silent
+      }
+    } else {
+      try {
+        const res = await fetch(pdfUrl);
+        if (!res.ok) throw new Error("PDF generation failed");
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `report-${report.id}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+      } catch (err) {
+        console.error("PDF download failed:", err);
+        toast({
+          title: "PDF download failed",
+          description: "Could not generate PDF. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [report, property, toast]);
+
+  // -------------------------------------------------------------------------
   // Version History
   // -------------------------------------------------------------------------
 
@@ -1441,210 +1574,21 @@ export default function PropertyReportPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Edit actions */}
+            {/* ---- Draft / Amendment toolbar ---- */}
             {(!isCertified || isAmending) && (
               <>
-                {/* View mode toggle: Edit / Split / Preview / Quick Review */}
-                <div className="flex rounded-lg border bg-muted p-0.5">
-                  <button
-                    onClick={() => setViewMode("edit")}
-                    className={`hidden sm:flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                      viewMode === "edit"
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Pencil className="h-3 w-3" />
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => setViewMode("split")}
-                    className={`hidden sm:flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                      viewMode === "split"
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    Split
-                  </button>
-                  <button
-                    onClick={() => setViewMode("preview")}
-                    className={`hidden sm:flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                      viewMode === "preview"
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Eye className="h-3 w-3" />
-                    Preview
-                  </button>
-                  <button
-                    onClick={() => setViewMode("quickReview")}
-                    className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                      viewMode === "quickReview"
-                        ? "bg-forest text-white shadow-sm"
-                        : "text-forest hover:text-forest-light sm:text-muted-foreground sm:hover:text-foreground"
-                    }`}
-                  >
-                    <Smartphone className="h-3 w-3" />
-                    <span className="sm:inline">Quick Review</span>
-                  </button>
-                </div>
-
-                {/* Report Options (PDF appendix toggles) */}
-                {(reportType === "health_assessment" || reportType === "removal_permit" || reportType === "tree_valuation" || reportType === "construction_encroachment" || reportType === "real_estate_package") && (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Settings2 className="h-3.5 w-3.5 mr-1.5" />
-                        Report Options
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-72" align="end">
-                      <div className="space-y-3">
-                        <h4 className="font-medium text-sm">PDF Appendices</h4>
-                        <label className="flex items-center justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-medium">TRAQ Risk Assessment Forms</p>
-                            <p className="text-xs text-muted-foreground">ISA Level 2 Basic Assessment per tree</p>
-                          </div>
-                          <Switch
-                            checked={reportOptions.includeTraq ?? (reportType === "health_assessment")}
-                            onCheckedChange={(checked) => updateReportOptions({ includeTraq: checked })}
-                          />
-                        </label>
-                        {reportType === "removal_permit" && (
-                          <label className="flex items-center justify-between gap-2">
-                            <div>
-                              <p className="text-sm font-medium">Permit Cover Letter</p>
-                              <p className="text-xs text-muted-foreground">Auto-generated letter to city</p>
-                            </div>
-                            <Switch
-                              checked={reportOptions.includeCoverLetter ?? true}
-                              onCheckedChange={(checked) => updateReportOptions({ includeCoverLetter: checked })}
-                            />
-                          </label>
-                        )}
-                        <label className="flex items-center justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-medium">Mitigation Summary</p>
-                            <p className="text-xs text-muted-foreground">Auto-calculated replacement requirements</p>
-                          </div>
-                          <Switch
-                            checked={reportOptions.includeMitigation ?? true}
-                            onCheckedChange={(checked) => updateReportOptions({ includeMitigation: checked })}
-                          />
-                        </label>
-                        <label className="flex items-center justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-medium">Site Map</p>
-                            <p className="text-xs text-muted-foreground">Satellite map with tree pins</p>
-                          </div>
-                          <Switch
-                            checked={reportOptions.includeSiteMap ?? true}
-                            onCheckedChange={(checked) => updateReportOptions({ includeSiteMap: checked })}
-                          />
-                        </label>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                )}
-
-                {/* Regenerate — full report + per-tree dropdown */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={generating || regeneratingTree !== null}
-                    >
-                      <RefreshCw
-                        className={`h-3.5 w-3.5 mr-1.5 ${generating || regeneratingTree !== null ? "animate-spin" : ""}`}
-                      />
-                      Regenerate
-                      <ChevronDown className="h-3 w-3 ml-1" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64 p-2" align="end">
-                    <button
-                      onClick={() => regenerateReport()}
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                    >
-                      <span className="font-medium">Full Report</span>
-                      <p className="text-xs text-muted-foreground">Regenerate the entire report</p>
-                    </button>
-                    {parsedTreeSections.treeSections.length > 0 && (
-                      <>
-                        <div className="border-t my-1" />
-                        <p className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                          Per Tree
-                        </p>
-                        {parsedTreeSections.treeSections.map((ts) => {
-                          const tree = property?.trees.find((t) => t.treeNumber === ts.treeNumber);
-                          return (
-                            <button
-                              key={ts.treeNumber}
-                              onClick={() => setShowRegenerateConfirm(ts.treeNumber)}
-                              disabled={regeneratingTree !== null}
-                              className="w-full text-left px-3 py-1.5 text-sm rounded-md hover:bg-accent transition-colors flex items-center gap-2"
-                            >
-                              {regeneratingTree === ts.treeNumber ? (
-                                <Loader2 className="h-3 w-3 animate-spin shrink-0" />
-                              ) : (
-                                <RefreshCw className="h-3 w-3 shrink-0 text-muted-foreground" />
-                              )}
-                              <span>
-                                Tree #{ts.treeNumber}
-                                {tree ? ` — ${tree.speciesCommon}` : ""}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </>
-                    )}
-                  </PopoverContent>
-                </Popover>
-
-                {/* Save */}
-                {(viewMode === "edit" || viewMode === "split") && (
+                {hasUnsavedChanges && (
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => saveReport(false)}
-                    disabled={saving || !hasUnsavedChanges}
+                    disabled={saving}
                   >
                     <Save className="h-3.5 w-3.5 mr-1.5" />
                     {saving ? "Saving..." : "Save"}
                   </Button>
                 )}
 
-                {/* Validation status indicator */}
-                {validationResult && !validationLoading && (
-                  <span className="text-xs flex items-center gap-1">
-                    {validationResult.hasFailures ? (
-                      <>
-                        <XCircle className="h-3.5 w-3.5 text-red-500" />
-                        <span className="text-red-600">
-                          {validationResult.checks.filter((c) => c.status === "fail").length} issue{validationResult.checks.filter((c) => c.status === "fail").length !== 1 ? "s" : ""}
-                        </span>
-                      </>
-                    ) : validationResult.hasWarnings ? (
-                      <>
-                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                        <span className="text-amber-600">
-                          {validationResult.checks.filter((c) => c.status === "warning").length} warning{validationResult.checks.filter((c) => c.status === "warning").length !== 1 ? "s" : ""}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-3.5 w-3.5 text-forest-light" />
-                        <span className="text-forest">Ready</span>
-                      </>
-                    )}
-                  </span>
-                )}
-
-                {/* Certify */}
                 <Button
                   size="sm"
                   className="bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform"
@@ -1660,222 +1604,270 @@ export default function PropertyReportPage() {
                   }}
                 >
                   <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                  Certify
+                  Certify Report
                 </Button>
 
-                <Separator orientation="vertical" className="h-6" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Regenerate
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="w-52">
+                        <DropdownMenuItem
+                          onClick={() => regenerateReport()}
+                          disabled={generating || regeneratingTree !== null}
+                        >
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Full Report
+                        </DropdownMenuItem>
+                        {parsedTreeSections.treeSections.length > 0 && (
+                          <>
+                            <DropdownMenuSeparator />
+                            {parsedTreeSections.treeSections.map((ts) => {
+                              const tree = property?.trees.find((t) => t.treeNumber === ts.treeNumber);
+                              return (
+                                <DropdownMenuItem
+                                  key={ts.treeNumber}
+                                  onClick={() => setShowRegenerateConfirm(ts.treeNumber)}
+                                  disabled={regeneratingTree !== null}
+                                >
+                                  <RefreshCw className="h-4 w-4 mr-2" />
+                                  Tree #{ts.treeNumber}{tree ? ` — ${tree.speciesCommon}` : ""}
+                                </DropdownMenuItem>
+                              );
+                            })}
+                          </>
+                        )}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <Settings2 className="h-4 w-4 mr-2" />
+                        Report Options
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="w-52">
+                        <DropdownMenuCheckboxItem
+                          checked={reportOptions.includeTraq ?? (reportType === "health_assessment")}
+                          onCheckedChange={(checked) => updateReportOptions({ includeTraq: checked })}
+                        >
+                          TRAQ Risk Assessment
+                        </DropdownMenuCheckboxItem>
+                        {reportType === "removal_permit" && (
+                          <DropdownMenuCheckboxItem
+                            checked={reportOptions.includeCoverLetter ?? true}
+                            onCheckedChange={(checked) => updateReportOptions({ includeCoverLetter: checked })}
+                          >
+                            Permit Cover Letter
+                          </DropdownMenuCheckboxItem>
+                        )}
+                        <DropdownMenuCheckboxItem
+                          checked={reportOptions.includeMitigation ?? true}
+                          onCheckedChange={(checked) => updateReportOptions({ includeMitigation: checked })}
+                        >
+                          Mitigation Summary
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem
+                          checked={reportOptions.includeSiteMap ?? true}
+                          onCheckedChange={(checked) => updateReportOptions({ includeSiteMap: checked })}
+                        >
+                          Site Map
+                        </DropdownMenuCheckboxItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem onClick={() => setViewMode("quickReview")}>
+                      <Smartphone className="h-4 w-4 mr-2" />
+                      Quick Review
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={openVersionHistory}>
+                      <History className="h-4 w-4 mr-2" />
+                      Version History
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem onClick={handleDownloadPdf} disabled={pdfLoading}>
+                      <Download className="h-4 w-4 mr-2" />
+                      {pdfLoading ? "Generating PDF..." : "Download PDF"}
+                    </DropdownMenuItem>
+                    {reportType !== "tree_valuation" && reportType !== "real_estate_package" && (
+                      <DropdownMenuItem onClick={handleDownloadWord}>
+                        <FileDown className="h-4 w-4 mr-2" />
+                        Download Word
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={handleSharePdf}>
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Share PDF
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem
+                      onClick={() => setShowDeleteDialog(true)}
+                      className="text-red-600 focus:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Report
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             )}
 
-            {/* Certified actions */}
+            {/* ---- Certified toolbar ---- */}
             {isCertified && !isAmending && (
               <>
                 <Button
-                  variant="outline"
                   size="sm"
-                  onClick={() => setViewMode("quickReview")}
-                  className={viewMode === "quickReview" ? "bg-forest text-white hover:bg-forest-light" : ""}
+                  className="bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform"
+                  onClick={handleShareWithClient}
                 >
-                  <Smartphone className="h-3.5 w-3.5 mr-1.5" />
-                  Quick Review
-                </Button>
-
-                <Button
-                  size="sm"
-                  className="bg-blue-600 hover:bg-blue-700"
-                  onClick={openDeliveryDialog}
-                >
-                  <Send className="h-3.5 w-3.5 mr-1.5" />
-                  Send Report
+                  <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                  Share with Client
                 </Button>
 
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowAmendDialog(true)}
-                  className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                  onClick={handleDownloadPdf}
+                  disabled={pdfLoading}
                 >
-                  <FileEdit className="h-3.5 w-3.5 mr-1.5" />
-                  Issue Amendment
+                  {pdfLoading ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5 mr-1.5" />
+                  )}
+                  {pdfLoading ? "Generating..." : "PDF"}
                 </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={unlockReport}
-                  disabled={unlocking}
-                >
-                  <Unlock className="h-3.5 w-3.5 mr-1.5" />
-                  {unlocking ? "Unlocking..." : "Unlock & Revise"}
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem onClick={openDeliveryDialog}>
+                      <Send className="h-4 w-4 mr-2" />
+                      Send via Email
+                    </DropdownMenuItem>
+                    {reportType === "real_estate_package" && reRealtorEmail && (
+                      <DropdownMenuItem asChild>
+                        <a
+                          href={`mailto:${reRealtorEmail}?subject=${encodeURIComponent(
+                            `Tree Canopy Report — ${property?.address ?? ""}`
+                          )}&body=${encodeURIComponent(
+                            `Hi ${reRealtorName || ""},\n\nPlease find the Certified Tree Canopy Report for ${property?.address ?? "the property"} attached.\n\nBest regards`
+                          )}`}
+                        >
+                          <Mail className="h-4 w-4 mr-2" />
+                          Email Realtor
+                        </a>
+                      </DropdownMenuItem>
+                    )}
 
-                <Separator orientation="vertical" className="h-6" />
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem onClick={() => setViewMode("quickReview")}>
+                      <Smartphone className="h-4 w-4 mr-2" />
+                      Quick Review
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem
+                      onClick={() => setShowAmendDialog(true)}
+                      className="text-amber-700 focus:text-amber-700"
+                    >
+                      <FileEdit className="h-4 w-4 mr-2" />
+                      Issue Amendment
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={unlockReport} disabled={unlocking}>
+                      <Unlock className="h-4 w-4 mr-2" />
+                      {unlocking ? "Unlocking..." : "Unlock & Revise"}
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem onClick={openVersionHistory}>
+                      <History className="h-4 w-4 mr-2" />
+                      Version History
+                    </DropdownMenuItem>
+                    {reportType !== "tree_valuation" && reportType !== "real_estate_package" && (
+                      <DropdownMenuItem onClick={handleDownloadWord}>
+                        <FileDown className="h-4 w-4 mr-2" />
+                        Download Word
+                      </DropdownMenuItem>
+                    )}
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem
+                      onClick={() => setShowDeleteDialog(true)}
+                      className="text-red-600 focus:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Report
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
-            )}
-
-            {/* Version History */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={openVersionHistory}
-            >
-              <History className="h-3.5 w-3.5 mr-1.5" />
-              Versions
-            </Button>
-
-            {/* Delete Report */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowDeleteDialog(true)}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-            >
-              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-              Delete
-            </Button>
-
-            <Separator orientation="vertical" className="h-6" />
-
-            {/* Export actions — always visible */}
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={pdfLoading}
-              onClick={async () => {
-                setPdfLoading(true);
-                try {
-                  const res = await fetch(`/api/reports/${report.id}/pdf`);
-                  if (!res.ok) throw new Error(`PDF generation failed (${res.status})`);
-                  const blob = await res.blob();
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `report-${report.id}.pdf`;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
-                } catch (err) {
-                  console.error("PDF download failed:", err);
-                  toast({
-                    title: "PDF download failed",
-                    description: "Could not generate PDF. Please try again.",
-                    variant: "destructive",
-                  });
-                } finally {
-                  setPdfLoading(false);
-                }
-              }}
-            >
-              {pdfLoading ? (
-                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-              ) : (
-                <Download className="h-3.5 w-3.5 mr-1.5" />
-              )}
-              {pdfLoading ? "Generating..." : "PDF"}
-            </Button>
-            {/* Word export — not available for valuation types (formatting doesn't support valuation tables) */}
-            {reportType !== "tree_valuation" && reportType !== "real_estate_package" && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  try {
-                    const res = await fetch(`/api/reports/${report.id}/word`);
-                    if (!res.ok) throw new Error(`Word export failed (${res.status})`);
-                    const blob = await res.blob();
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = `report-${report.id}.docx`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                  } catch (err) {
-                    console.error("Word download failed:", err);
-                    toast({
-                      title: "Word download failed",
-                      description: "Could not generate Word document. Please try again.",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-              >
-                <FileDown className="h-3.5 w-3.5 mr-1.5" />
-                Word
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                const pdfUrl = `/api/reports/${report.id}/pdf`;
-                if (navigator.share) {
-                  try {
-                    const res = await fetch(pdfUrl);
-                    const blob = await res.blob();
-                    const file = new File(
-                      [blob],
-                      `report-${report.id}.pdf`,
-                      { type: "application/pdf" }
-                    );
-                    await navigator.share({
-                      title: `Tree Report — ${property?.address ?? ""}`,
-                      files: [file],
-                    });
-                  } catch {
-                    // User cancelled share — silent
-                  }
-                } else {
-                  try {
-                    const res = await fetch(pdfUrl);
-                    if (!res.ok) throw new Error("PDF generation failed");
-                    const blob = await res.blob();
-                    const blobUrl = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = blobUrl;
-                    a.download = `report-${report.id}.pdf`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(blobUrl);
-                  } catch (err) {
-                    console.error("PDF download failed:", err);
-                    toast({
-                      title: "PDF download failed",
-                      description: "Could not generate PDF. Please try again.",
-                      variant: "destructive",
-                    });
-                  }
-                }
-              }}
-            >
-              <Share2 className="h-3.5 w-3.5 mr-1.5" />
-              Share
-            </Button>
-            {/* Share with Realtor — RE only, when realtor email is set */}
-            {reportType === "real_estate_package" && reRealtorEmail && (
-              <Button
-                variant="outline"
-                size="sm"
-                asChild
-              >
-                <a
-                  href={`mailto:${reRealtorEmail}?subject=${encodeURIComponent(
-                    `Tree Canopy Report — ${property?.address ?? ""}`
-                  )}&body=${encodeURIComponent(
-                    `Hi ${reRealtorName || ""},\n\nPlease find the Certified Tree Canopy Report for ${property?.address ?? "the property"} attached.\n\nBest regards`
-                  )}`}
-                >
-                  <Mail className="h-3.5 w-3.5 mr-1.5" />
-                  Email Realtor
-                </a>
-              </Button>
             )}
           </div>
         </div>
       </div>
+
+      {/* ---- Validation Banner (inline, replaces old toolbar indicator) ---- */}
+      {(!isCertified || isAmending) && validationResult && !validationLoading && (
+        <button
+          type="button"
+          className={`flex-none border-b px-4 py-2 text-sm flex items-center gap-2 w-full text-left transition-colors ${
+            validationResult.hasFailures
+              ? "bg-red-50 border-red-200 text-red-800 hover:bg-red-100"
+              : validationResult.hasWarnings
+              ? "bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100"
+              : "bg-forest/5 border-forest/20 text-forest hover:bg-forest/10"
+          }`}
+          onClick={() => {
+            setCertifyStep(1);
+            setReviewChecked(false);
+            setCertifyAgreed(false);
+            setSignatureText("");
+            setCertifySuccess(false);
+            setWarningsAcknowledged(false);
+            if (report) fetchValidation(report.id);
+            setShowCertifyPanel(true);
+          }}
+        >
+          {validationResult.hasFailures ? (
+            <>
+              <XCircle className="h-4 w-4 shrink-0 text-red-500" />
+              {validationResult.checks.filter((c) => c.status === "fail").length} blocking issue{validationResult.checks.filter((c) => c.status === "fail").length !== 1 ? "s" : ""} — click to review
+            </>
+          ) : validationResult.hasWarnings ? (
+            <>
+              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+              {validationResult.checks.filter((c) => c.status === "warning").length} warning{validationResult.checks.filter((c) => c.status === "warning").length !== 1 ? "s" : ""} — click to review
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-forest" />
+              Ready to certify
+            </>
+          )}
+        </button>
+      )}
 
       {/* ---- Error Bar ---- */}
       {error && report && (
