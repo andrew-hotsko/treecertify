@@ -293,6 +293,15 @@
 - Writing preferences applied to both full report generation and per-tree regeneration prompts.
 - `aiStandardDisclaimer` is appended verbatim after AI generation (not sent to Claude) — ensures exact arborist text.
 
+## Document Templates (Letter Library)
+- `DocumentTemplate` model: id, arboristId, name, content (@db.Text), category, cityTag, reportTypeTag, usageCount, createdAt, updatedAt. Indexed on arboristId.
+- API routes: `app/api/templates/route.ts` (GET all + POST create), `app/api/templates/[id]/route.ts` (PUT update/incrementUsage + DELETE).
+- 3 default templates seeded on arborist creation in `app/api/arborist/onboard/route.ts`: Standard Limitations, Methodology Statement, Qualifications Summary. Defined in `lib/default-templates.ts`.
+- Settings page: "Document Templates" card after "Report Writing Style". List view with category/city/type badges, edit/delete buttons. New/Edit modal with name, category select, city select (from `citiesServed`), report type select, content textarea.
+- Report editor: "Templates" button in draft toolbar opens a Sheet panel. Templates split into "Suggested" (matching current city or report type) and "All Templates". Search filter. Insert at cursor position (or append). `usageCount` incremented on insert.
+- Report editor: "Save as Template" button appears when text is selected in the textarea. Pre-fills content from selection, cityTag from property, reportTypeTag from report.
+- AI context: `buildTemplateContext()` in `lib/ai-writing-preferences.ts` formats top 5 relevant templates into system prompt. Injected after `buildArboristStyleInstructions()` in `app/api/ai/generate-report/route.ts`. Templates filtered by city + report type match, ordered by usageCount desc.
+
 ## Real Estate Package
 - `real_estate_package` report type bundles health assessment + CTLA valuation for real estate transactions. Generates a "Certified Tree Canopy Report."
 - Report model has 7 RE listing fields: `reListingAddress`, `reRealtorName`, `reRealtorEmail`, `reRealtorPhone`, `reRealtorCompany`, `reListingPrice` (Float), `rePackageNotes`. All nullable.

@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { DEFAULT_TEMPLATES } from "@/lib/default-templates";
 
 export async function POST(request: NextRequest) {
   const { userId } = await auth();
@@ -51,6 +52,16 @@ export async function POST(request: NextRequest) {
       citiesServed: body.citiesServed || "[]",
       onboardingStep: 1,
     },
+  });
+
+  // Seed default document templates for new arborist
+  await prisma.documentTemplate.createMany({
+    data: DEFAULT_TEMPLATES.map((t) => ({
+      arboristId: arborist.id,
+      name: t.name,
+      content: t.content,
+      category: t.category,
+    })),
   });
 
   return NextResponse.json(arborist, { status: 201 });

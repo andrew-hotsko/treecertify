@@ -62,6 +62,8 @@ import {
   Flag,
   Smartphone,
   MoreVertical,
+  BookOpen,
+  Search,
 } from "lucide-react";
 import { OnboardingHint } from "@/components/onboarding-hint";
 import { parseReportSections, replaceTreeSection } from "@/lib/report-sections";
@@ -390,7 +392,27 @@ export default function PropertyReportPage() {
   const [restoring, setRestoring] = useState(false);
   const [reportCost, setReportCost] = useState<number | null>(null);
 
+  // Template insert state
+  interface DocTemplate {
+    id: string;
+    name: string;
+    content: string;
+    category: string | null;
+    cityTag: string | null;
+    reportTypeTag: string | null;
+    usageCount: number;
+  }
+  const [showTemplatePanel, setShowTemplatePanel] = useState(false);
+  const [editorTemplates, setEditorTemplates] = useState<DocTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState("");
+  const [selectedText, setSelectedText] = useState("");
+  const [showSaveTemplateDialog, setShowSaveTemplateDialog] = useState(false);
+  const [savingNewTemplate, setSavingNewTemplate] = useState(false);
+  const [newTemplateForm, setNewTemplateForm] = useState({ name: "", content: "", category: "", cityTag: "", reportTypeTag: "" });
+
   // Refs
+  const editorRef = useRef<HTMLTextAreaElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSaveRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1604,6 +1626,44 @@ export default function PropertyReportPage() {
                   Certify Report
                 </Button>
 
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setTemplatesLoading(true);
+                    setTemplateSearch("");
+                    fetch("/api/templates")
+                      .then((r) => (r.ok ? r.json() : []))
+                      .then((data) => setEditorTemplates(data))
+                      .catch(() => setEditorTemplates([]))
+                      .finally(() => setTemplatesLoading(false));
+                    setShowTemplatePanel(true);
+                  }}
+                >
+                  <BookOpen className="h-3.5 w-3.5 mr-1.5" />
+                  Templates
+                </Button>
+
+                {selectedText.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setNewTemplateForm({
+                        name: "",
+                        content: selectedText,
+                        category: "",
+                        cityTag: property?.city || "",
+                        reportTypeTag: reportType || "",
+                      });
+                      setShowSaveTemplateDialog(true);
+                    }}
+                  >
+                    <Save className="h-3.5 w-3.5 mr-1.5" />
+                    Save as Template
+                  </Button>
+                )}
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -2041,8 +2101,17 @@ export default function PropertyReportPage() {
                   )}
                 </div>
                 <textarea
+                  ref={editorRef}
                   value={content}
                   onChange={(e) => handleContentChange(e.target.value)}
+                  onSelect={() => {
+                    const el = editorRef.current;
+                    if (el && el.selectionStart !== el.selectionEnd) {
+                      setSelectedText(content.substring(el.selectionStart, el.selectionEnd));
+                    } else {
+                      setSelectedText("");
+                    }
+                  }}
                   className="flex-1 resize-none border-0 bg-background p-4 font-mono text-sm leading-relaxed focus:outline-none focus:ring-0"
                   spellCheck={false}
                 />
@@ -3226,6 +3295,200 @@ export default function PropertyReportPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Insert Template Panel */}
+      <Sheet open={showTemplatePanel} onOpenChange={setShowTemplatePanel}>
+        <SheetContent className="w-full sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle className="font-display">Insert Template</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 space-y-4">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search templates..."
+                value={templateSearch}
+                onChange={(e) => setTemplateSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            {templatesLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-neutral-400" />
+              </div>
+            ) : (() => {
+              const query = templateSearch.toLowerCase();
+              const filtered = editorTemplates.filter(
+                (t) => t.name.toLowerCase().includes(query) || t.content.toLowerCase().includes(query)
+              );
+              const suggested = filtered.filter(
+                (t) => (t.cityTag && t.cityTag === property?.city) || (t.reportTypeTag && t.reportTypeTag === reportType)
+              );
+              const rest = filtered.filter(
+                (t) => !suggested.includes(t)
+              );
+              return filtered.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  {editorTemplates.length === 0 ? "No templates yet. Create them in Settings." : "No matching templates."}
+                </p>
+              ) : (
+                <ScrollArea className="h-[calc(100vh-200px)]">
+                  <div className="space-y-1">
+                    {suggested.length > 0 && (
+                      <>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1 pt-2">Suggested</p>
+                        {suggested.map((t) => (
+                          <button
+                            key={t.id}
+                            className="w-full text-left rounded-lg border p-3 hover:bg-neutral-50 transition-colors"
+                            onClick={() => {
+                              const el = editorRef.current;
+                              const pos = el?.selectionStart ?? content.length;
+                              const before = content.substring(0, pos);
+                              const after = content.substring(pos);
+                              const sep = before.length > 0 && !before.endsWith("\n") ? "\n\n" : "";
+                              handleContentChange(before + sep + t.content + after);
+                              fetch(`/api/templates/${t.id}`, {
+                                method: "PUT",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ incrementUsage: true }),
+                              }).catch(() => {});
+                              setShowTemplatePanel(false);
+                              toast({ description: "Template inserted" });
+                            }}
+                          >
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-sm">{t.name}</span>
+                              {t.category && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-forest/10 text-forest font-medium">{t.category}</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{t.content}</p>
+                          </button>
+                        ))}
+                      </>
+                    )}
+                    {rest.length > 0 && (
+                      <>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1 pt-2">
+                          {suggested.length > 0 ? "All Templates" : "Templates"}
+                        </p>
+                        {rest.map((t) => (
+                          <button
+                            key={t.id}
+                            className="w-full text-left rounded-lg border p-3 hover:bg-neutral-50 transition-colors"
+                            onClick={() => {
+                              const el = editorRef.current;
+                              const pos = el?.selectionStart ?? content.length;
+                              const before = content.substring(0, pos);
+                              const after = content.substring(pos);
+                              const sep = before.length > 0 && !before.endsWith("\n") ? "\n\n" : "";
+                              handleContentChange(before + sep + t.content + after);
+                              fetch(`/api/templates/${t.id}`, {
+                                method: "PUT",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ incrementUsage: true }),
+                              }).catch(() => {});
+                              setShowTemplatePanel(false);
+                              toast({ description: "Template inserted" });
+                            }}
+                          >
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-sm">{t.name}</span>
+                              {t.category && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-forest/10 text-forest font-medium">{t.category}</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{t.content}</p>
+                          </button>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                </ScrollArea>
+              );
+            })()}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Save as Template Dialog */}
+      <Dialog open={showSaveTemplateDialog} onOpenChange={setShowSaveTemplateDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display">Save as Template</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div>
+              <Label htmlFor="new-tpl-name" className="text-sm font-medium">Name</Label>
+              <Input
+                id="new-tpl-name"
+                value={newTemplateForm.name}
+                onChange={(e) => setNewTemplateForm({ ...newTemplateForm, name: e.target.value })}
+                placeholder="e.g., Standard Limitations"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-tpl-category" className="text-sm font-medium">Category</Label>
+              <select
+                id="new-tpl-category"
+                value={newTemplateForm.category}
+                onChange={(e) => setNewTemplateForm({ ...newTemplateForm, category: e.target.value })}
+                className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="">No category</option>
+                <option value="cover_letter">Cover Letter</option>
+                <option value="limitations">Limitations</option>
+                <option value="methodology">Methodology</option>
+                <option value="qualifications">Qualifications</option>
+                <option value="site_boilerplate">Site Boilerplate</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Content</Label>
+              <div className="mt-1 rounded-md border bg-muted/30 p-3 text-sm max-h-32 overflow-y-auto">
+                {newTemplateForm.content}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowSaveTemplateDialog(false)}>Cancel</Button>
+              <Button
+                disabled={savingNewTemplate || !newTemplateForm.name.trim()}
+                className="bg-forest hover:bg-forest-light"
+                onClick={async () => {
+                  setSavingNewTemplate(true);
+                  try {
+                    const res = await fetch("/api/templates", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        name: newTemplateForm.name,
+                        content: newTemplateForm.content,
+                        category: newTemplateForm.category || null,
+                        cityTag: newTemplateForm.cityTag || null,
+                        reportTypeTag: newTemplateForm.reportTypeTag || null,
+                      }),
+                    });
+                    if (!res.ok) throw new Error();
+                    setShowSaveTemplateDialog(false);
+                    setSelectedText("");
+                    toast({ description: "Template saved" });
+                  } catch {
+                    toast({ variant: "destructive", description: "Failed to save template" });
+                  } finally {
+                    setSavingNewTemplate(false);
+                  }
+                }}
+              >
+                {savingNewTemplate ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                Save Template
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

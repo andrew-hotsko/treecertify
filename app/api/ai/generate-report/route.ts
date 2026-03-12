@@ -17,7 +17,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getOrdinanceByCity } from "@/lib/ordinances";
 import { getReportTemplate, getMasterVoiceInstructions } from "@/lib/report-templates";
-import { buildArboristStyleInstructions } from "@/lib/ai-writing-preferences";
+import { buildArboristStyleInstructions, buildTemplateContext } from "@/lib/ai-writing-preferences";
 import Anthropic from "@anthropic-ai/sdk";
 import { logApiUsage } from "@/lib/api-usage";
 import { logEvent } from "@/lib/analytics";
@@ -568,6 +568,28 @@ export async function POST(request: NextRequest) {
 
     const ordinance = await getOrdinanceByCity(property.city);
 
+    // Fetch arborist's saved document templates for AI context
+    const arboristTemplates = await prisma.documentTemplate.findMany({
+      where: {
+        arboristId: arborist.id,
+        OR: [
+          { cityTag: property.city },
+          { cityTag: null },
+        ],
+        AND: [
+          {
+            OR: [
+              { reportTypeTag: body.reportType },
+              { reportTypeTag: null },
+            ],
+          },
+        ],
+      },
+      orderBy: { usageCount: "desc" },
+      take: 5,
+      select: { name: true, content: true, category: true },
+    });
+
     let aiDraftContent: string;
 
     if (process.env.ANTHROPIC_API_KEY) {
@@ -666,6 +688,7 @@ ${template?.systemInstructions || `Write a professional arborist report followin
 
 ${getMasterVoiceInstructions(body.reportType)}
 ${buildArboristStyleInstructions(arborist)}
+${buildTemplateContext(arboristTemplates)}
 ${body.reportType === "real_estate_package" ? `
 REAL ESTATE PACKAGE — LANGUAGE OVERRIDES:
 This report is for a REAL ESTATE TRANSACTION, not a municipal permit application. Override the general voice instructions as follows:

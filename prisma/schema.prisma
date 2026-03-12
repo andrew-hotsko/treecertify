@@ -69,7 +69,8 @@ model Arborist {
   reports         Report[]
   apiUsageLogs    ApiUsageLog[]
   feedbacks       Feedback[]
-  analyticsEvents AnalyticsEvent[]
+  analyticsEvents   AnalyticsEvent[]
+  documentTemplates DocumentTemplate[]
 }
 
 model Property {
@@ -375,5 +376,21 @@ model AnalyticsEvent {
   @@index([arboristId])
   @@index([eventType])
   @@index([createdAt])
+}
+
+model DocumentTemplate {
+  id            String   @id @default(cuid())
+  arboristId    String
+  arborist      Arborist @relation(fields: [arboristId], references: [id], onDelete: Cascade)
+  name          String
+  content       String   @db.Text
+  category      String?
+  cityTag       String?
+  reportTypeTag String?
+  usageCount    Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([arboristId])
 }
 

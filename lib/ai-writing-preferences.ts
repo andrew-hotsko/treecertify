@@ -69,3 +69,17 @@ export function buildArboristStyleInstructions(
     ? `\n\nARBORIST WRITING PREFERENCES:\n${parts.join("\n")}`
     : "";
 }
+
+/**
+ * Build prompt context from arborist's saved document templates.
+ * Injected into AI generation prompt so Claude matches the arborist's voice.
+ */
+export function buildTemplateContext(
+  templates: { name: string; content: string; category: string | null }[]
+): string {
+  if (templates.length === 0) return "";
+  const blocks = templates.map(
+    (t) => `[Template: ${t.name}]\n${t.content}`
+  );
+  return `\n\nARBORIST SAVED TEXT BLOCKS:\nThe arborist has saved the following preferred language and text blocks. Use these as reference for tone, terminology, and phrasing. Do not copy them verbatim unless they are direct insertions (like a limitations paragraph), but match their professional voice:\n\n${blocks.join("\n\n")}`;
+}

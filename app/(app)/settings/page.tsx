@@ -31,6 +31,8 @@ import {
   RotateCcw,
   ChevronUp,
   ChevronDown,
+  Pencil,
+  BookOpen,
 } from "lucide-react";
 import {
   DndContext,
@@ -58,6 +60,13 @@ import {
 } from "@/lib/default-observations";
 import { PENINSULA_SPECIES } from "@/lib/species";
 import { ACTION_OPTIONS, CONDITION_LABELS } from "@/lib/observation-helpers";
+import { REPORT_TYPES } from "@/lib/report-types";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ArboristProfile {
   id: string;
@@ -100,6 +109,7 @@ interface ArboristProfile {
   aiStandardDisclaimer?: string | null;
   aiTonePreference?: string | null;
   aiCustomInstructions?: string | null;
+  citiesServed?: string;
 }
 
 interface ReportDefaults {
@@ -356,6 +366,30 @@ export default function SettingsPage() {
   const [newPreferredTerm, setNewPreferredTerm] = useState("");
   const [newAvoidTerm, setNewAvoidTerm] = useState("");
 
+  // Document templates state
+  interface DocTemplate {
+    id: string;
+    name: string;
+    content: string;
+    category: string | null;
+    cityTag: string | null;
+    reportTypeTag: string | null;
+    usageCount: number;
+  }
+  const [templates, setTemplates] = useState<DocTemplate[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<DocTemplate | null>(null);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null);
+  const [templateForm, setTemplateForm] = useState({
+    name: "",
+    content: "",
+    category: "",
+    cityTag: "",
+    reportTypeTag: "",
+  });
+
   // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -470,6 +504,13 @@ export default function SettingsPage() {
       }
     }
     load();
+
+    // Load document templates (separate model)
+    fetch("/api/templates")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setTemplates(data))
+      .catch(() => setTemplates([]))
+      .finally(() => setLoadingTemplates(false));
   }, []);
 
   // Load usage data
@@ -608,6 +649,78 @@ export default function SettingsPage() {
       setSavingValuation(false);
     }
   };
+
+  // Document template CRUD
+  const openNewTemplate = () => {
+    setEditingTemplate(null);
+    setTemplateForm({ name: "", content: "", category: "", cityTag: "", reportTypeTag: "" });
+    setShowTemplateModal(true);
+  };
+  const openEditTemplate = (t: DocTemplate) => {
+    setEditingTemplate(t);
+    setTemplateForm({
+      name: t.name,
+      content: t.content,
+      category: t.category || "",
+      cityTag: t.cityTag || "",
+      reportTypeTag: t.reportTypeTag || "",
+    });
+    setShowTemplateModal(true);
+  };
+  const saveTemplate = async () => {
+    if (!templateForm.name.trim() || !templateForm.content.trim()) return;
+    setSavingTemplate(true);
+    try {
+      const payload = {
+        name: templateForm.name,
+        content: templateForm.content,
+        category: templateForm.category || null,
+        cityTag: templateForm.cityTag || null,
+        reportTypeTag: templateForm.reportTypeTag || null,
+      };
+      if (editingTemplate) {
+        const res = await fetch(`/api/templates/${editingTemplate.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error();
+        const updated = await res.json();
+        setTemplates((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      } else {
+        const res = await fetch("/api/templates", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error();
+        const created = await res.json();
+        setTemplates((prev) => [created, ...prev]);
+      }
+      setShowTemplateModal(false);
+      setMessage({ type: "success", text: editingTemplate ? "Template updated" : "Template created" });
+    } catch {
+      setMessage({ type: "error", text: "Failed to save template" });
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+  const deleteTemplate = async (id: string) => {
+    setDeletingTemplateId(id);
+    try {
+      const res = await fetch(`/api/templates/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      setTemplates((prev) => prev.filter((t) => t.id !== id));
+    } catch {
+      setMessage({ type: "error", text: "Failed to delete template" });
+    } finally {
+      setDeletingTemplateId(null);
+    }
+  };
+
+  const citiesServedList: string[] = (() => {
+    try { return JSON.parse(profile?.citiesServed || "[]"); } catch { return []; }
+  })();
 
   const uploadLogo = async (file: File) => {
     setUploading(true);
@@ -1968,6 +2081,176 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Document Templates */}
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base font-display">
+                <BookOpen className="h-5 w-5 text-forest" />
+                Document Templates
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Saved text blocks for reports. These help the AI match your preferred language.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={openNewTemplate}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              New Template
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingTemplates ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-neutral-400" />
+            </div>
+          ) : templates.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              No templates yet. Save text blocks from your reports to build your library.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {templates.map((t) => (
+                <div
+                  key={t.id}
+                  className="flex items-start justify-between gap-3 rounded-lg border p-3 hover:bg-neutral-50 transition-colors"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm">{t.name}</span>
+                      {t.category && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-forest/10 text-forest font-medium">
+                          {t.category}
+                        </span>
+                      )}
+                      {t.cityTag && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-medium">
+                          {t.cityTag}
+                        </span>
+                      )}
+                      {t.reportTypeTag && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 font-medium">
+                          {REPORT_TYPES.find((rt) => rt.id === t.reportTypeTag)?.label || t.reportTypeTag}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{t.content}</p>
+                    {t.usageCount > 0 && (
+                      <p className="text-[10px] text-neutral-400 mt-1">Used {t.usageCount} time{t.usageCount !== 1 ? "s" : ""}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEditTemplate(t)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                      disabled={deletingTemplateId === t.id}
+                      onClick={() => deleteTemplate(t.id)}
+                    >
+                      {deletingTemplateId === t.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Template New/Edit Modal */}
+      <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display">{editingTemplate ? "Edit Template" : "New Template"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div>
+              <Label htmlFor="tpl-name" className="text-sm font-medium">Name</Label>
+              <Input
+                id="tpl-name"
+                value={templateForm.name}
+                onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })}
+                placeholder="e.g., Standard Limitations"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="tpl-category" className="text-sm font-medium">Category</Label>
+              <select
+                id="tpl-category"
+                value={templateForm.category}
+                onChange={(e) => setTemplateForm({ ...templateForm, category: e.target.value })}
+                className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="">No category</option>
+                <option value="cover_letter">Cover Letter</option>
+                <option value="limitations">Limitations</option>
+                <option value="methodology">Methodology</option>
+                <option value="qualifications">Qualifications</option>
+                <option value="site_boilerplate">Site Boilerplate</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="tpl-city" className="text-sm font-medium">City (optional)</Label>
+                <select
+                  id="tpl-city"
+                  value={templateForm.cityTag}
+                  onChange={(e) => setTemplateForm({ ...templateForm, cityTag: e.target.value })}
+                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="">All Cities</option>
+                  {citiesServedList.map((c: string) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="tpl-type" className="text-sm font-medium">Report Type (optional)</Label>
+                <select
+                  id="tpl-type"
+                  value={templateForm.reportTypeTag}
+                  onChange={(e) => setTemplateForm({ ...templateForm, reportTypeTag: e.target.value })}
+                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="">All Types</option>
+                  {REPORT_TYPES.map((rt) => (
+                    <option key={rt.id} value={rt.id}>{rt.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="tpl-content" className="text-sm font-medium">Content</Label>
+              <textarea
+                id="tpl-content"
+                rows={6}
+                value={templateForm.content}
+                onChange={(e) => setTemplateForm({ ...templateForm, content: e.target.value })}
+                placeholder="Paste or type your template text here..."
+                className="mt-1 flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowTemplateModal(false)}>Cancel</Button>
+              <Button
+                onClick={saveTemplate}
+                disabled={savingTemplate || !templateForm.name.trim() || !templateForm.content.trim()}
+                className="bg-forest hover:bg-forest-light"
+              >
+                {savingTemplate ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                {editingTemplate ? "Update" : "Create"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Save Button */}
       <div className="flex justify-end mb-8">
