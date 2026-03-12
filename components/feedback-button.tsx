@@ -157,7 +157,7 @@ export function FeedbackButton() {
       <button
         data-feedback-trigger
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-forest text-white shadow-lg hover:bg-forest-light hover:shadow-xl transition-all active:scale-95 print:hidden"
+        className="fixed bottom-20 md:bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-forest text-white shadow-lg hover:bg-forest-light hover:shadow-xl transition-all active:scale-[0.98] print:hidden"
         aria-label="Send feedback"
       >
         <MessageSquarePlus className="h-5 w-5" />

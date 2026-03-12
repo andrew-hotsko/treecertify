@@ -1306,10 +1306,10 @@ export default function PropertyReportPage() {
       <div>
         <Link
           href={`/properties/${propertyId}`}
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Property
+          {property.address}
         </Link>
 
         <div className="max-w-2xl mx-auto mt-8">
@@ -1529,13 +1529,14 @@ export default function PropertyReportPage() {
           <div className="flex items-center gap-3">
             <Link
               href={`/properties/${propertyId}`}
-              className="text-muted-foreground hover:text-foreground"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline truncate max-w-[200px]">{property.address}</span>
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-semibold font-display">Report Editor</h1>
+                <h1 className="text-lg font-semibold font-display">Report</h1>
                 <StatusBadge status={report.status} />
                 <Badge variant="outline" className="text-xs">
                   {getReportTypeConfig(report.reportType)?.label ||

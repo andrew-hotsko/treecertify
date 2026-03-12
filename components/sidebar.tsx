@@ -5,12 +5,8 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   MapPin,
-  BookOpen,
-  Plus,
   User,
   Settings,
-  Shield,
-  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useConnectivity } from "@/lib/connectivity";
@@ -27,11 +23,6 @@ const navItems = [
     icon: MapPin,
   },
   {
-    label: "Ordinances",
-    href: "/ordinances",
-    icon: BookOpen,
-  },
-  {
     label: "Settings",
     href: "/settings",
     icon: Settings,
@@ -42,10 +33,9 @@ interface SidebarProps {
   arboristName: string;
   isaCertNum: string;
   profilePhotoUrl?: string;
-  isAdmin?: boolean;
 }
 
-export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl, isAdmin }: SidebarProps) {
+export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl }: SidebarProps) {
   const pathname = usePathname();
   const { isOnline, pendingCount } = useConnectivity();
 
@@ -64,20 +54,9 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl, isAdmin }: 
         </div>
       </div>
 
-      {/* Quick action */}
-      <div className="px-4 py-4">
-        <Link
-          href="/properties/new"
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-forest px-4 py-2.5 text-sm font-medium text-neutral-50 transition-colors hover:bg-forest-light"
-        >
-          <Plus className="h-4 w-4" />
-          New Property
-        </Link>
-      </div>
-
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3">
-        {[...navItems, ...(isAdmin ? [{ label: "Admin", href: "/admin", icon: Shield }] : [])].map((item) => {
+      <nav className="flex-1 space-y-1 px-3 pt-4">
+        {navItems.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
           return (
@@ -85,7 +64,7 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl, isAdmin }: 
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
                 isActive
                   ? "bg-forest/10 text-forest-muted border-l-[3px] border-forest-muted pl-[9px]"
                   : "text-neutral-400 hover:bg-neutral-700 hover:text-neutral-50"
@@ -97,19 +76,6 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl, isAdmin }: 
           );
         })}
       </nav>
-
-      {/* Sample Report */}
-      <div className="px-3 mb-2">
-        <a
-          href="/api/sample-report?showcase=true"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-neutral-400 hover:bg-neutral-700 hover:text-neutral-50 transition-colors"
-        >
-          <FileText className="h-5 w-5" />
-          Sample Report
-        </a>
-      </div>
 
       {/* User section */}
       <div className="border-t border-neutral-700 p-4">

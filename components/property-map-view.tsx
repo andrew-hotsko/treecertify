@@ -26,7 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/status-badge";
 import { OnboardingHint } from "@/components/onboarding-hint";
 import {
-  ChevronLeft,
+  ArrowLeft,
   FileText,
   TreePine,
   ChevronDown,
@@ -1006,11 +1006,12 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
       <div className="space-y-3">
         {/* Row 1: Back + Address */}
         <div className="flex items-center gap-3 min-w-0">
-          <Link href="/properties" className="shrink-0">
-            <Button variant="ghost" size="sm">
-              <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Properties</span>
-            </Button>
+          <Link
+            href="/properties"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Properties
           </Link>
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-semibold tracking-tight font-display text-foreground truncate">
@@ -1042,7 +1043,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             {/* Primary action — changes per lifecycle state */}
             {lifecycleState === "assessing" && (
               <Link href={`/properties/${property.id}/report`}>
-                <Button className="bg-forest hover:bg-forest-light">
+                <Button className="bg-forest hover:bg-forest-light active:scale-[0.98] transition-all">
                   <FileText className="h-4 w-4 mr-2" />
                   Generate Report
                 </Button>
@@ -1050,14 +1051,14 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             )}
             {lifecycleState === "report_draft" && (
               <Link href={`/properties/${property.id}/report`}>
-                <Button className="bg-forest hover:bg-forest-light">
+                <Button className="bg-forest hover:bg-forest-light active:scale-[0.98] transition-all">
                   <FileText className="h-4 w-4 mr-2" />
                   {property.reports?.[0]?.status === "review" ? "Review Report" : "Edit Report"}
                 </Button>
               </Link>
             )}
             {lifecycleState === "certified" && (
-              <Button className="bg-forest hover:bg-forest-light" onClick={handleShare} disabled={sharingLoading}>
+              <Button className="bg-forest hover:bg-forest-light active:scale-[0.98] transition-all" onClick={handleShare} disabled={sharingLoading}>
                 {sharingLoading ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (

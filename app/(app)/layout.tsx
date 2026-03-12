@@ -31,10 +31,10 @@ export default async function AppLayout({
     <AppProviders>
       <div className="min-h-screen bg-background">
         <ConnectivityIndicator />
-        <Sidebar arboristName={arborist.name} isaCertNum={arborist.isaCertificationNum} profilePhotoUrl={arborist.profilePhotoUrl ?? undefined} isAdmin={process.env.ADMIN_ARBORIST_ID?.split(",").includes(arborist.id)} />
-        <MobileNav arboristName={arborist.name} isaCertNum={arborist.isaCertificationNum} profilePhotoUrl={arborist.profilePhotoUrl ?? undefined} />
+        <Sidebar arboristName={arborist.name} isaCertNum={arborist.isaCertificationNum} profilePhotoUrl={arborist.profilePhotoUrl ?? undefined} />
+        <MobileNav />
         <main className="pl-0 md:pl-64">
-          <div className="mx-auto max-w-7xl px-4 md:px-6 pt-16 md:pt-8 pb-8">{children}</div>
+          <div className="animate-page-in mx-auto max-w-7xl px-4 md:px-6 pt-6 md:pt-8 pb-20 md:pb-8">{children}</div>
         </main>
         <FeedbackButton />
       </div>

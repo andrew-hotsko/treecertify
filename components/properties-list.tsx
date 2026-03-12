@@ -399,7 +399,7 @@ export function PropertiesList({
               <div key={property.id} className="group relative">
                 <Link
                   href={`/properties/${property.id}`}
-                  className="block rounded-lg border bg-card p-4 hover:border-forest/30 hover:shadow-sm transition-all"
+                  className="block rounded-lg border bg-card p-4 hover:border-forest/30 hover:shadow-md transition-all"
                 >
                   {/* Row 1: Address + City */}
                   <div className="flex items-start justify-between gap-3">
@@ -463,7 +463,7 @@ export function PropertiesList({
       {/* Mobile FAB */}
       <Link
         href="/properties/new"
-        className="fixed bottom-6 right-6 z-40 sm:hidden flex h-14 w-14 items-center justify-center rounded-full bg-forest text-white shadow-lg hover:bg-forest-light active:scale-95 transition-all"
+        className="fixed bottom-20 right-6 z-40 sm:hidden flex h-14 w-14 items-center justify-center rounded-full bg-forest text-white shadow-lg hover:bg-forest-light active:scale-[0.98] transition-all"
         aria-label="New Property"
       >
         <Plus className="h-6 w-6" />

@@ -164,14 +164,23 @@ export function DashboardView({
 
   return (
     <div className="space-y-8 pb-24 sm:pb-8">
-      {/* Greeting + Date */}
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight font-display text-foreground">
-          {getGreeting()}, {firstName}
-        </h1>
-        <span className="text-sm text-muted-foreground hidden sm:block">
-          {formatDate()}
-        </span>
+      {/* Greeting + Date + Action */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight font-display text-foreground">
+            {getGreeting()}, {firstName}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5 hidden sm:block">
+            {formatDate()}
+          </p>
+        </div>
+        <Link
+          href="/properties/new"
+          className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-forest text-white hover:bg-forest-light active:scale-[0.98] transition-all"
+        >
+          <Plus className="h-4 w-4" />
+          New Property
+        </Link>
       </div>
 
       {/* Action Cards */}
@@ -300,21 +309,11 @@ export function DashboardView({
         </div>
       )}
 
-      {/* Desktop "New Property" button */}
-      <div className="hidden sm:block">
-        <Link
-          href="/properties/new"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-forest text-white hover:bg-forest-light transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          New Property
-        </Link>
-      </div>
 
       {/* Mobile FAB */}
       <Link
         href="/properties/new"
-        className="fixed bottom-6 right-6 z-40 sm:hidden flex h-14 w-14 items-center justify-center rounded-full bg-forest text-white shadow-lg hover:bg-forest-light active:scale-95 transition-all"
+        className="fixed bottom-20 right-6 z-40 sm:hidden flex h-14 w-14 items-center justify-center rounded-full bg-forest text-white shadow-lg hover:bg-forest-light active:scale-[0.98] transition-all"
         aria-label="New Property"
       >
         <Plus className="h-6 w-6" />

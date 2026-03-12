@@ -36,7 +36,7 @@ export default async function PropertiesPage({
           Properties
         </h1>
         <Link href="/properties/new" className="hidden sm:block">
-          <Button className="bg-forest hover:bg-forest-light">
+          <Button className="bg-forest hover:bg-forest-light active:scale-[0.98] transition-all">
             <Plus className="h-4 w-4 mr-2" />
             New Property
           </Button>
