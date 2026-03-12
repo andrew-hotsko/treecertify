@@ -47,6 +47,7 @@ import {
   Monitor,
   DollarSign,
   Save,
+  Pencil,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -135,6 +136,20 @@ function isTreeComplete(tree: TreeData): boolean {
     tree.conditionRating && tree.conditionRating > 0 &&
     (tree.healthNotes?.trim() || tree.structuralNotes?.trim())
   );
+}
+
+type LifecycleState = "no_trees" | "assessing" | "report_draft" | "certified" | "shared";
+
+function getLifecycleState(
+  trees: TreeData[],
+  reports: PropertyData["reports"],
+  shareToken: string | null
+): LifecycleState {
+  if (trees.length === 0) return "no_trees";
+  const r = reports?.[0];
+  if (!r) return "assessing";
+  if (r.status === "certified") return shareToken ? "shared" : "certified";
+  return "report_draft";
 }
 
 const CONDITION_LABELS: Record<number, string> = {
@@ -429,6 +444,11 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   // Progress counts
   const assessedCount = trees.filter((t) => isTreeComplete(t)).length;
   const protectedCount = trees.filter((t) => t.isProtected).length;
+
+  // Lifecycle state — drives progressive disclosure
+  const lifecycleState = getLifecycleState(trees, property.reports, shareToken);
+  const incompleteTrees = trees.filter((t) => !isTreeComplete(t));
+  const allTreesComplete = trees.length > 0 && incompleteTrees.length === 0;
 
   // Filter logic: compute dimmed pin IDs
   const dimmedPinIds =
@@ -982,8 +1002,9 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Top Bar */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      {/* Page Header */}
+      <div className="space-y-3">
+        {/* Row 1: Back + Address */}
         <div className="flex items-center gap-3 min-w-0">
           <Link href="/properties" className="shrink-0">
             <Button variant="ghost" size="sm">
@@ -991,65 +1012,134 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               <span className="hidden sm:inline">Properties</span>
             </Button>
           </Link>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold font-display truncate">
-                {property.address}
-              </h1>
-              {reportTypeConfig && (
-                <Badge variant="outline" className="text-xs shrink-0 hidden sm:inline-flex">
-                  {reportTypeConfig.label}
-                </Badge>
-              )}
-            </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-semibold tracking-tight font-display text-foreground truncate">
+              {property.address}
+            </h1>
             <p className="text-sm text-muted-foreground truncate">{property.city}</p>
           </div>
         </div>
+
+        {/* Row 2: Badges + Primary Action */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            {reportTypeConfig && (
+              <Badge variant="outline" className="text-xs">
+                {reportTypeConfig.label}
+              </Badge>
+            )}
+            {trees.length > 0 && (
+              <Badge variant="secondary" className="gap-1">
+                <TreePine className="h-3 w-3" />
+                {trees.length} tree{trees.length !== 1 ? "s" : ""}
+              </Badge>
+            )}
+            {property.reports?.[0] && (
+              <StatusBadge status={property.reports[0].status} />
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Primary action — changes per lifecycle state */}
+            {lifecycleState === "assessing" && (
+              <Link href={`/properties/${property.id}/report`}>
+                <Button className="bg-forest hover:bg-forest-light">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Generate Report
+                </Button>
+              </Link>
+            )}
+            {lifecycleState === "report_draft" && (
+              <Link href={`/properties/${property.id}/report`}>
+                <Button className="bg-forest hover:bg-forest-light">
+                  <FileText className="h-4 w-4 mr-2" />
+                  {property.reports?.[0]?.status === "review" ? "Review Report" : "Edit Report"}
+                </Button>
+              </Link>
+            )}
+            {lifecycleState === "certified" && (
+              <Button className="bg-forest hover:bg-forest-light" onClick={handleShare} disabled={sharingLoading}>
+                {sharingLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Share2 className="h-4 w-4 mr-2" />
+                )}
+                Share with Client
+              </Button>
+            )}
+            {lifecycleState === "shared" && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(`/share/${shareToken}`, "_blank")}
+                >
+                  View Share Page
+                </Button>
+                <Button
+                  className="bg-forest hover:bg-forest-light"
+                  onClick={() => {
+                    const a = document.createElement("a");
+                    a.href = `/api/reports/${property.reports[0].id}/pdf`;
+                    a.download = "";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download PDF
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Row 3: Secondary actions + assessment toggles */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Field / Desktop toggle — mobile only */}
-          <div className="flex items-center gap-1.5 md:hidden">
-            <label
-              htmlFor="field-mode-toggle"
-              className={`flex items-center gap-1 text-xs cursor-pointer select-none ${
-                fieldMode ? "text-forest font-medium" : "text-muted-foreground"
-              }`}
-            >
-              {fieldMode ? (
-                <Smartphone className="h-3.5 w-3.5 text-forest" />
-              ) : (
-                <Monitor className="h-3.5 w-3.5" />
-              )}
-              <span>{fieldMode ? "Field" : "Desktop"}</span>
-            </label>
-            <Switch
-              id="field-mode-toggle"
-              checked={fieldMode}
-              onCheckedChange={setFieldMode}
-              className="scale-75"
-            />
-          </div>
-          {/* Quick Add toggle */}
-          <div className="flex items-center gap-1.5">
-            <label
-              htmlFor="quick-add-toggle"
-              className={`flex items-center gap-1 text-xs cursor-pointer select-none ${
-                quickAddMode ? "text-amber-700 font-medium" : "text-muted-foreground"
-              }`}
-            >
-              <Zap className={`h-3.5 w-3.5 ${quickAddMode ? "text-amber-500" : ""}`} />
-              <span className="hidden sm:inline">Quick Add</span>
-            </label>
-            <Switch
-              id="quick-add-toggle"
-              checked={quickAddMode}
-              onCheckedChange={setQuickAddMode}
-              className="scale-75"
-            />
-          </div>
-          <Badge variant="secondary" className="gap-1">
-            <TreePine className="h-3 w-3" />
-            {trees.length} tree{trees.length !== 1 ? "s" : ""}
-          </Badge>
+          {/* Field / Desktop toggle — mobile only, assessment phases */}
+          {(lifecycleState === "no_trees" || lifecycleState === "assessing") && (
+            <div className="flex items-center gap-1.5 md:hidden">
+              <label
+                htmlFor="field-mode-toggle"
+                className={`flex items-center gap-1 text-xs cursor-pointer select-none ${
+                  fieldMode ? "text-forest font-medium" : "text-muted-foreground"
+                }`}
+              >
+                {fieldMode ? (
+                  <Smartphone className="h-3.5 w-3.5 text-forest" />
+                ) : (
+                  <Monitor className="h-3.5 w-3.5" />
+                )}
+                <span>{fieldMode ? "Field" : "Desktop"}</span>
+              </label>
+              <Switch
+                id="field-mode-toggle"
+                checked={fieldMode}
+                onCheckedChange={setFieldMode}
+                className="scale-75"
+              />
+            </div>
+          )}
+          {/* Quick Add toggle — assessment phases */}
+          {(lifecycleState === "no_trees" || lifecycleState === "assessing") && (
+            <div className="flex items-center gap-1.5">
+              <label
+                htmlFor="quick-add-toggle"
+                className={`flex items-center gap-1 text-xs cursor-pointer select-none ${
+                  quickAddMode ? "text-amber-700 font-medium" : "text-muted-foreground"
+                }`}
+              >
+                <Zap className={`h-3.5 w-3.5 ${quickAddMode ? "text-amber-500" : ""}`} />
+                <span className="hidden sm:inline">Quick Add</span>
+              </label>
+              <Switch
+                id="quick-add-toggle"
+                checked={quickAddMode}
+                onCheckedChange={setQuickAddMode}
+                className="scale-75"
+              />
+            </div>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -1077,166 +1167,126 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               <span className="hidden sm:inline">Export CSV</span>
             </Button>
           )}
-          <div className="relative">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleShare}
-              disabled={sharingLoading}
-              title="Share property map"
-            >
-              {sharingLoading ? (
-                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-              ) : (
-                <Share2 className="h-3.5 w-3.5 mr-1.5" />
-              )}
-              <span className="hidden sm:inline">Share</span>
-            </Button>
-            {showSharePopover && shareToken && (
-              <div className="absolute right-0 top-full mt-2 z-50 w-80 bg-neutral-50 rounded-lg border shadow-lg p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold">Share Link</h3>
-                  <button
-                    onClick={() => {
-                      setShowSharePopover(false);
-                      setShareCopied(false);
-                    }}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                <OnboardingHint hintId="share_link" className="mb-1">
-                Share this link with your client. They&apos;ll see a plain-English summary and can download the PDF.
-              </OnboardingHint>
-              <div className="flex items-center gap-2">
-                  <input
-                    readOnly
-                    value={`${typeof window !== "undefined" ? window.location.origin : ""}/share/${shareToken}`}
-                    className="flex-1 text-xs bg-neutral-100 border rounded px-2 py-1.5 text-neutral-700 select-all"
-                    onClick={(e) => (e.target as HTMLInputElement).select()}
-                  />
+          {/* Share button (secondary) — when not the primary action */}
+          {lifecycleState !== "certified" && (
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleShare}
+                disabled={sharingLoading}
+                title="Share property map"
+              >
+                {sharingLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                <span className="hidden sm:inline">Share</span>
+              </Button>
+              {showSharePopover && shareToken && (
+                <div className="absolute right-0 top-full mt-2 z-50 w-80 bg-neutral-50 rounded-lg border shadow-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold">Share Link</h3>
+                    <button
+                      onClick={() => {
+                        setShowSharePopover(false);
+                        setShareCopied(false);
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <OnboardingHint hintId="share_link" className="mb-1">
+                    Share this link with your client. They&apos;ll see a plain-English summary and can download the PDF.
+                  </OnboardingHint>
+                  <div className="flex items-center gap-2">
+                    <input
+                      readOnly
+                      value={`${typeof window !== "undefined" ? window.location.origin : ""}/share/${shareToken}`}
+                      className="flex-1 text-xs bg-neutral-100 border rounded px-2 py-1.5 text-neutral-700 select-all"
+                      onClick={(e) => (e.target as HTMLInputElement).select()}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCopyShareLink}
+                      className="shrink-0"
+                    >
+                      {shareCopied ? (
+                        <span className="text-forest text-xs">Copied!</span>
+                      ) : (
+                        <>
+                          <Copy className="h-3.5 w-3.5 mr-1" />
+                          <span className="text-xs">Copy</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Anyone with this link can view the property map and tree inventory.
+                  </p>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    onClick={handleCopyShareLink}
-                    className="shrink-0"
+                    onClick={handleRevokeShare}
+                    disabled={sharingLoading}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 w-full"
                   >
-                    {shareCopied ? (
-                      <span className="text-forest text-xs">Copied!</span>
+                    {sharingLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                     ) : (
-                      <>
-                        <Copy className="h-3.5 w-3.5 mr-1" />
-                        <span className="text-xs">Copy</span>
-                      </>
+                      "Revoke Link"
                     )}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Anyone with this link can view the property map and tree inventory.
-                </p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRevokeShare}
-                  disabled={sharingLoading}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 w-full"
-                >
-                  {sharingLoading ? (
-                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                  ) : (
-                    "Revoke Link"
-                  )}
-                </Button>
-              </div>
-            )}
-          </div>
-          {property.reports && property.reports.length > 0 ? (
-            <div className="flex items-center gap-2">
-              <StatusBadge status={property.reports[0].status} />
-              <Link href={`/properties/${property.id}/report`}>
-                <Button variant="outline" size="sm">
-                  <FileText className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">
-                    {property.reports[0].status === "certified"
-                      ? "View Report"
-                      : "Edit Report"}
-                  </span>
-                </Button>
-              </Link>
-              {property.reports[0].status === "certified" && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const a = document.createElement("a");
-                      a.href = `/api/reports/${property.reports[0].id}/pdf`;
-                      a.download = "";
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                    }}
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const a = document.createElement("a");
-                      a.href = `/api/reports/${property.reports[0].id}/word`;
-                      a.download = "";
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                    }}
-                  >
-                    <FileDown className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      const pdfUrl = `/api/reports/${property.reports[0].id}/pdf`;
-                      if (navigator.share) {
-                        try {
-                          const res = await fetch(pdfUrl);
-                          const blob = await res.blob();
-                          const file = new File(
-                            [blob],
-                            `report-${property.reports[0].id}.pdf`,
-                            { type: "application/pdf" }
-                          );
-                          await navigator.share({
-                            title: `Tree Report — ${property.address}`,
-                            files: [file],
-                          });
-                        } catch {
-                          // User cancelled or share failed
-                        }
-                      } else {
-                        const a = document.createElement("a");
-                        a.href = pdfUrl;
-                        a.download = "";
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                      }
-                    }}
-                  >
-                    <Share2 className="h-3.5 w-3.5" />
-                  </Button>
-                </>
               )}
             </div>
-          ) : (
+          )}
+          {/* Report link (secondary) — for certified/shared states */}
+          {(lifecycleState === "certified" || lifecycleState === "shared") && (
             <Link href={`/properties/${property.id}/report`}>
               <Button variant="outline" size="sm">
-                <FileText className="h-4 w-4 mr-1" />
-                Generate Report
+                <FileText className="h-4 w-4 mr-1.5" />
+                <span className="hidden sm:inline">View Report</span>
               </Button>
             </Link>
+          )}
+          {/* Download buttons — certified/shared */}
+          {(lifecycleState === "certified" || lifecycleState === "shared") && property.reports?.[0] && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = `/api/reports/${property.reports[0].id}/pdf`;
+                  a.download = "";
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                }}
+                title="Download PDF"
+              >
+                <Download className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = `/api/reports/${property.reports[0].id}/word`;
+                  a.download = "";
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                }}
+                title="Download Word"
+              >
+                <FileDown className="h-3.5 w-3.5" />
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -1248,8 +1298,8 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         </div>
       )}
 
-      {/* Construction Encroachment: Project Info Card */}
-      {reportType === "construction_encroachment" && (
+      {/* Construction Encroachment: Project Info Card — assessment phases only */}
+      {(lifecycleState === "assessing" || lifecycleState === "report_draft") && reportType === "construction_encroachment" && (
         <Card>
           <CardHeader
             className="pb-2 cursor-pointer hover:bg-muted/50 transition-colors"
@@ -1338,8 +1388,8 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         </Card>
       )}
 
-      {/* Site Information */}
-      <Card>
+      {/* Site Information — assessment phases only */}
+      {(lifecycleState === "assessing" || lifecycleState === "report_draft") && <Card>
         <CardHeader
           className="pb-2 cursor-pointer hover:bg-muted/50 transition-colors"
           onClick={() => setSiteInfoOpen((v) => !v)}
@@ -1430,10 +1480,10 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             </div>
           </CardContent>
         )}
-      </Card>
+      </Card>}
 
-      {/* Valuation Report Settings */}
-      {(property.reportType === "tree_valuation" || property.reportType === "real_estate_package") && (
+      {/* Valuation Report Settings — assessment phases only */}
+      {(lifecycleState === "assessing" || lifecycleState === "report_draft") && (property.reportType === "tree_valuation" || property.reportType === "real_estate_package") && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -1533,8 +1583,8 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         </Card>
       )}
 
-      {/* Protected Trees Permit Warning Banner */}
-      {trees.some((t) => t.isProtected) && (
+      {/* Protected Trees Permit Warning Banner — assessment phases only */}
+      {(lifecycleState === "assessing" || lifecycleState === "report_draft") && trees.some((t) => t.isProtected) && (
         <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
           <ShieldCheck className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
           <p className="text-sm text-amber-800">
@@ -1566,10 +1616,62 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
       )}
 
       {/* First-use hint for tree placement */}
-      {trees.length === 0 && (
+      {lifecycleState === "no_trees" && (
         <OnboardingHint hintId="assessment_first_tree" className="mb-3">
           Tap the map to place a tree, or use + Add Tree to enter data manually.
         </OnboardingHint>
+      )}
+
+      {/* Tree Readiness Checklist — assessing with incomplete trees */}
+      {lifecycleState === "assessing" && incompleteTrees.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-medium text-amber-900 mb-2">
+            {incompleteTrees.length} tree{incompleteTrees.length !== 1 ? "s" : ""} need{incompleteTrees.length === 1 ? "s" : ""} assessment data before generating a report
+          </p>
+          <div className="space-y-1">
+            {incompleteTrees.slice(0, 5).map((t) => (
+              <button
+                key={t.id}
+                onClick={() => handleSelectTreeFromList(t.id)}
+                className="flex items-center gap-2 text-xs text-amber-800 hover:text-amber-950 w-full text-left"
+              >
+                <span className="font-mono">#{t.treeNumber}</span>
+                <span>{t.speciesCommon || "Unidentified"}</span>
+                <span className="text-amber-600">
+                  — missing{" "}
+                  {[
+                    !t.speciesCommon?.trim() && "species",
+                    (!t.dbhInches || t.dbhInches <= 0) && "DBH",
+                    (!t.conditionRating || t.conditionRating <= 0) && "condition",
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
+                </span>
+              </button>
+            ))}
+            {incompleteTrees.length > 5 && (
+              <p className="text-xs text-amber-600">+ {incompleteTrees.length - 5} more</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Ready to Generate prompt — assessing with all trees complete */}
+      {lifecycleState === "assessing" && allTreesComplete && (
+        <div className="rounded-lg border border-forest/20 bg-forest/5 p-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              All {trees.length} tree{trees.length !== 1 ? "s" : ""} assessed
+            </p>
+            <p className="text-xs text-muted-foreground">Ready to generate your report</p>
+          </div>
+          <Link href={`/properties/${property.id}/report`}>
+            <Button className="bg-forest hover:bg-forest-light">
+              <FileText className="h-4 w-4 mr-2" />
+              Generate Report
+            </Button>
+          </Link>
+        </div>
       )}
 
       {/* Main Area: Tree List + Map + Side Panel */}
@@ -1652,6 +1754,16 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          handleSelectTreeFromList(tree.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-neutral-200 text-muted-foreground hover:text-foreground flex-shrink-0"
+                        title={`Edit Tree #${tree.treeNumber}`}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
                           handleDeleteRequest(tree.id);
                         }}
                         className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 flex-shrink-0"
@@ -1668,6 +1780,21 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
 
         {/* Map area — with relative positioning for overlays */}
         <div className="w-full md:flex-1 relative" style={{ minHeight: 400 }}>
+          {/* Map empty state overlay — no trees */}
+          {trees.length === 0 && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+              <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border p-6 text-center max-w-xs pointer-events-auto">
+                <TreePine className="h-8 w-8 text-forest mx-auto mb-3" />
+                <p className="text-sm font-medium text-foreground mb-1">
+                  Start your assessment
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Tap the map to place your first tree, or it will be placed at the property center.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Tree list toggle button (when list is hidden) */}
           {!showTreeList && trees.length > 0 && (
             <button
@@ -1679,8 +1806,8 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             </button>
           )}
 
-          {/* Tree count progress badge */}
-          {trees.length > 0 && (
+          {/* Tree count progress badge — assessing only */}
+          {lifecycleState === "assessing" && trees.length > 0 && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-neutral-50/95 backdrop-blur-sm rounded-full shadow-md border px-3 py-1.5 text-xs font-medium flex items-center gap-2">
               <TreePine className="h-3.5 w-3.5 text-forest" />
               <span>
@@ -1845,13 +1972,15 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         )}
       </div>
 
-      {/* Summary Panel */}
-      <TreeSummaryPanel
-        trees={trees}
-        selectedTreeId={selectedTreeId}
-        onSelectTree={handleSelectTreeFromSummary}
-        reportType={reportType}
-      />
+      {/* Summary Panel — assessment phases only */}
+      {(lifecycleState === "assessing" || lifecycleState === "report_draft") && (
+        <TreeSummaryPanel
+          trees={trees}
+          selectedTreeId={selectedTreeId}
+          onSelectTree={handleSelectTreeFromSummary}
+          reportType={reportType}
+        />
+      )}
 
       {/* Delete Tree Confirmation Dialog */}
       <AlertDialog open={!!deleteConfirmTreeId} onOpenChange={(open) => !open && setDeleteConfirmTreeId(null)}>
