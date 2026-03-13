@@ -408,7 +408,7 @@ export default async function SharedPropertyPage({
 
   if (!property) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#FEFDFB]">
         <div className="text-center max-w-md px-6">
           <div className="inline-flex items-center gap-2 mb-6">
             <TreePine className="h-6 w-6 text-[#1D4E3E]" />
@@ -528,10 +528,10 @@ export default async function SharedPropertyPage({
     REPORT_TYPE_LABELS[report?.reportType ?? ""] ?? "Arborist Report";
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-[#FEFDFB]">
       {/* ==== A. Branded Header ==== */}
-      <header className="bg-white border-b">
-        <div className="max-w-2xl mx-auto px-5 py-8">
+      <header className="bg-white border-b border-border">
+        <div className="max-w-4xl mx-auto px-6 md:px-10 py-8">
           {/* Company logo */}
           {arborist?.companyLogoUrl && (
             /* eslint-disable-next-line @next/next/no-img-element */
@@ -543,7 +543,7 @@ export default async function SharedPropertyPage({
           )}
 
           {/* Report type label */}
-          <p className="text-xs font-semibold uppercase tracking-wider text-forest mb-1">
+          <p className="text-[10px] font-mono uppercase tracking-widest text-[#1D4E3E] mb-1">
             {isRealEstatePackage
               ? (isCertified ? "Certified Tree Canopy Report" : "Draft — Pending Certification")
               : isValuation
@@ -578,7 +578,7 @@ export default async function SharedPropertyPage({
 
           {/* Certification date */}
           {isCertified && (report?.certifiedAt || report?.originalCertifiedAt) && (
-            <p className="flex items-center gap-1.5 text-sm text-green-700 mt-2">
+            <p className="flex items-center gap-1.5 text-sm text-[#1D4E3E] mt-2">
               <CheckCircle2 className="h-4 w-4" />
               Certified{" "}
               {new Date(
@@ -589,14 +589,14 @@ export default async function SharedPropertyPage({
                 day: "numeric",
               })}
               {report?.amendmentNumber != null && report.amendmentNumber > 0 && !isAmending && (
-                <span className="text-green-600 text-xs ml-1">(Amended)</span>
+                <span className="text-[#3D7D68] text-xs ml-1">(Amended)</span>
               )}
             </p>
           )}
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-5 py-8 space-y-8">
+      <main className="max-w-4xl mx-auto px-6 md:px-10 py-8 space-y-8">
         {/* ==== B. In-Progress Banner (not certified) ==== */}
         {!isCertified && (
           <section>
@@ -622,8 +622,8 @@ export default async function SharedPropertyPage({
         {/* ==== C. Client Note ==== */}
         {isCertified && report?.clientNote && (
           <section>
-            <div className="bg-forest/5 border border-forest/20 rounded-lg p-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-forest/70 mb-2 flex items-center gap-1.5">
+            <div className="bg-[#1D4E3E]/5 border border-[#1D4E3E]/20 rounded-lg p-5">
+              <p className="text-[10px] font-mono uppercase tracking-widest text-[#1D4E3E]/70 mb-2 flex items-center gap-1.5">
                 <MessageSquare className="h-3.5 w-3.5" />
                 From Your Arborist
               </p>
@@ -637,7 +637,7 @@ export default async function SharedPropertyPage({
         {/* ==== D. Plain-Language Summary ==== */}
         {isCertified && summary && (
           <section>
-            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-3">
               {reportTypeLabel}
             </p>
 
@@ -668,11 +668,11 @@ export default async function SharedPropertyPage({
         {/* ==== D2. Prominent Canopy Value (real_estate_package only) ==== */}
         {isCertified && isRealEstatePackage && canopyTotal > 0 && (
           <section>
-            <div className="bg-forest/5 border border-forest/20 rounded-xl p-8 text-center">
-              <p className="text-xs font-semibold uppercase tracking-wider text-forest/70 mb-2">
+            <div className="bg-[#1D4E3E]/5 border border-[#1D4E3E]/20 rounded-xl p-8 text-center">
+              <p className="text-[10px] font-mono uppercase tracking-widest text-[#1D4E3E]/70 mb-2">
                 Total Certified Tree Canopy Value
               </p>
-              <p className="text-4xl sm:text-5xl font-bold font-mono text-forest tracking-tight">
+              <p className="text-4xl sm:text-5xl font-bold font-mono text-[#1D4E3E] tracking-tight">
                 {fmtCurrency(canopyTotal)}
               </p>
               <p className="text-sm text-neutral-500 mt-3">
@@ -692,11 +692,11 @@ export default async function SharedPropertyPage({
         {/* ==== D3. Prominent Total Appraised Value (standalone tree_valuation only) ==== */}
         {isCertified && isValuation && canopyTotal > 0 && (
           <section>
-            <div className="bg-forest/5 border border-forest/20 rounded-xl p-8 text-center">
-              <p className="text-xs font-semibold uppercase tracking-wider text-forest/70 mb-2">
+            <div className="bg-[#1D4E3E]/5 border border-[#1D4E3E]/20 rounded-xl p-8 text-center">
+              <p className="text-[10px] font-mono uppercase tracking-widest text-[#1D4E3E]/70 mb-2">
                 Total Appraised Value
               </p>
-              <p className="text-4xl sm:text-5xl font-bold font-mono text-forest tracking-tight">
+              <p className="text-4xl sm:text-5xl font-bold font-mono text-[#1D4E3E] tracking-tight">
                 {fmtCurrency(canopyTotal)}
               </p>
               <p className="text-sm text-neutral-500 mt-3">
@@ -721,7 +721,7 @@ export default async function SharedPropertyPage({
         {/* ==== E. Tree Overview Cards ==== */}
         {isCertified && property.trees.length > 0 && (
           <section>
-            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3 flex items-center gap-2">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-3 flex items-center gap-2">
               <TreePine className="h-4 w-4" />
               Trees on This Property ({property.trees.length})
             </p>
@@ -767,7 +767,7 @@ export default async function SharedPropertyPage({
                             </h3>
                           </div>
                           {tree.valuationAppraisedValue != null && tree.valuationAppraisedValue > 0 && (
-                            <span className="font-mono font-semibold text-forest text-sm shrink-0 ml-3">
+                            <span className="font-mono font-semibold text-[#1D4E3E] text-sm shrink-0 ml-3">
                               {fmtCurrency(tree.valuationAppraisedValue)}
                             </span>
                           )}
@@ -779,7 +779,7 @@ export default async function SharedPropertyPage({
                           <span className="text-neutral-400">·</span>
                           <span>{CONDITION_FRIENDLY[tree.conditionRating] ?? "Not assessed"}</span>
                         </div>
-                        <p className="text-xs text-forest mt-1.5 ml-5 group-open:hidden">
+                        <p className="text-xs text-[#1D4E3E] mt-1.5 ml-5 group-open:hidden">
                           View details ▸
                         </p>
                       </summary>
@@ -889,7 +889,7 @@ export default async function SharedPropertyPage({
         {/* F1: No-permit jurisdiction (e.g. Reno) — positive framing */}
         {isCertified && report && cityContact && cityContact.jurisdictionType === "no_permit" && (
           <section>
-            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-3">
               What To Do With This Report
             </p>
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-6">
@@ -919,12 +919,12 @@ export default async function SharedPropertyPage({
             {/* City contact info for public right-of-way questions */}
             {cityContact.phone && (
               <div className="bg-white rounded-lg border p-4 space-y-2 mt-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">
+                <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-2">
                   {cityContact.department}
                 </p>
                 <a
                   href={`tel:${cityContact.phone.replace(/[^\d+]/g, "")}`}
-                  className="flex items-center gap-2 text-sm text-forest hover:text-forest-light font-medium"
+                  className="flex items-center gap-2 text-sm text-[#1D4E3E] hover:text-[#2A6B55] font-medium"
                 >
                   <Phone className="h-3.5 w-3.5" />
                   {cityContact.phone}
@@ -943,7 +943,7 @@ export default async function SharedPropertyPage({
         {/* F2: Regional authority (e.g. TRPA) — amber warning callout + standard guidance */}
         {isCertified && report && cityContact && cityContact.jurisdictionType === "regional" && (
           <section>
-            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-4">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-4">
               What Happens Next
             </p>
             <div className="space-y-4">
@@ -967,7 +967,7 @@ export default async function SharedPropertyPage({
               {/* Step 1: Submit */}
               <div className="flex gap-4">
                 <div className="flex-none flex items-start">
-                  <span className="h-7 w-7 rounded-full bg-forest text-white text-sm font-semibold flex items-center justify-center">
+                  <span className="h-7 w-7 rounded-full bg-[#1D4E3E] text-white text-sm font-semibold flex items-center justify-center">
                     1
                   </span>
                 </div>
@@ -987,7 +987,7 @@ export default async function SharedPropertyPage({
                       href={cityContact.portalUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 mt-2 px-4 py-2 bg-forest hover:bg-forest-light text-white rounded-lg text-sm font-medium transition-colors"
+                      className="inline-flex items-center gap-2 mt-2 px-4 py-2 bg-[#1D4E3E] hover:bg-[#2A6B55] text-white rounded-lg text-sm font-medium transition-colors"
                     >
                       Open Agency Portal
                       <ExternalLink className="h-3.5 w-3.5" />
@@ -999,7 +999,7 @@ export default async function SharedPropertyPage({
               {/* Step 2: Required Documents */}
               <div className="flex gap-4">
                 <div className="flex-none flex items-start">
-                  <span className="h-7 w-7 rounded-full bg-forest text-white text-sm font-semibold flex items-center justify-center">
+                  <span className="h-7 w-7 rounded-full bg-[#1D4E3E] text-white text-sm font-semibold flex items-center justify-center">
                     2
                   </span>
                 </div>
@@ -1013,7 +1013,7 @@ export default async function SharedPropertyPage({
                         key={doc}
                         className="flex items-center gap-2 text-sm text-neutral-600"
                       >
-                        <CheckCircle2 className="h-3.5 w-3.5 text-forest shrink-0" />
+                        <CheckCircle2 className="h-3.5 w-3.5 text-[#1D4E3E] shrink-0" />
                         {doc}
                       </li>
                     ))}
@@ -1029,7 +1029,7 @@ export default async function SharedPropertyPage({
               {/* Step 3: Agency Review */}
               <div className="flex gap-4">
                 <div className="flex-none flex items-start">
-                  <span className="h-7 w-7 rounded-full bg-forest text-white text-sm font-semibold flex items-center justify-center">
+                  <span className="h-7 w-7 rounded-full bg-[#1D4E3E] text-white text-sm font-semibold flex items-center justify-center">
                     3
                   </span>
                 </div>
@@ -1046,7 +1046,7 @@ export default async function SharedPropertyPage({
               {/* Step 4: After Approval */}
               <div className="flex gap-4">
                 <div className="flex-none flex items-start">
-                  <span className="h-7 w-7 rounded-full bg-forest text-white text-sm font-semibold flex items-center justify-center">
+                  <span className="h-7 w-7 rounded-full bg-[#1D4E3E] text-white text-sm font-semibold flex items-center justify-center">
                     4
                   </span>
                 </div>
@@ -1062,13 +1062,13 @@ export default async function SharedPropertyPage({
 
               {/* Agency Contact Info Card */}
               <div className="bg-white rounded-lg border p-4 space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">
+                <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-2">
                   {cityContact.department}
                 </p>
                 {cityContact.phone && (
                   <a
                     href={`tel:${cityContact.phone.replace(/[^\d+]/g, "")}`}
-                    className="flex items-center gap-2 text-sm text-forest hover:text-forest-light font-medium"
+                    className="flex items-center gap-2 text-sm text-[#1D4E3E] hover:text-[#2A6B55] font-medium"
                   >
                     <Phone className="h-3.5 w-3.5" />
                     {cityContact.phone}
@@ -1077,7 +1077,7 @@ export default async function SharedPropertyPage({
                 {cityContact.email && (
                   <a
                     href={`mailto:${cityContact.email}`}
-                    className="flex items-center gap-2 text-sm text-forest hover:text-forest-light font-medium"
+                    className="flex items-center gap-2 text-sm text-[#1D4E3E] hover:text-[#2A6B55] font-medium"
                   >
                     <Mail className="h-3.5 w-3.5" />
                     {cityContact.email}
@@ -1131,14 +1131,14 @@ export default async function SharedPropertyPage({
          cityContact.jurisdictionType !== "no_permit" &&
          cityContact.jurisdictionType !== "regional" && (
           <section>
-            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-4">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-4">
               What Happens Next
             </p>
             <div className="space-y-4">
               {/* Step 1: Submit */}
               <div className="flex gap-4">
                 <div className="flex-none flex items-start">
-                  <span className="h-7 w-7 rounded-full bg-forest text-white text-sm font-semibold flex items-center justify-center">
+                  <span className="h-7 w-7 rounded-full bg-[#1D4E3E] text-white text-sm font-semibold flex items-center justify-center">
                     1
                   </span>
                 </div>
@@ -1159,7 +1159,7 @@ export default async function SharedPropertyPage({
                       href={cityContact.portalUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 mt-2 px-4 py-2 bg-forest hover:bg-forest-light text-white rounded-lg text-sm font-medium transition-colors"
+                      className="inline-flex items-center gap-2 mt-2 px-4 py-2 bg-[#1D4E3E] hover:bg-[#2A6B55] text-white rounded-lg text-sm font-medium transition-colors"
                     >
                       {cityContact.jurisdictionType === "county" ? "Open County Portal" : "Open City Portal"}
                       <ExternalLink className="h-3.5 w-3.5" />
@@ -1170,7 +1170,7 @@ export default async function SharedPropertyPage({
                       href={cityContact.websiteUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm text-forest hover:text-forest-light mt-1.5 font-medium"
+                      className="inline-flex items-center gap-1 text-sm text-[#1D4E3E] hover:text-[#2A6B55] mt-1.5 font-medium"
                     >
                       {cityContact.jurisdictionType === "county" ? "Visit County Website" : "Visit City Website"}
                       <ExternalLink className="h-3.5 w-3.5" />
@@ -1182,7 +1182,7 @@ export default async function SharedPropertyPage({
               {/* Step 2: Required Documents */}
               <div className="flex gap-4">
                 <div className="flex-none flex items-start">
-                  <span className="h-7 w-7 rounded-full bg-forest text-white text-sm font-semibold flex items-center justify-center">
+                  <span className="h-7 w-7 rounded-full bg-[#1D4E3E] text-white text-sm font-semibold flex items-center justify-center">
                     2
                   </span>
                 </div>
@@ -1196,7 +1196,7 @@ export default async function SharedPropertyPage({
                         key={doc}
                         className="flex items-center gap-2 text-sm text-neutral-600"
                       >
-                        <CheckCircle2 className="h-3.5 w-3.5 text-forest shrink-0" />
+                        <CheckCircle2 className="h-3.5 w-3.5 text-[#1D4E3E] shrink-0" />
                         {doc}
                       </li>
                     ))}
@@ -1212,7 +1212,7 @@ export default async function SharedPropertyPage({
               {/* Step 3: Review */}
               <div className="flex gap-4">
                 <div className="flex-none flex items-start">
-                  <span className="h-7 w-7 rounded-full bg-forest text-white text-sm font-semibold flex items-center justify-center">
+                  <span className="h-7 w-7 rounded-full bg-[#1D4E3E] text-white text-sm font-semibold flex items-center justify-center">
                     3
                   </span>
                 </div>
@@ -1229,7 +1229,7 @@ export default async function SharedPropertyPage({
               {/* Step 4: After Approval */}
               <div className="flex gap-4">
                 <div className="flex-none flex items-start">
-                  <span className="h-7 w-7 rounded-full bg-forest text-white text-sm font-semibold flex items-center justify-center">
+                  <span className="h-7 w-7 rounded-full bg-[#1D4E3E] text-white text-sm font-semibold flex items-center justify-center">
                     4
                   </span>
                 </div>
@@ -1245,13 +1245,13 @@ export default async function SharedPropertyPage({
 
               {/* Contact Info Card */}
               <div className="bg-white rounded-lg border p-4 space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">
+                <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-2">
                   {property.city} {cityContact.department}
                 </p>
                 {cityContact.phone && (
                   <a
                     href={`tel:${cityContact.phone.replace(/[^\d+]/g, "")}`}
-                    className="flex items-center gap-2 text-sm text-forest hover:text-forest-light font-medium"
+                    className="flex items-center gap-2 text-sm text-[#1D4E3E] hover:text-[#2A6B55] font-medium"
                   >
                     <Phone className="h-3.5 w-3.5" />
                     {cityContact.phone}
@@ -1260,7 +1260,7 @@ export default async function SharedPropertyPage({
                 {cityContact.email && (
                   <a
                     href={`mailto:${cityContact.email}`}
-                    className="flex items-center gap-2 text-sm text-forest hover:text-forest-light font-medium"
+                    className="flex items-center gap-2 text-sm text-[#1D4E3E] hover:text-[#2A6B55] font-medium"
                   >
                     <Mail className="h-3.5 w-3.5" />
                     {cityContact.email}
@@ -1315,43 +1315,43 @@ export default async function SharedPropertyPage({
           !cityContact && (
             <section>
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">
+                <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-3">
                   Submitting Your Report
-                </h3>
-                <p className="text-gray-700 text-sm">
+                </p>
+                <p className="text-neutral-700 text-sm">
                   Your arborist report is ready to submit. Here&apos;s the general process
                   for tree removal permits in California cities:
                 </p>
                 <div className="space-y-3">
                   <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-forest/10 text-forest flex items-center justify-center text-sm font-semibold">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#1D4E3E]/10 text-[#1D4E3E] flex items-center justify-center text-sm font-mono font-semibold">
                       1
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">Contact your city&apos;s Planning Department</p>
-                      <p className="text-sm text-gray-600">
+                      <p className="font-medium text-neutral-900">Contact your city&apos;s Planning Department</p>
+                      <p className="text-sm text-neutral-600">
                         Search for &ldquo;{property.city} tree removal permit&rdquo; or call your city hall to find the right department.
                       </p>
                     </div>
                   </div>
                   <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-forest/10 text-forest flex items-center justify-center text-sm font-semibold">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#1D4E3E]/10 text-[#1D4E3E] flex items-center justify-center text-sm font-mono font-semibold">
                       2
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">Request a Tree Removal Permit Application</p>
-                      <p className="text-sm text-gray-600">
+                      <p className="font-medium text-neutral-900">Request a Tree Removal Permit Application</p>
+                      <p className="text-sm text-neutral-600">
                         Most cities have a specific form. Ask what documents are required — your arborist report will be one of them.
                       </p>
                     </div>
                   </div>
                   <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-forest/10 text-forest flex items-center justify-center text-sm font-semibold">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#1D4E3E]/10 text-[#1D4E3E] flex items-center justify-center text-sm font-mono font-semibold">
                       3
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">Submit the application with this report</p>
-                      <p className="text-sm text-gray-600">
+                      <p className="font-medium text-neutral-900">Submit the application with this report</p>
+                      <p className="text-sm text-neutral-600">
                         Download the PDF below and include it with your permit application.
                       </p>
                     </div>
@@ -1360,10 +1360,10 @@ export default async function SharedPropertyPage({
 
                 {/* Arborist contact nudge */}
                 {arborist && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">
+                  <div className="mt-4 p-4 bg-neutral-50 rounded-lg">
+                    <p className="text-sm text-neutral-600">
                       Your arborist can help with the submission process.{" "}
-                      <span className="font-medium text-gray-700">{arborist.name}</span>{" "}
+                      <span className="font-medium text-neutral-700">{arborist.name}</span>{" "}
                       is available to answer questions about your report and permit requirements.
                     </p>
                   </div>
@@ -1375,7 +1375,7 @@ export default async function SharedPropertyPage({
         {/* F5: Non-removal report type next steps (generic) */}
         {isCertified && nextSteps && (
           <section>
-            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-3">
               What Happens Next
             </p>
             <div className="bg-white rounded-lg border p-5">
@@ -1392,7 +1392,7 @@ export default async function SharedPropertyPage({
         {/* ==== F6. About This Report (real_estate_package only) ==== */}
         {isCertified && isRealEstatePackage && (
           <section>
-            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-3">
               About This Report
             </p>
             <div className="bg-white rounded-lg border p-5 space-y-3">
@@ -1414,7 +1414,7 @@ export default async function SharedPropertyPage({
         {/* ==== F7. About This Appraisal (standalone tree_valuation only) ==== */}
         {isCertified && isValuation && (
           <section>
-            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-3">
               About This Appraisal
             </p>
             <div className="bg-white rounded-lg border p-5 space-y-3">
@@ -1466,7 +1466,7 @@ export default async function SharedPropertyPage({
          timeline &&
          timelineProgress && (
           <section>
-            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-3">
               Permit Processing Timeline
             </p>
             <div className="bg-white rounded-lg border p-5">
@@ -1497,8 +1497,8 @@ export default async function SharedPropertyPage({
                         <div
                           className={[
                             "w-3.5 h-3.5 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center",
-                            isCompleted ? "bg-forest border-forest" : "",
-                            isActive && !isTerminalNegative ? "bg-forest border-forest ring-4 ring-forest/20" : "",
+                            isCompleted ? "bg-[#1D4E3E] border-[#1D4E3E]" : "",
+                            isActive && !isTerminalNegative ? "bg-[#1D4E3E] border-[#1D4E3E] ring-4 ring-[#1D4E3E]/20" : "",
                             isActive && timelineProgress.terminalStatus === "denied" ? "bg-red-500 border-red-500 ring-4 ring-red-100" : "",
                             isActive && timelineProgress.terminalStatus === "revision_requested" ? "bg-amber-500 border-amber-500 ring-4 ring-amber-100" : "",
                             isFuture ? "bg-white border-neutral-300" : "",
@@ -1513,7 +1513,7 @@ export default async function SharedPropertyPage({
                           <div
                             className={[
                               "w-0.5 flex-1 min-h-[24px]",
-                              isCompleted && !isFuture ? "bg-forest" : "bg-neutral-200",
+                              isCompleted && !isFuture ? "bg-[#1D4E3E]" : "bg-neutral-200",
                             ].filter(Boolean).join(" ")}
                           />
                         )}
@@ -1525,7 +1525,7 @@ export default async function SharedPropertyPage({
                           className={[
                             "text-sm",
                             isCompleted ? "font-medium text-neutral-900" : "",
-                            isActive && !isTerminalNegative ? "font-medium text-forest" : "",
+                            isActive && !isTerminalNegative ? "font-medium text-[#1D4E3E]" : "",
                             isActive && timelineProgress.terminalStatus === "denied" ? "font-medium text-red-700" : "",
                             isActive && timelineProgress.terminalStatus === "revision_requested" ? "font-medium text-amber-700" : "",
                             isFuture ? "text-neutral-400" : "",
@@ -1586,7 +1586,7 @@ export default async function SharedPropertyPage({
                     {" "}Contact {cityContact.department} at{" "}
                     <a
                       href={`tel:${cityContact.phone.replace(/[^\d+]/g, "")}`}
-                      className="text-forest hover:text-forest-light font-medium not-italic"
+                      className="text-[#1D4E3E] hover:text-[#2A6B55] font-medium not-italic"
                     >
                       {cityContact.phone}
                     </a>{" "}
@@ -1602,7 +1602,7 @@ export default async function SharedPropertyPage({
         {isCertified && report && (
           <section>
             <div className="bg-white rounded-lg border p-6 shadow-sm text-center">
-              <FileText className="h-8 w-8 text-forest mx-auto mb-3" />
+              <FileText className="h-8 w-8 text-[#1D4E3E] mx-auto mb-3" />
               {cityContact?.jurisdictionType === "no_permit" ? (
                 <p className="text-sm text-neutral-600 mb-4 max-w-md mx-auto">
                   Download the full certified report for your records, insurance, or real estate documentation.
@@ -1637,7 +1637,7 @@ export default async function SharedPropertyPage({
               )}
               <a
                 href={`/api/reports/${report.id}/pdf?token=${token}`}
-                className="inline-flex items-center gap-2 px-8 py-3 bg-forest hover:bg-forest-light text-white rounded-lg font-medium text-sm transition-colors shadow-sm w-full sm:w-auto justify-center"
+                className="inline-flex items-center gap-2 px-8 py-3 bg-[#1D4E3E] hover:bg-[#2A6B55] text-white rounded-lg font-medium text-sm transition-colors shadow-sm w-full sm:w-auto justify-center"
                 download
               >
                 <Download className="h-4 w-4" />
@@ -1652,8 +1652,8 @@ export default async function SharedPropertyPage({
           <section>
             <div className="bg-white rounded-lg border p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-4">
-                <DollarSign className="h-5 w-5 text-forest" />
-                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                <DollarSign className="h-5 w-5 text-[#1D4E3E]" />
+                <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93]">
                   Amount Due
                 </p>
               </div>
@@ -1676,7 +1676,7 @@ export default async function SharedPropertyPage({
 
               {report.billingPaymentInstructions && (
                 <div className="bg-neutral-50 rounded-lg p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-1">
+                  <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-1">
                     Payment Instructions
                   </p>
                   <p className="text-sm text-neutral-700 whitespace-pre-wrap">
@@ -1705,7 +1705,7 @@ export default async function SharedPropertyPage({
         {isCertified && isRealEstatePackage && report?.reRealtorName && (
           <section>
             <div className="bg-violet-50 border border-violet-200 rounded-lg p-6 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wider text-violet-600 mb-4">
+              <p className="text-[10px] font-mono uppercase tracking-widest text-violet-600 mb-4">
                 Listing Agent
               </p>
               <div className="text-sm space-y-1 mb-4">
@@ -1744,7 +1744,7 @@ export default async function SharedPropertyPage({
         {arborist && (
           <section>
             <div className="bg-white rounded-lg border p-6 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-4">
+              <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-4">
                 Your Arborist
               </p>
               <div className="flex items-start gap-4 mb-4">
@@ -1776,7 +1776,7 @@ export default async function SharedPropertyPage({
                   {arborist.companyPhone && (
                     <a
                       href={`tel:${arborist.companyPhone}`}
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-forest/5 hover:bg-forest/10 text-forest rounded-lg text-sm font-medium transition-colors border border-forest/20"
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1D4E3E]/5 hover:bg-[#1D4E3E]/10 text-[#1D4E3E] rounded-lg text-sm font-medium transition-colors border border-[#1D4E3E]/20"
                     >
                       <Phone className="h-4 w-4" />
                       Call
@@ -1785,7 +1785,7 @@ export default async function SharedPropertyPage({
                   {arborist.companyEmail && (
                     <a
                       href={`mailto:${arborist.companyEmail}`}
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-forest/5 hover:bg-forest/10 text-forest rounded-lg text-sm font-medium transition-colors border border-forest/20"
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1D4E3E]/5 hover:bg-[#1D4E3E]/10 text-[#1D4E3E] rounded-lg text-sm font-medium transition-colors border border-[#1D4E3E]/20"
                     >
                       <Mail className="h-4 w-4" />
                       Email
@@ -1800,7 +1800,7 @@ export default async function SharedPropertyPage({
                   href={arborist.companyWebsite}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 text-sm text-forest hover:text-forest-light mt-3 font-medium"
+                  className="flex items-center justify-center gap-1.5 text-sm text-[#1D4E3E] hover:text-[#2A6B55] mt-3 font-medium"
                 >
                   <Globe className="h-3.5 w-3.5" />
                   {arborist.companyWebsite.replace(/^https?:\/\//, "")}
@@ -1817,8 +1817,8 @@ export default async function SharedPropertyPage({
           <section>
             <div className="bg-white rounded-lg border p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-4">
-                <DollarSign className="h-5 w-5 text-forest" />
-                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                <DollarSign className="h-5 w-5 text-[#1D4E3E]" />
+                <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93]">
                   Amount Due
                 </p>
               </div>
@@ -1841,7 +1841,7 @@ export default async function SharedPropertyPage({
 
               {report.billingPaymentInstructions && (
                 <div className="bg-neutral-50 rounded-lg p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-1">
+                  <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-1">
                     Payment Instructions
                   </p>
                   <p className="text-sm text-neutral-700 whitespace-pre-wrap">
@@ -1855,9 +1855,11 @@ export default async function SharedPropertyPage({
       </main>
 
       {/* ==== K. Footer ==== */}
-      <footer className="border-t mt-12">
-        <div className="max-w-2xl mx-auto px-5 py-4 text-center text-xs text-neutral-400">
-          Powered by TreeCertify
+      <footer className="border-t border-border mt-12">
+        <div className="max-w-4xl mx-auto px-6 md:px-10 py-6 text-center">
+          <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93]">
+            Powered by TreeCertify
+          </p>
         </div>
       </footer>
     </div>
