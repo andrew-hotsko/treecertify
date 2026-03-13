@@ -73,7 +73,7 @@ function RatingInput({
         step="5"
         value={value ?? 75}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-1.5 accent-forest cursor-pointer"
+        className="w-full h-1.5 accent-[#1D4E3E] cursor-pointer"
       />
       {tip && <p className="text-[10px] text-muted-foreground">{tip}</p>}
     </div>
@@ -205,7 +205,7 @@ export function TreeValuationFields({
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-forest">
+        <span className="text-xs font-semibold uppercase tracking-wider text-[#1D4E3E]">
           CTLA Valuation (10th Ed.)
         </span>
       </div>
@@ -241,7 +241,7 @@ export function TreeValuationFields({
           <span className="text-xs font-medium uppercase tracking-wider text-neutral-600">
             Condition Rating
           </span>
-          <span className="font-mono text-xs font-semibold text-forest">
+          <span className="font-mono text-xs font-semibold text-[#1D4E3E]">
             Combined: {conditionPct.toFixed(1)}%
           </span>
         </div>
@@ -304,7 +304,7 @@ export function TreeValuationFields({
             userOverrodeSpeciesRef.current = true;
             update({ valuationSpeciesRating: Number(e.target.value) });
           }}
-          className="w-full h-1.5 accent-forest cursor-pointer"
+          className="w-full h-1.5 accent-[#1D4E3E] cursor-pointer"
         />
         {defaultSpeciesRating != null && (
           <p className="text-[10px] text-muted-foreground">
@@ -319,7 +319,7 @@ export function TreeValuationFields({
           <span className="text-xs font-medium uppercase tracking-wider text-neutral-600">
             Location Rating
           </span>
-          <span className="font-mono text-xs font-semibold text-forest">
+          <span className="font-mono text-xs font-semibold text-[#1D4E3E]">
             Combined: {locationPct.toFixed(1)}%
           </span>
         </div>
@@ -342,11 +342,11 @@ export function TreeValuationFields({
       </div>
 
       {/* Calculation Breakdown */}
-      <div className="rounded-lg border border-forest/20 bg-forest/5 p-3 space-y-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-forest">
+      <div className="rounded-lg border border-[#1D4E3E]/20 bg-[#1D4E3E]/5 p-3 space-y-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-[#1D4E3E]">
           Appraised Value
         </p>
-        <div className="space-y-1 text-xs text-forest">
+        <div className="space-y-1 text-xs text-[#1D4E3E]">
           <div className="flex justify-between">
             <span>Trunk Area</span>
             <span className="font-mono font-medium">{trunkArea.toFixed(1)} sq in</span>
@@ -355,7 +355,7 @@ export function TreeValuationFields({
             <span>× Unit Price</span>
             <span className="font-mono font-medium">${unitPrice.toFixed(2)}/sq in</span>
           </div>
-          <div className="flex justify-between border-t border-forest/10 pt-1">
+          <div className="flex justify-between border-t border-[#1D4E3E]/10 pt-1">
             <span>= Basic Value</span>
             <span className="font-mono font-medium">{formatCurrency(basicVal)}</span>
           </div>
@@ -372,9 +372,9 @@ export function TreeValuationFields({
             <span className="font-mono font-medium">{locationPct.toFixed(1)}%</span>
           </div>
         </div>
-        <div className="flex items-center justify-between border-t-2 border-forest/30 pt-2">
-          <span className="text-sm font-bold text-forest">APPRAISED VALUE</span>
-          <span className="font-mono text-xl font-bold text-forest">
+        <div className="flex items-center justify-between border-t-2 border-[#1D4E3E]/30 pt-2">
+          <span className="text-sm font-bold text-[#1D4E3E]">APPRAISED VALUE</span>
+          <span className="font-mono text-xl font-bold text-[#1D4E3E]">
             {formatCurrency(appraisedVal)}
           </span>
         </div>

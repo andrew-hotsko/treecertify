@@ -630,7 +630,7 @@ export function MobileFieldMode({
               <button
                 type="button"
                 onClick={goBack}
-                className="flex items-center gap-0.5 text-forest text-sm font-medium -ml-1"
+                className="flex items-center gap-0.5 text-[#1D4E3E] text-sm font-medium -ml-1"
                 style={{ minHeight: 44, minWidth: 44 }}
               >
                 <ChevronLeft className="h-5 w-5" />
@@ -675,7 +675,7 @@ export function MobileFieldMode({
                   <div
                     key={i}
                     className={`h-1 flex-1 rounded-full transition-colors ${
-                      isActive ? "bg-forest" : isPast ? "bg-forest/40" : "bg-neutral-200"
+                      isActive ? "bg-[#1D4E3E]" : isPast ? "bg-[#1D4E3E]/40" : "bg-neutral-200"
                     }`}
                   />
                 );
@@ -695,7 +695,7 @@ export function MobileFieldMode({
                   <button
                     type="button"
                     onClick={handleCopyFromLast}
-                    className="w-full h-12 rounded-lg border-2 border-dashed border-neutral-300 text-sm text-neutral-500 active:border-forest active:text-forest transition-colors flex items-center justify-center gap-2"
+                    className="w-full h-12 rounded-lg border-2 border-dashed border-neutral-300 text-sm text-neutral-500 active:border-[#1D4E3E] active:text-[#1D4E3E] transition-colors flex items-center justify-center gap-2"
                   >
                     <Copy className="h-4 w-4" />
                     Copy from Tree #{lastSavedTree.treeNumber} ({lastSavedTree.speciesCommon})
@@ -710,7 +710,7 @@ export function MobileFieldMode({
                     onClick={() => setSpeciesSheetOpen(true)}
                     className={`w-full h-14 rounded-xl border-2 px-4 text-left flex items-center justify-between transition-colors ${
                       speciesCommon
-                        ? "border-forest/30 bg-forest/5"
+                        ? "border-[#1D4E3E]/30 bg-[#1D4E3E]/5"
                         : "border-neutral-200 bg-neutral-50"
                     }`}
                   >
@@ -844,7 +844,7 @@ export function MobileFieldMode({
                                 ? "border-amber-500 bg-amber-50 text-amber-700"
                                 : opt.color === "blue"
                                 ? "border-blue-500 bg-blue-50 text-blue-700"
-                                : "border-forest bg-forest/10 text-forest"
+                                : "border-[#1D4E3E] bg-[#1D4E3E]/10 text-[#1D4E3E]"
                               : "border-neutral-200 text-neutral-600"
                           }`}
                         >
@@ -1051,11 +1051,11 @@ export function MobileFieldMode({
                       return (
                         <div key={cat.value} className="flex items-center gap-2 text-xs">
                           <span className={`h-4 w-4 rounded-full flex items-center justify-center ${
-                            has ? "bg-forest" : "bg-neutral-200"
+                            has ? "bg-[#1D4E3E]" : "bg-neutral-200"
                           }`}>
                             {has && <Check className="h-2.5 w-2.5 text-white" />}
                           </span>
-                          <span className={has ? "text-forest font-medium" : "text-neutral-400"}>
+                          <span className={has ? "text-[#1D4E3E] font-medium" : "text-neutral-400"}>
                             {cat.label} {cat.required && "(required)"}
                           </span>
                         </div>
@@ -1064,7 +1064,7 @@ export function MobileFieldMode({
                 </div>
 
                 {/* Camera button */}
-                <label className="flex items-center justify-center gap-2 h-14 rounded-xl border-2 border-dashed border-forest/30 text-forest cursor-pointer active:bg-forest/5 transition-colors">
+                <label className="flex items-center justify-center gap-2 h-14 rounded-xl border-2 border-dashed border-[#1D4E3E]/30 text-[#1D4E3E] cursor-pointer active:bg-[#1D4E3E]/5 transition-colors">
                   {uploadingPhoto ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
@@ -1196,7 +1196,7 @@ export function MobileFieldMode({
                       recommendedAction === "remove" ? "text-red-600" :
                       recommendedAction === "prune" ? "text-amber-600" :
                       recommendedAction === "monitor" ? "text-blue-600" :
-                      "text-forest"
+                      "text-[#1D4E3E]"
                     }`}>
                       {recommendedAction}
                     </span>
@@ -1331,7 +1331,7 @@ export function MobileFieldMode({
                 type="button"
                 onClick={goNext}
                 disabled={currentScreen === 2 && !canSave}
-                className="w-full h-14 bg-forest hover:bg-forest-light text-white text-base font-semibold rounded-xl"
+                className="w-full h-14 bg-[#1D4E3E] hover:bg-[#2A6B55] text-white text-base font-semibold rounded-xl"
               >
                 {currentScreen === 2 && !canSave
                   ? "Enter species & DBH to continue"
@@ -1344,7 +1344,7 @@ export function MobileFieldMode({
                   type="button"
                   onClick={handleSaveAndNext}
                   disabled={saving || !canSave}
-                  className="w-full h-14 bg-forest hover:bg-forest-light text-white text-base font-semibold rounded-xl gap-2"
+                  className="w-full h-14 bg-[#1D4E3E] hover:bg-[#2A6B55] text-white text-base font-semibold rounded-xl gap-2"
                 >
                   {saving ? (
                     <Loader2 className="h-5 w-5 animate-spin" />

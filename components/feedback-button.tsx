@@ -157,7 +157,7 @@ export function FeedbackButton() {
       <button
         data-feedback-trigger
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 md:bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-forest text-white shadow-lg hover:bg-forest-light hover:shadow-xl transition-all active:scale-[0.98] print:hidden"
+        className="fixed bottom-20 md:bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-[#1D4E3E] text-white shadow-lg hover:bg-[#2A6B55] hover:shadow-xl transition-all active:scale-[0.98] print:hidden"
         aria-label="Send feedback"
       >
         <MessageSquarePlus className="h-5 w-5" />
@@ -216,7 +216,7 @@ export function FeedbackButton() {
             {/* Screenshot */}
             <div className="flex items-center gap-3">
               {screenshotUrl ? (
-                <div className="flex items-center gap-2 text-sm text-forest">
+                <div className="flex items-center gap-2 text-sm text-[#1D4E3E]">
                   <Check className="h-4 w-4" />
                   Screenshot attached
                 </div>
@@ -252,7 +252,7 @@ export function FeedbackButton() {
               <Button
                 onClick={handleSubmit}
                 disabled={!description.trim() || submitting}
-                className="bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform"
+                className="bg-[#1D4E3E] hover:bg-[#2A6B55] active:scale-[0.98] transition-transform"
               >
                 {submitting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

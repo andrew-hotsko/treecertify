@@ -550,7 +550,7 @@ export function QuickReview({
                           {CONDITION_LABELS[tree.conditionRating] || "Unknown"}
                         </span>
                         {tree.isProtected && (
-                          <span className="text-xs text-forest font-medium flex items-center gap-1">
+                          <span className="text-xs text-[#1D4E3E] font-medium flex items-center gap-1">
                             <span className="text-[10px]">&#128737;</span>{" "}
                             Protected
                           </span>
@@ -571,7 +571,7 @@ export function QuickReview({
           /* Certified: Share + Download */
           <div className="flex gap-3 max-w-2xl mx-auto">
             <Button
-              className="flex-1 bg-forest hover:bg-forest-light h-[52px] text-base"
+              className="flex-1 bg-[#1D4E3E] hover:bg-[#2A6B55] h-[52px] text-base"
               onClick={shareWithClient}
             >
               <Share2 className="h-4.5 w-4.5 mr-2" />
@@ -610,7 +610,7 @@ export function QuickReview({
           /* No flags: Certify */
           <div className="max-w-2xl mx-auto">
             <Button
-              className="w-full bg-forest hover:bg-forest-light h-[52px] text-base"
+              className="w-full bg-[#1D4E3E] hover:bg-[#2A6B55] h-[52px] text-base"
               onClick={onStartCertification}
             >
               <CheckCircle2 className="h-4.5 w-4.5 mr-2" />

@@ -31,7 +31,7 @@ export function OnboardingHint({ hintId, children, icon: Icon, className }: Onbo
   return (
     <div
       className={cn(
-        "bg-forest/5 border border-forest/20 rounded-lg p-3 text-sm text-forest flex items-start gap-2",
+        "bg-[#1D4E3E]/5 border border-[#1D4E3E]/20 rounded-lg p-3 text-sm text-[#1D4E3E] flex items-start gap-2",
         className
       )}
     >
@@ -39,7 +39,7 @@ export function OnboardingHint({ hintId, children, icon: Icon, className }: Onbo
       <span className="flex-1">{children}</span>
       <button
         onClick={handleDismiss}
-        className="shrink-0 p-0.5 rounded hover:bg-forest/10 transition-colors"
+        className="shrink-0 p-0.5 rounded hover:bg-[#1D4E3E]/10 transition-colors"
         aria-label="Dismiss hint"
       >
         <X className="h-3.5 w-3.5" />

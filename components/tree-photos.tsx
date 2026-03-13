@@ -496,7 +496,7 @@ export function TreePhotos({
                         }}
                         className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                           pendingCategories[idx] === cat.value
-                            ? "bg-forest text-white border-forest"
+                            ? "bg-[#1D4E3E] text-white border-[#1D4E3E]"
                             : "bg-background hover:bg-muted border-border"
                         }`}
                       >
@@ -560,7 +560,7 @@ export function TreePhotos({
                 {photo.category && (
                   <Badge
                     variant="secondary"
-                    className="absolute top-1 left-1 text-[8px] px-1 py-0 bg-forest text-white hover:bg-forest max-w-[90%] truncate"
+                    className="absolute top-1 left-1 text-[8px] px-1 py-0 bg-[#1D4E3E] text-white hover:bg-[#1D4E3E] max-w-[90%] truncate"
                   >
                     {getCategoryLabel(photo.category)}
                   </Badge>
@@ -583,7 +583,7 @@ export function TreePhotos({
                 {/* Category tag button */}
                 {categories.length > 0 && (
                   <button
-                    className="rounded-full bg-black/60 p-1 text-white hover:bg-forest-light transition-colors"
+                    className="rounded-full bg-black/60 p-1 text-white hover:bg-[#2A6B55] transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       // Cycle through categories + uncategorized
@@ -755,7 +755,7 @@ export function TreePhotos({
                 {/* Counter + badges */}
                 <div className="absolute top-3 right-3 flex items-center gap-2">
                   {lightboxPhoto.category && (
-                    <Badge className="bg-forest text-white hover:bg-forest text-xs">
+                    <Badge className="bg-[#1D4E3E] text-white hover:bg-[#1D4E3E] text-xs">
                       {getCategoryLabel(lightboxPhoto.category)}
                     </Badge>
                   )}

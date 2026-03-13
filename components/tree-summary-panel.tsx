@@ -183,13 +183,13 @@ export function TreeSummaryPanel({
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-base">
           <span className="flex items-center gap-2">
-            <TreePine className="h-4 w-4 text-forest" />
+            <TreePine className="h-4 w-4 text-[#1D4E3E]" />
             Site Overview
           </span>
           <div className="flex items-center gap-2">
             {protectedCount > 0 && (
               <Badge variant="outline" className="text-xs gap-1">
-                <ShieldCheck className="h-3 w-3 text-forest" />
+                <ShieldCheck className="h-3 w-3 text-[#1D4E3E]" />
                 {protectedCount} protected
               </Badge>
             )}
@@ -246,7 +246,7 @@ export function TreeSummaryPanel({
                       onClick={() => onSelectTree(tree.id)}
                       className={`cursor-pointer transition-colors hover:bg-accent ${
                         isSelected
-                          ? "bg-forest/5"
+                          ? "bg-[#1D4E3E]/5"
                           : ""
                       }`}
                     >
@@ -284,7 +284,7 @@ export function TreeSummaryPanel({
                       </td>
                       <td className="px-3 py-2 text-center">
                         {tree.isProtected ? (
-                          <ShieldCheck className="h-4 w-4 text-forest mx-auto" />
+                          <ShieldCheck className="h-4 w-4 text-[#1D4E3E] mx-auto" />
                         ) : (
                           <span className="text-muted-foreground/30">—</span>
                         )}

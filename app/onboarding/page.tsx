@@ -107,11 +107,11 @@ const COLOR_MAP: Record<
   { border: string; bg: string; ring: string; icon: string; check: string }
 > = {
   green: {
-    border: "border-l-forest",
-    bg: "bg-forest/5",
-    ring: "ring-forest",
-    icon: "text-forest",
-    check: "bg-forest",
+    border: "border-l-[#1D4E3E]",
+    bg: "bg-[#1D4E3E]/5",
+    ring: "ring-[#1D4E3E]",
+    icon: "text-[#1D4E3E]",
+    check: "bg-[#1D4E3E]",
   },
   red: {
     border: "border-l-red-600",
@@ -190,9 +190,9 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
               className={cn(
                 "w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-all",
                 currentStep > step.num
-                  ? "bg-forest text-white"
+                  ? "bg-[#1D4E3E] text-white"
                   : currentStep === step.num
-                    ? "bg-forest text-white ring-4 ring-forest/10"
+                    ? "bg-[#1D4E3E] text-white ring-4 ring-[#1D4E3E]/10"
                     : "bg-neutral-300 text-neutral-500"
               )}
             >
@@ -234,9 +234,9 @@ function SampleReportPreview() {
       <div className="max-h-[420px] overflow-y-auto">
         <div className="p-5 sm:p-6 space-y-5" style={{ fontFamily: "'Roboto', sans-serif", fontSize: "10.5pt", lineHeight: 1.55, color: "#3A3A36" }}>
           {/* Certification header */}
-          <div className="border-2 border-forest rounded p-4 bg-[#FBF9F6]">
+          <div className="border-2 border-[#1D4E3E] rounded p-4 bg-[#FBF9F6]">
             <div className="text-center space-y-1">
-              <p className="text-[10px] uppercase tracking-widest text-forest font-semibold">Certified Arborist Report</p>
+              <p className="text-[10px] uppercase tracking-widest text-[#1D4E3E] font-semibold">Certified Arborist Report</p>
               <p className="text-sm font-semibold text-neutral-800">{property.address}, {property.city}, {property.state} {property.zip}</p>
               <p className="text-xs text-neutral-500">Prepared by {certifier.name}, ISA #{certifier.isaCertNum} &middot; {certifier.company}</p>
             </div>
@@ -244,7 +244,7 @@ function SampleReportPreview() {
 
           {/* Tree inventory mini-table */}
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-forest mb-2" style={{ fontFamily: "'Instrument Sans', sans-serif" }}>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#1D4E3E] mb-2" style={{ fontFamily: "'Instrument Sans', sans-serif" }}>
               Tree Inventory Summary
             </h3>
             <div className="border rounded overflow-hidden text-xs">
@@ -278,14 +278,14 @@ function SampleReportPreview() {
                       <td className="px-3 py-2">
                         <span className={cn(
                           "font-medium",
-                          tree.recommendedAction === "remove" ? "text-red-600" : "text-forest"
+                          tree.recommendedAction === "remove" ? "text-red-600" : "text-[#1D4E3E]"
                         )}>
                           {ACTION_LABEL[tree.recommendedAction]}
                         </span>
                       </td>
                       <td className="px-3 py-2">
                         {tree.isProtected && (
-                          <span className="inline-flex items-center gap-1 text-forest">
+                          <span className="inline-flex items-center gap-1 text-[#1D4E3E]">
                             <ShieldCheck className="h-3 w-3" />
                             {tree.isHeritage ? "Heritage" : "Protected"}
                           </span>
@@ -300,7 +300,7 @@ function SampleReportPreview() {
 
           {/* Sample narrative excerpt — Tree #2 only (most compelling) */}
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-forest mb-2" style={{ fontFamily: "'Instrument Sans', sans-serif" }}>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#1D4E3E] mb-2" style={{ fontFamily: "'Instrument Sans', sans-serif" }}>
               Assessment Excerpt
             </h3>
             <div className="space-y-2 text-[10pt] leading-relaxed">
@@ -537,19 +537,19 @@ export default function OnboardingPage() {
 
   if (initialLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-forest/5 to-green-100">
-        <Loader2 className="h-8 w-8 animate-spin text-forest" />
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#1D4E3E]/5 to-green-100">
+        <Loader2 className="h-8 w-8 animate-spin text-[#1D4E3E]" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-forest/5 to-green-100 px-4 py-12">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#1D4E3E]/5 to-green-100 px-4 py-12">
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="mx-auto mb-4 rounded-full bg-forest/10 p-3 w-fit">
-            <TreePine className="h-8 w-8 text-forest" />
+          <div className="mx-auto mb-4 rounded-full bg-[#1D4E3E]/10 p-3 w-fit">
+            <TreePine className="h-8 w-8 text-[#1D4E3E]" />
           </div>
           <h1 className="text-2xl font-display font-bold text-neutral-900">
             Welcome to TreeCertify
@@ -639,7 +639,7 @@ export default function OnboardingPage() {
             <Button
               onClick={handleStep1}
               disabled={loading}
-              className="w-full bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform h-12 text-base"
+              className="w-full bg-[#1D4E3E] hover:bg-[#2A6B55] active:scale-[0.98] transition-transform h-12 text-base"
             >
               {loading ? (
                 <>
@@ -665,27 +665,27 @@ export default function OnboardingPage() {
 
             {/* Feature callout cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="border-l-4 border-l-forest bg-forest/5 rounded-r-lg p-4">
+              <div className="border-l-4 border-l-[#1D4E3E] bg-[#1D4E3E]/5 rounded-r-lg p-4">
                 <div className="flex items-center gap-2 mb-1">
-                  <Sparkles className="h-4 w-4 text-forest" />
+                  <Sparkles className="h-4 w-4 text-[#1D4E3E]" />
                   <h3 className="text-sm font-medium text-neutral-900">AI-generated narrative</h3>
                 </div>
                 <p className="text-xs text-neutral-500 leading-relaxed">
                   Enter tree data, get a professional report in seconds
                 </p>
               </div>
-              <div className="border-l-4 border-l-forest bg-forest/5 rounded-r-lg p-4">
+              <div className="border-l-4 border-l-[#1D4E3E] bg-[#1D4E3E]/5 rounded-r-lg p-4">
                 <div className="flex items-center gap-2 mb-1">
-                  <ShieldCheck className="h-4 w-4 text-forest" />
+                  <ShieldCheck className="h-4 w-4 text-[#1D4E3E]" />
                   <h3 className="text-sm font-medium text-neutral-900">Ordinance intelligence</h3>
                 </div>
                 <p className="text-xs text-neutral-500 leading-relaxed">
                   Automatically checks protection status and cites local code
                 </p>
               </div>
-              <div className="border-l-4 border-l-forest bg-forest/5 rounded-r-lg p-4">
+              <div className="border-l-4 border-l-[#1D4E3E] bg-[#1D4E3E]/5 rounded-r-lg p-4">
                 <div className="flex items-center gap-2 mb-1">
-                  <FileText className="h-4 w-4 text-forest" />
+                  <FileText className="h-4 w-4 text-[#1D4E3E]" />
                   <h3 className="text-sm font-medium text-neutral-900">One-click PDF &amp; share</h3>
                 </div>
                 <p className="text-xs text-neutral-500 leading-relaxed">
@@ -708,7 +708,7 @@ export default function OnboardingPage() {
               </Button>
               <Button
                 onClick={() => setCurrentStep(3)}
-                className="flex-1 bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform h-12 text-base"
+                className="flex-1 bg-[#1D4E3E] hover:bg-[#2A6B55] active:scale-[0.98] transition-transform h-12 text-base"
               >
                 Continue
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -735,7 +735,7 @@ export default function OnboardingPage() {
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2 mb-1">
-                  <MapPin className="h-4 w-4 text-forest" />
+                  <MapPin className="h-4 w-4 text-[#1D4E3E]" />
                   <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide">
                     Your First Property
                   </h2>
@@ -769,7 +769,7 @@ export default function OnboardingPage() {
                       className="h-12"
                     />
                     {showCityValidation && isSupportedCity && (
-                      <p className="flex items-center gap-1.5 text-xs text-forest">
+                      <p className="flex items-center gap-1.5 text-xs text-[#1D4E3E]">
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         Tree ordinance data available for {normalizedCity}
                       </p>
@@ -866,7 +866,7 @@ export default function OnboardingPage() {
                   !reportType ||
                   creatingProperty
                 }
-                className="flex-1 bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform h-12 text-base"
+                className="flex-1 bg-[#1D4E3E] hover:bg-[#2A6B55] active:scale-[0.98] transition-transform h-12 text-base"
               >
                 {creatingProperty ? (
                   <>

@@ -10,10 +10,10 @@ export default async function Home() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-forest/5 to-green-100">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1D4E3E]/5 to-green-100">
       <div className="flex flex-col items-center gap-8">
         <div className="flex items-center gap-3">
-          <div className="rounded-full bg-forest p-3">
+          <div className="rounded-full bg-[#1D4E3E] p-3">
             <TreePine className="h-8 w-8 text-white" />
           </div>
           <div>
@@ -30,7 +30,7 @@ export default async function Home() {
               headerTitle: "text-neutral-900",
               headerSubtitle: "text-neutral-500",
               formButtonPrimary:
-                "bg-forest hover:bg-forest-light focus:ring-forest",
+                "bg-[#1D4E3E] hover:bg-[#2A6B55] focus:ring-[#1D4E3E]",
             },
           }}
         />

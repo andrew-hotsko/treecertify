@@ -550,7 +550,7 @@ export function PhotoMarkupEditor({
                 size="sm"
                 onClick={handleSave}
                 disabled={saving}
-                className="bg-forest hover:bg-forest-light"
+                className="bg-[#1D4E3E] hover:bg-[#2A6B55]"
               >
                 <Save className="h-3.5 w-3.5" />
                 {saving ? "Saving..." : "Save Markup"}

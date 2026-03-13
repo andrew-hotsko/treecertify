@@ -330,7 +330,7 @@ export function TreeAudioNotes({ propertyId, treeId }: TreeAudioNotesProps) {
                 size="sm"
                 onClick={handleUploadRecording}
                 disabled={uploading}
-                className="bg-forest hover:bg-forest-light text-white"
+                className="bg-[#1D4E3E] hover:bg-[#2A6B55] text-white"
               >
                 {uploading ? (
                   <>
@@ -463,7 +463,7 @@ export function TreeAudioNotes({ propertyId, treeId }: TreeAudioNotesProps) {
                   <div
                     className={`h-full rounded-full transition-all ${
                       playingId === note.id
-                        ? "bg-forest-light animate-pulse w-1/2"
+                        ? "bg-[#2A6B55] animate-pulse w-1/2"
                         : "bg-muted-foreground/30 w-0"
                     }`}
                   />

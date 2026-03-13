@@ -2534,7 +2534,7 @@ export default function PropertyReportPage() {
                           type="checkbox"
                           checked={reviewChecked}
                           onChange={(e) => setReviewChecked(e.target.checked)}
-                          className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-[#1D4E3E] focus:ring-forest-light"
+                          className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-[#1D4E3E] focus:ring-[#2A6B55]"
                         />
                         <span>I have reviewed the report content and all tree data is accurate.</span>
                       </label>
@@ -2574,7 +2574,7 @@ export default function PropertyReportPage() {
                           type="checkbox"
                           checked={certifyAgreed}
                           onChange={(e) => setCertifyAgreed(e.target.checked)}
-                          className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-[#1D4E3E] focus:ring-forest-light"
+                          className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-[#1D4E3E] focus:ring-[#2A6B55]"
                         />
                         <span>I agree to the above certification statement and confirm all information is accurate.</span>
                       </label>

@@ -92,7 +92,7 @@ export function SpeciesSheet({
               placeholder="Search species..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-12 pl-10 pr-4 rounded-xl border border-neutral-200 bg-neutral-50 text-base focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest"
+              className="w-full h-12 pl-10 pr-4 rounded-xl border border-neutral-200 bg-neutral-50 text-base focus:outline-none focus:ring-2 focus:ring-[#1D4E3E]/30 focus:border-[#1D4E3E]"
             />
           </div>
         </div>
@@ -120,7 +120,7 @@ export function SpeciesSheet({
                   <button
                     type="button"
                     onClick={handleCustomEntry}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-forest/20 bg-forest/5 text-sm font-medium text-forest active:scale-[0.98] transition-transform"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#1D4E3E]/20 bg-[#1D4E3E]/5 text-sm font-medium text-[#1D4E3E] active:scale-[0.98] transition-transform"
                   >
                     <TreePine className="h-4 w-4" />
                     Use &ldquo;{search.trim()}&rdquo;
@@ -147,8 +147,8 @@ export function SpeciesSheet({
                         onClick={() => handleSelect(sp.common, sp.scientific)}
                         className={`px-3.5 py-2 rounded-full text-sm font-medium transition-colors ${
                           value === sp.common
-                            ? "bg-forest text-white"
-                            : "bg-forest/5 text-forest border border-forest/20"
+                            ? "bg-[#1D4E3E] text-white"
+                            : "bg-[#1D4E3E]/5 text-[#1D4E3E] border border-[#1D4E3E]/20"
                         }`}
                         style={{ minHeight: 44 }}
                       >
@@ -173,7 +173,7 @@ export function SpeciesSheet({
                         onClick={() => handleSelect(sp.common, sp.scientific)}
                         className={`px-3.5 py-2 rounded-full text-sm font-medium transition-colors ${
                           value === sp.common
-                            ? "bg-forest text-white"
+                            ? "bg-[#1D4E3E] text-white"
                             : "bg-neutral-100 text-neutral-700 border border-neutral-200"
                         }`}
                         style={{ minHeight: 44 }}
@@ -254,18 +254,18 @@ function SpeciesRow({
       type="button"
       onClick={onSelect}
       className={`w-full flex items-center gap-3 px-4 py-3 text-left active:bg-neutral-50 transition-colors ${
-        selected ? "bg-forest/5" : ""
+        selected ? "bg-[#1D4E3E]/5" : ""
       }`}
       style={{ minHeight: 48 }}
     >
       <div className="flex-1 min-w-0">
-        <p className={`text-sm ${selected ? "font-semibold text-forest" : "font-medium text-neutral-900"}`}>
+        <p className={`text-sm ${selected ? "font-semibold text-[#1D4E3E]" : "font-medium text-neutral-900"}`}>
           {common}
         </p>
         <p className="text-xs text-neutral-400 italic truncate">{scientific}</p>
       </div>
       {selected && (
-        <Check className="h-4 w-4 text-forest shrink-0" />
+        <Check className="h-4 w-4 text-[#1D4E3E] shrink-0" />
       )}
     </button>
   );

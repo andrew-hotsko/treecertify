@@ -69,7 +69,7 @@ const PropertyMap = dynamic(
     loading: () => (
       <div className="h-full w-full flex items-center justify-center bg-neutral-200 animate-pulse">
         <div className="text-center text-muted-foreground">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-forest" />
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-[#1D4E3E]" />
           <p className="text-sm">Loading map...</p>
         </div>
       </div>
@@ -1081,14 +1081,14 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             {/* Primary action — changes per lifecycle state */}
             {lifecycleState === "report_draft" && (
               <Link href={`/properties/${property.id}/report`}>
-                <Button className="bg-forest hover:bg-forest-light active:scale-[0.98] transition-all">
+                <Button className="bg-[#1D4E3E] hover:bg-[#2A6B55] active:scale-[0.98] transition-all">
                   <FileText className="h-4 w-4 mr-2" />
                   {property.reports?.[0]?.status === "review" ? "Review Report" : "Edit Report"}
                 </Button>
               </Link>
             )}
             {lifecycleState === "certified" && (
-              <Button className="bg-forest hover:bg-forest-light active:scale-[0.98] transition-all" onClick={handleShare} disabled={sharingLoading}>
+              <Button className="bg-[#1D4E3E] hover:bg-[#2A6B55] active:scale-[0.98] transition-all" onClick={handleShare} disabled={sharingLoading}>
                 {sharingLoading ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
@@ -1107,7 +1107,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                   View Share Page
                 </Button>
                 <Button
-                  className="bg-forest hover:bg-forest-light"
+                  className="bg-[#1D4E3E] hover:bg-[#2A6B55]"
                   onClick={() => {
                     const a = document.createElement("a");
                     a.href = `/api/reports/${property.reports[0].id}/pdf`;
@@ -1133,11 +1133,11 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               <label
                 htmlFor="field-mode-toggle"
                 className={`flex items-center gap-1 text-xs cursor-pointer select-none ${
-                  fieldMode ? "text-forest font-medium" : "text-muted-foreground"
+                  fieldMode ? "text-[#1D4E3E] font-medium" : "text-muted-foreground"
                 }`}
               >
                 {fieldMode ? (
-                  <Smartphone className="h-3.5 w-3.5 text-forest" />
+                  <Smartphone className="h-3.5 w-3.5 text-[#1D4E3E]" />
                 ) : (
                   <Monitor className="h-3.5 w-3.5" />
                 )}
@@ -1158,7 +1158,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               onClick={() => setQuickAddMode(!quickAddMode)}
               className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 quickAddMode
-                  ? "bg-forest text-white"
+                  ? "bg-[#1D4E3E] text-white"
                   : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
               }`}
             >
@@ -1241,7 +1241,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                       className="shrink-0"
                     >
                       {shareCopied ? (
-                        <span className="text-forest text-xs">Copied!</span>
+                        <span className="text-[#1D4E3E] text-xs">Copied!</span>
                       ) : (
                         <>
                           <Copy className="h-3.5 w-3.5 mr-1" />
@@ -1591,7 +1591,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               <Button
                 size="sm"
                 onClick={saveValuationReportSettings}
-                className="bg-forest hover:bg-forest-light"
+                className="bg-[#1D4E3E] hover:bg-[#2A6B55]"
               >
                 <Save className="h-3.5 w-3.5 mr-1.5" />
                 Save Valuation Settings
@@ -1658,7 +1658,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                 onClick={() => setActiveFilter(filter.key)}
                 className={`text-xs px-2.5 py-1 rounded-full whitespace-nowrap transition-colors ${
                   activeFilter === filter.key
-                    ? "bg-forest text-white"
+                    ? "bg-[#1D4E3E] text-white"
                     : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300"
                 }`}
               >
@@ -1711,7 +1711,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
 
       {/* Ready to Generate prompt — assessing with all trees complete */}
       {lifecycleState === "assessing" && allTreesComplete && (
-        <div className="rounded-lg border border-forest/20 bg-forest/5 p-4 flex items-center justify-between">
+        <div className="rounded-lg border border-[#1D4E3E]/20 bg-[#1D4E3E]/5 p-4 flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-foreground">
               All {trees.length} tree{trees.length !== 1 ? "s" : ""} assessed
@@ -1719,7 +1719,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             <p className="text-xs text-muted-foreground">Ready to generate your report</p>
           </div>
           <Link href={`/properties/${property.id}/report`}>
-            <Button className="bg-forest hover:bg-forest-light">
+            <Button className="bg-[#1D4E3E] hover:bg-[#2A6B55]">
               <FileText className="h-4 w-4 mr-2" />
               Generate Report
             </Button>
@@ -1731,13 +1731,13 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
       <div className="flex gap-0 rounded-xl border overflow-hidden relative">
         {/* Quick-entry placement prompt */}
         {showPlacementPrompt && !selectedTreeId && !pendingPin && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-forest text-white px-4 py-2 rounded-full shadow-lg text-sm font-medium flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-[#1D4E3E] text-white px-4 py-2 rounded-full shadow-lg text-sm font-medium flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
             <span>&#10003; Tree #{lastSavedNumber} saved</span>
-            <span className="text-forest-muted">&middot;</span>
+            <span className="text-[#3D7D68]">&middot;</span>
             <span>Tap map to place Tree #{lastSavedNumber + 1}</span>
             <button
               onClick={() => setShowPlacementPrompt(false)}
-              className="ml-1 text-forest-muted hover:text-white"
+              className="ml-1 text-[#3D7D68] hover:text-white"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -1769,7 +1769,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                       key={tree.id}
                       className={`group w-full text-left px-3 py-2 text-xs hover:bg-neutral-100 transition-colors flex items-center gap-2 ${
                         selectedTreeId === tree.id
-                          ? "bg-forest/5 border-l-2 border-forest"
+                          ? "bg-[#1D4E3E]/5 border-l-2 border-[#1D4E3E]"
                           : ""
                       } ${isDimmed ? "opacity-40" : ""}`}
                     >
@@ -1801,7 +1801,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                           </div>
                         </div>
                         {tree.isProtected && (
-                          <ShieldCheck className="h-3 w-3 text-forest flex-shrink-0" />
+                          <ShieldCheck className="h-3 w-3 text-[#1D4E3E] flex-shrink-0" />
                         )}
                       </button>
                       <button
@@ -1840,7 +1840,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           {trees.length === 0 && (
             <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
               <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border p-6 text-center max-w-xs pointer-events-auto">
-                <TreePine className="h-8 w-8 text-forest mx-auto mb-3" />
+                <TreePine className="h-8 w-8 text-[#1D4E3E] mx-auto mb-3" />
                 <p className="text-sm font-medium text-foreground mb-1">
                   Start your assessment
                 </p>
@@ -1869,8 +1869,8 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               onClick={() => setQuickAddMode(!quickAddMode)}
               className={`absolute bottom-20 left-4 z-10 flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg text-sm font-semibold transition-all ${
                 quickAddMode
-                  ? "bg-forest text-white ring-2 ring-forest/30"
-                  : "bg-white text-forest hover:bg-forest/5 border"
+                  ? "bg-[#1D4E3E] text-white ring-2 ring-[#1D4E3E]/30"
+                  : "bg-white text-[#1D4E3E] hover:bg-[#1D4E3E]/5 border"
               }`}
             >
               <TreePine className="h-4 w-4" />

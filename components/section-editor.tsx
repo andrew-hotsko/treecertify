@@ -301,7 +301,7 @@ function SectionCard({
       id={`section-${section.id}`}
       className={`group relative rounded-lg border transition-colors ${
         isEditing
-          ? "border-forest/40 bg-white shadow-sm"
+          ? "border-[#1D4E3E]/40 bg-white shadow-sm"
           : isOtherEditing
             ? "border-neutral-100 bg-neutral-50/50 opacity-60"
             : "border-neutral-200/60 bg-white hover:border-neutral-300"
@@ -322,9 +322,9 @@ function SectionCard({
           <HeadingTag
             className={`font-display font-semibold tracking-tight ${
               section.level === 1
-                ? "text-base text-forest"
+                ? "text-base text-[#1D4E3E]"
                 : section.level === 2
-                  ? "text-[15px] text-forest"
+                  ? "text-[15px] text-[#1D4E3E]"
                   : "text-sm text-neutral-800"
             }`}
           >
@@ -346,7 +346,7 @@ function SectionCard({
                 setEditBody(section.body);
                 onStartEdit(section.id);
               }}
-              className="flex items-center gap-1 text-xs text-neutral-500 hover:text-forest px-2 py-1 rounded hover:bg-forest/5 transition-colors"
+              className="flex items-center gap-1 text-xs text-neutral-500 hover:text-[#1D4E3E] px-2 py-1 rounded hover:bg-[#1D4E3E]/5 transition-colors"
             >
               <Pencil className="h-3 w-3" />
               Edit
@@ -399,7 +399,7 @@ function SectionCard({
                 <Button
                   size="sm"
                   onClick={() => onSave(section.id, editBody)}
-                  className="bg-forest hover:bg-forest-light"
+                  className="bg-[#1D4E3E] hover:bg-[#2A6B55]"
                 >
                   <Check className="h-3.5 w-3.5 mr-1" />
                   Save
@@ -424,8 +424,8 @@ function SectionCard({
                   dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(section.body) }}
                 />
               </div>
-              <div className="rounded border border-forest/30 bg-forest/5 p-3">
-                <p className="text-[10px] text-forest uppercase tracking-wider mb-1 font-semibold">Rewritten</p>
+              <div className="rounded border border-[#1D4E3E]/30 bg-[#1D4E3E]/5 p-3">
+                <p className="text-[10px] text-[#1D4E3E] uppercase tracking-wider mb-1 font-semibold">Rewritten</p>
                 <div
                   className="prose prose-sm max-w-none report-section-content"
                   dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(rewriteResult) }}
@@ -435,7 +435,7 @@ function SectionCard({
                 <Button
                   size="sm"
                   onClick={acceptRewrite}
-                  className="bg-forest hover:bg-forest-light"
+                  className="bg-[#1D4E3E] hover:bg-[#2A6B55]"
                 >
                   <Check className="h-3.5 w-3.5 mr-1" />
                   Accept

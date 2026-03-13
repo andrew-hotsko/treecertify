@@ -22,13 +22,13 @@ function getSelectedClasses(color?: string): string {
     case "amber":
       return "border-amber-500 bg-amber-50 text-amber-700";
     case "green":
-      return "border-forest bg-forest/10 text-forest";
+      return "border-[#1D4E3E] bg-[#1D4E3E]/10 text-[#1D4E3E]";
     case "blue":
       return "border-blue-500 bg-blue-50 text-blue-700";
     case "gray":
       return "border-neutral-400 bg-neutral-100 text-neutral-700";
     default:
-      return "border-forest bg-forest/10 text-forest";
+      return "border-[#1D4E3E] bg-[#1D4E3E]/10 text-[#1D4E3E]";
   }
 }
 

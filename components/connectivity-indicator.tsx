@@ -28,7 +28,7 @@ export function ConnectivityIndicator() {
   return (
     <div
       className={`fixed top-0 left-0 right-0 z-[100] text-center py-2 px-4 text-sm font-medium transition-colors ${
-        isOnline ? "bg-forest-light text-white" : "bg-amber-500 text-white"
+        isOnline ? "bg-[#2A6B55] text-white" : "bg-amber-500 text-white"
       }`}
     >
       {isOnline ? (

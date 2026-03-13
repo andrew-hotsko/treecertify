@@ -20,7 +20,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   },
   certified: {
     label: "Certified",
-    className: "bg-forest/5 text-forest border-forest/20",
+    className: "bg-[#1D4E3E]/5 text-[#1D4E3E] border-[#1D4E3E]/20",
   },
   filed: {
     label: "Submitted",
@@ -32,7 +32,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   },
   active: {
     label: "Active",
-    className: "bg-forest/5 text-forest border-forest/20",
+    className: "bg-[#1D4E3E]/5 text-[#1D4E3E] border-[#1D4E3E]/20",
   },
   archived: {
     label: "Archived",

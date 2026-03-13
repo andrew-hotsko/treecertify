@@ -503,7 +503,7 @@ export function TreeSidePanel({
   // ---- Derived ----
   const statusDot =
     tree?.status === "certified"
-      ? "bg-forest-light"
+      ? "bg-[#2A6B55]"
       : tree?.status === "assessed"
         ? "bg-blue-500"
         : "bg-neutral-400";
@@ -722,7 +722,7 @@ export function TreeSidePanel({
         {isNewTree && lastSavedTree && (
           <button
             onClick={handleCopyFromLast}
-            className="w-full text-xs text-forest hover:text-forest hover:bg-forest/5 py-1.5 px-3 rounded border border-forest/20 border-dashed transition-colors flex items-center justify-center gap-1.5"
+            className="w-full text-xs text-[#1D4E3E] hover:text-[#1D4E3E] hover:bg-[#1D4E3E]/5 py-1.5 px-3 rounded border border-[#1D4E3E]/20 border-dashed transition-colors flex items-center justify-center gap-1.5"
           >
             <Copy className="h-3 w-3" />
             Copy from Tree #{lastSavedTree.treeNumber}
@@ -754,7 +754,7 @@ export function TreeSidePanel({
             )}
 
             {/* Camera capture button */}
-            <label className="flex items-center justify-center gap-1.5 text-xs text-forest hover:text-forest hover:bg-forest/5 py-2 px-3 rounded border border-forest/20 border-dashed cursor-pointer transition-colors">
+            <label className="flex items-center justify-center gap-1.5 text-xs text-[#1D4E3E] hover:text-[#1D4E3E] hover:bg-[#1D4E3E]/5 py-2 px-3 rounded border border-[#1D4E3E]/20 border-dashed cursor-pointer transition-colors">
               {uploadingPhoto ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
@@ -785,7 +785,7 @@ export function TreeSidePanel({
                   key={sp.common}
                   type="button"
                   onClick={() => handleSpeciesChange(sp.common, sp.scientific)}
-                  className="text-xs px-2.5 py-1 rounded-full bg-forest/5 text-forest hover:bg-forest/10 border border-forest/20 whitespace-nowrap transition-colors flex-shrink-0"
+                  className="text-xs px-2.5 py-1 rounded-full bg-[#1D4E3E]/5 text-[#1D4E3E] hover:bg-[#1D4E3E]/10 border border-[#1D4E3E]/20 whitespace-nowrap transition-colors flex-shrink-0"
                 >
                   {sp.common}
                 </button>
@@ -860,7 +860,7 @@ export function TreeSidePanel({
             <button
               type="button"
               onClick={() => setShowMultiTrunk(!showMultiTrunk)}
-              className="text-xs text-forest hover:text-forest-light font-medium flex items-center gap-1 transition-colors"
+              className="text-xs text-[#1D4E3E] hover:text-[#2A6B55] font-medium flex items-center gap-1 transition-colors"
             >
               {showMultiTrunk ? "▾" : "▸"} Multi-trunk calculator
             </button>
@@ -899,7 +899,7 @@ export function TreeSidePanel({
                   <button
                     type="button"
                     onClick={() => setTrunkDiameters([...trunkDiameters, ""])}
-                    className="h-7 px-2 text-xs text-forest hover:text-forest-light border border-dashed border-forest/30 rounded-md"
+                    className="h-7 px-2 text-xs text-[#1D4E3E] hover:text-[#2A6B55] border border-dashed border-[#1D4E3E]/30 rounded-md"
                   >
                     + Trunk
                   </button>
@@ -929,7 +929,7 @@ export function TreeSidePanel({
                         setProtectionResult(null);
                         toast({ title: `DBH set to ${eq}"` });
                       }}
-                      className="text-xs px-2 py-0.5 bg-forest text-white rounded font-medium hover:bg-forest-light transition-colors"
+                      className="text-xs px-2 py-0.5 bg-[#1D4E3E] text-white rounded font-medium hover:bg-[#2A6B55] transition-colors"
                     >
                       Apply
                     </button>
@@ -1095,20 +1095,20 @@ export function TreeSidePanel({
             <div
               className={`rounded-lg border-2 p-3 text-sm ${
                 protectionResult.isProtected
-                  ? "border-forest-light bg-forest/5"
+                  ? "border-[#2A6B55] bg-[#1D4E3E]/5"
                   : "border-neutral-300 bg-neutral-100"
               }`}
             >
               <div className="flex items-center gap-2">
                 {protectionResult.isProtected ? (
-                  <ShieldCheck className="h-5 w-5 shrink-0 text-forest" />
+                  <ShieldCheck className="h-5 w-5 shrink-0 text-[#1D4E3E]" />
                 ) : (
                   <ShieldX className="h-5 w-5 shrink-0 text-neutral-400" />
                 )}
                 <span
                   className={`font-semibold ${
                     protectionResult.isProtected
-                      ? "text-forest"
+                      ? "text-[#1D4E3E]"
                       : "text-neutral-600"
                   }`}
                 >
@@ -1123,7 +1123,7 @@ export function TreeSidePanel({
               <p
                 className={`mt-1.5 text-xs ${
                   protectionResult.isProtected
-                    ? "text-forest"
+                    ? "text-[#1D4E3E]"
                     : "text-neutral-500"
                 }`}
               >
@@ -1345,7 +1345,7 @@ export function TreeSidePanel({
                       }));
                       toast({ title: "Copied valuation settings from previous tree" });
                     }}
-                    className="flex items-center gap-1.5 text-xs text-forest hover:text-forest-light font-medium transition-colors"
+                    className="flex items-center gap-1.5 text-xs text-[#1D4E3E] hover:text-[#2A6B55] font-medium transition-colors"
                   >
                     <Copy className="h-3 w-3" />
                     Copy unit price &amp; location ratings from Tree #{lastSavedTree.treeNumber}
@@ -1415,7 +1415,7 @@ export function TreeSidePanel({
         <Button
           onClick={handleSave}
           disabled={saving || !speciesCommon || !dbhInches}
-          className="flex-1 bg-forest hover:bg-forest-light text-white"
+          className="flex-1 bg-[#1D4E3E] hover:bg-[#2A6B55] text-white"
         >
           {saving ? (
             <>

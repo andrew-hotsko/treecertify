@@ -28,7 +28,7 @@ export function MobileNav() {
             href={tab.href}
             className={cn(
               "flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-[10px] font-medium transition-colors",
-              isActive ? "text-forest-muted" : "text-neutral-400"
+              isActive ? "text-[#3D7D68]" : "text-neutral-400"
             )}
           >
             <tab.icon className="h-5 w-5" />

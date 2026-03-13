@@ -239,9 +239,9 @@ export function SmartDictation({ onApply }: SmartDictationProps) {
 
       {/* Confirmation card */}
       {parsed && (
-        <div className="mt-3 rounded-lg border border-forest/20 bg-forest/5 p-3 space-y-2">
+        <div className="mt-3 rounded-lg border border-[#1D4E3E]/20 bg-[#1D4E3E]/5 p-3 space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-forest flex items-center gap-1">
+            <p className="text-xs font-semibold text-[#1D4E3E] flex items-center gap-1">
               <Sparkles className="h-3.5 w-3.5" />
               Extracted from voice
             </p>
@@ -274,7 +274,7 @@ export function SmartDictation({ onApply }: SmartDictationProps) {
             <Button
               size="sm"
               onClick={handleApply}
-              className="bg-forest hover:bg-forest-light h-7 text-xs"
+              className="bg-[#1D4E3E] hover:bg-[#2A6B55] h-7 text-xs"
             >
               <Check className="h-3 w-3 mr-1" />
               Apply Fields

@@ -347,7 +347,7 @@ export function SubmissionChecklistDialog({
           <div className="flex items-center gap-2 mt-3">
             <div className="flex-1 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
               <div
-                className="h-full bg-forest rounded-full transition-all duration-300"
+                className="h-full bg-[#1D4E3E] rounded-full transition-all duration-300"
                 style={{
                   width: `${requiredCount > 0 ? (checkedRequiredCount / requiredCount) * 100 : 0}%`,
                 }}
@@ -383,7 +383,7 @@ export function SubmissionChecklistDialog({
                         key={req.id}
                         className={cn(
                           "flex items-start gap-3 rounded-lg px-3 py-3 min-h-[44px] transition-colors",
-                          isAutoVerified && "bg-forest/5",
+                          isAutoVerified && "bg-[#1D4E3E]/5",
                           isAutoFailed && "bg-amber-50",
                           !isAutoVerified && !isAutoFailed && "hover:bg-neutral-50"
                         )}
@@ -391,7 +391,7 @@ export function SubmissionChecklistDialog({
                         {/* Checkbox or auto-check icon */}
                         <div className="pt-0.5 shrink-0">
                           {isAutoVerified ? (
-                            <CheckCircle2 className="h-5 w-5 text-forest" />
+                            <CheckCircle2 className="h-5 w-5 text-[#1D4E3E]" />
                           ) : isAutoFailed ? (
                             <AlertTriangle className="h-5 w-5 text-amber-500" />
                           ) : (
@@ -401,8 +401,8 @@ export function SubmissionChecklistDialog({
                               className={cn(
                                 "h-5 w-5 rounded border-2 flex items-center justify-center transition-colors",
                                 isChecked
-                                  ? "bg-forest border-forest"
-                                  : "border-neutral-300 hover:border-forest/50"
+                                  ? "bg-[#1D4E3E] border-[#1D4E3E]"
+                                  : "border-neutral-300 hover:border-[#1D4E3E]/50"
                               )}
                             >
                               {isChecked && (
@@ -435,7 +435,7 @@ export function SubmissionChecklistDialog({
                             <span
                               className={cn(
                                 "text-sm font-medium",
-                                isAutoVerified && "text-forest",
+                                isAutoVerified && "text-[#1D4E3E]",
                                 isAutoFailed && "text-amber-800"
                               )}
                             >
@@ -505,7 +505,7 @@ export function SubmissionChecklistDialog({
                     <Phone className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
                     <a
                       href={`tel:${cityContact.phone.replace(/[^\d+]/g, "")}`}
-                      className="text-forest hover:underline"
+                      className="text-[#1D4E3E] hover:underline"
                     >
                       {cityContact.phone}
                     </a>
@@ -518,7 +518,7 @@ export function SubmissionChecklistDialog({
                     <Mail className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
                     <a
                       href={`mailto:${cityContact.email}`}
-                      className="text-forest hover:underline"
+                      className="text-[#1D4E3E] hover:underline"
                     >
                       {cityContact.email}
                     </a>
@@ -554,7 +554,7 @@ export function SubmissionChecklistDialog({
                     href={cityContact.portalUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs text-forest hover:underline pl-5"
+                    className="inline-flex items-center gap-1.5 text-xs text-[#1D4E3E] hover:underline pl-5"
                   >
                     <ExternalLink className="h-3 w-3" />
                     Open city portal
@@ -569,7 +569,7 @@ export function SubmissionChecklistDialog({
         <div className="flex-none px-5 py-4 border-t bg-neutral-50/50 sm:rounded-b-xl rounded-b-none">
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
-              className="bg-forest hover:bg-forest-light flex-1 sm:flex-none"
+              className="bg-[#1D4E3E] hover:bg-[#2A6B55] flex-1 sm:flex-none"
               disabled={!allRequiredChecked || submitting}
               onClick={handleConfirm}
             >
@@ -632,7 +632,7 @@ export function SubmissionChecklistSummary({
   return (
     <details className="border rounded-lg text-sm mb-4 overflow-hidden">
       <summary className="flex items-center gap-2 cursor-pointer font-medium px-4 py-3 hover:bg-neutral-50">
-        <CheckCircle2 className="h-4 w-4 text-forest shrink-0" />
+        <CheckCircle2 className="h-4 w-4 text-[#1D4E3E] shrink-0" />
         <span>Submission Checklist &mdash; {state.cityName}</span>
         <span className="text-xs text-muted-foreground ml-auto font-mono">
           {state.checkedItems.length}/{totalRequired} verified
@@ -652,7 +652,7 @@ export function SubmissionChecklistSummary({
                 <CheckCircle2
                   className={cn(
                     "h-4 w-4 shrink-0",
-                    isAuto ? "text-forest" : "text-forest/70"
+                    isAuto ? "text-[#1D4E3E]" : "text-[#1D4E3E]/70"
                   )}
                 />
               ) : (

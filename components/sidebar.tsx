@@ -45,7 +45,7 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl }: SidebarPr
       <div className="flex h-16 items-center border-b border-neutral-700 px-6">
         <div>
           <h1 className="text-lg font-display font-bold tracking-tight">
-            <span className="text-forest-muted">Tree</span>
+            <span className="text-[#3D7D68]">Tree</span>
             <span className="text-neutral-50">Certify</span>
           </h1>
           <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-500">
@@ -66,7 +66,7 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl }: SidebarPr
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
                 isActive
-                  ? "bg-forest/10 text-forest-muted border-l-[3px] border-forest-muted pl-[9px]"
+                  ? "bg-[#1D4E3E]/10 text-[#3D7D68] border-l-[3px] border-[#3D7D68] pl-[9px]"
                   : "text-neutral-400 hover:bg-neutral-700 hover:text-neutral-50"
               )}
             >
@@ -96,7 +96,7 @@ export function Sidebar({ arboristName, isaCertNum, profilePhotoUrl }: SidebarPr
             <span
               className={cn(
                 "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-neutral-800",
-                isOnline ? "bg-forest-muted" : "bg-red-500 animate-pulse"
+                isOnline ? "bg-[#3D7D68]" : "bg-red-500 animate-pulse"
               )}
             />
           </div>

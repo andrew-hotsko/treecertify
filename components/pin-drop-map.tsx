@@ -131,11 +131,11 @@ export function PinDropMap({
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
           <div className="flex flex-col items-center -translate-y-4">
             {/* Pin head */}
-            <div className="w-8 h-8 rounded-full bg-forest border-[3px] border-white shadow-lg flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-[#1D4E3E] border-[3px] border-white shadow-lg flex items-center justify-center">
               <Crosshair className="h-4 w-4 text-white" />
             </div>
             {/* Pin tail */}
-            <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-forest -mt-0.5" />
+            <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#1D4E3E] -mt-0.5" />
             {/* Shadow dot */}
             <div className="w-2 h-1 rounded-full bg-black/20 mt-0.5" />
           </div>
@@ -151,9 +151,9 @@ export function PinDropMap({
         aria-label="Use my location"
       >
         {locating ? (
-          <Loader2 className="h-5 w-5 text-forest animate-spin" />
+          <Loader2 className="h-5 w-5 text-[#1D4E3E] animate-spin" />
         ) : (
-          <Navigation className="h-5 w-5 text-forest" />
+          <Navigation className="h-5 w-5 text-[#1D4E3E]" />
         )}
       </button>
 
@@ -174,7 +174,7 @@ export function PinDropMap({
         <button
           type="button"
           onClick={handleConfirm}
-          className="w-full h-14 rounded-xl bg-forest text-white text-base font-semibold shadow-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          className="w-full h-14 rounded-xl bg-[#1D4E3E] text-white text-base font-semibold shadow-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
         >
           Confirm Location
         </button>

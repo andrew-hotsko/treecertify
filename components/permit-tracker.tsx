@@ -218,7 +218,7 @@ export function PermitTracker({
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-sm font-display font-semibold">
-              <Send className="h-4 w-4 text-forest" />
+              <Send className="h-4 w-4 text-[#1D4E3E]" />
               Permit Status
             </CardTitle>
             {!isApproved && (
@@ -243,9 +243,9 @@ export function PermitTracker({
                     <div
                       className={cn(
                         "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors",
-                        completed && "bg-forest text-white",
+                        completed && "bg-[#1D4E3E] text-white",
                         current && !isTerminalDenied && !isTerminalApproved && "ring-2 ring-amber-500 bg-amber-50 text-amber-700",
-                        isTerminalApproved && "bg-forest text-white",
+                        isTerminalApproved && "bg-[#1D4E3E] text-white",
                         isTerminalDenied && "bg-red-500 text-white",
                         !completed && !current && "bg-neutral-200 text-neutral-400"
                       )}
@@ -274,7 +274,7 @@ export function PermitTracker({
                       <div
                         className={cn(
                           "h-0.5 w-full rounded",
-                          i < stepIndex ? "bg-forest" : "bg-neutral-200"
+                          i < stepIndex ? "bg-[#1D4E3E]" : "bg-neutral-200"
                         )}
                       />
                     </div>
@@ -307,7 +307,7 @@ export function PermitTracker({
             )}
 
             {permitStatus === "approved" && (
-              <p className="text-forest font-medium">
+              <p className="text-[#1D4E3E] font-medium">
                 <CheckCircle2 className="h-3.5 w-3.5 inline mr-1" />
                 Approved {formatShortDate(approvedAt)}
               </p>
@@ -315,7 +315,7 @@ export function PermitTracker({
 
             {permitStatus === "approved_with_conditions" && (
               <div className="space-y-1.5">
-                <p className="text-forest font-medium">
+                <p className="text-[#1D4E3E] font-medium">
                   <CheckCircle2 className="h-3.5 w-3.5 inline mr-1" />
                   Approved with Conditions {formatShortDate(approvedAt)}
                 </p>
@@ -356,18 +356,18 @@ export function PermitTracker({
               <p className="font-medium text-neutral-700">{cityContact.department}</p>
               <div className="flex items-center gap-3 flex-wrap">
                 {cityContact.phone && (
-                  <a href={`tel:${cityContact.phone}`} className="flex items-center gap-1 text-forest hover:underline">
+                  <a href={`tel:${cityContact.phone}`} className="flex items-center gap-1 text-[#1D4E3E] hover:underline">
                     <Phone className="h-3 w-3" />
                     {cityContact.phone}
                   </a>
                 )}
                 {cityContact.email && (
-                  <a href={`mailto:${cityContact.email}`} className="text-forest hover:underline">
+                  <a href={`mailto:${cityContact.email}`} className="text-[#1D4E3E] hover:underline">
                     {cityContact.email}
                   </a>
                 )}
                 {cityContact.portalUrl && (
-                  <a href={cityContact.portalUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-forest hover:underline">
+                  <a href={cityContact.portalUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[#1D4E3E] hover:underline">
                     <Globe className="h-3 w-3" />
                     Portal
                   </a>
@@ -486,7 +486,7 @@ export function PermitTracker({
 
             {/* City contact hint when setting to submitted */}
             {formStatus === "submitted" && cityContact && (
-              <div className="rounded-md bg-forest/5 px-3 py-2 text-xs text-neutral-600">
+              <div className="rounded-md bg-[#1D4E3E]/5 px-3 py-2 text-xs text-neutral-600">
                 <p className="font-medium text-neutral-700">{cityContact.department}</p>
                 <p>
                   {cityContact.phone && <>{cityContact.phone}</>}
@@ -504,7 +504,7 @@ export function PermitTracker({
               <Button
                 onClick={handleSave}
                 disabled={saving}
-                className="bg-forest hover:bg-forest-light"
+                className="bg-[#1D4E3E] hover:bg-[#2A6B55]"
               >
                 {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 Save
