@@ -471,10 +471,6 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     lng: property.lng ?? -122.143,
   };
 
-  // Progress counts
-  const assessedCount = trees.filter((t) => isTreeComplete(t)).length;
-  const protectedCount = trees.filter((t) => t.isProtected).length;
-
   // Lifecycle state — drives progressive disclosure
   const lifecycleState = getLifecycleState(trees, property.reports, shareToken);
   const incompleteTrees = trees.filter((t) => !isTreeComplete(t));
@@ -1035,9 +1031,9 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     : selectedTree?.treeNumber ?? 1;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {/* Page Header */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {/* Row 1: Back + Address */}
         <div className="flex items-center gap-3 min-w-0">
           <Link
@@ -1833,7 +1829,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         )}
 
         {/* Map area — with relative positioning for overlays */}
-        <div className="w-full md:flex-1 relative" style={{ minHeight: 400 }}>
+        <div className="w-full md:flex-1 relative" style={{ minHeight: "calc(65vh - 48px)" }}>
           {/* Map empty state overlay — no trees */}
           {trees.length === 0 && (
             <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
@@ -1858,26 +1854,6 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               <PanelLeftOpen className="h-3.5 w-3.5" />
               Trees
             </button>
-          )}
-
-          {/* Tree count progress badge — assessing only */}
-          {lifecycleState === "assessing" && trees.length > 0 && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-neutral-50/95 backdrop-blur-sm rounded-full shadow-md border px-3 py-1.5 text-xs font-medium flex items-center gap-2">
-              <TreePine className="h-3.5 w-3.5 text-forest" />
-              <span>
-                {trees.length} tree{trees.length !== 1 ? "s" : ""}
-              </span>
-              <span className="text-muted-foreground">&middot;</span>
-              <span className="text-forest">{assessedCount} assessed</span>
-              {protectedCount > 0 && (
-                <>
-                  <span className="text-muted-foreground">&middot;</span>
-                  <span className="text-forest">
-                    {protectedCount} protected
-                  </span>
-                </>
-              )}
-            </div>
           )}
 
           {/* Map Legend */}
