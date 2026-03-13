@@ -356,7 +356,7 @@ export default function PropertyReportPage() {
   const [previewVersion, setPreviewVersion] = useState<ReportVersionItem | null>(null);
   const [showVersionPreview, setShowVersionPreview] = useState(false);
   const [restoring, setRestoring] = useState(false);
-  const [reportCost, setReportCost] = useState<number | null>(null);
+  // reportCost removed — API cost not shown in UI (tracked server-side only)
 
   // Template insert state
   interface DocTemplate {
@@ -452,16 +452,7 @@ export default function PropertyReportPage() {
     loadData();
   }, [propertyId]);
 
-  // Fetch per-report API cost
-  useEffect(() => {
-    if (!report?.id) return;
-    fetch(`/api/reports/usage?reportId=${report.id}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.totalCost != null) setReportCost(data.totalCost);
-      })
-      .catch((err) => { console.error("Report usage fetch failed:", err); });
-  }, [report?.id]);
+  // API cost fetch removed — tracked server-side via logApiUsage, not shown in UI
 
   // -------------------------------------------------------------------------
   // Fetch validation checks
@@ -1528,7 +1519,7 @@ export default function PropertyReportPage() {
                 <span>
                   {property.address}, {property.city}
                 </span>
-                {lastSaved && (
+                {lastSaved && !hasUnsavedChanges && (
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
                     Saved {timeAgo(lastSaved)}
@@ -1537,12 +1528,6 @@ export default function PropertyReportPage() {
                 {hasUnsavedChanges && (
                   <span className="text-amber-600 font-medium">
                     Unsaved changes
-                  </span>
-                )}
-                {reportCost != null && reportCost > 0 && (
-                  <span className="flex items-center gap-1 text-neutral-400" title="Estimated API cost for this report">
-                    <Sparkles className="h-3 w-3" />
-                    API: ${reportCost.toFixed(3)}
                   </span>
                 )}
               </div>
