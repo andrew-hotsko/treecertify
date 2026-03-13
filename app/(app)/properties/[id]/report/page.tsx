@@ -762,7 +762,6 @@ export default function PropertyReportPage() {
         body: JSON.stringify({ propertyId, reportType }),
       });
       if (!res.ok) {
-        // Non-streaming error — try to parse JSON
         const data = await res.json().catch(() => ({ error: "Failed to generate report" }));
         throw new Error(data.error || "Failed to generate report");
       }
@@ -775,6 +774,7 @@ export default function PropertyReportPage() {
         const decoder = new TextDecoder();
         let accumulated = "";
         let buffer = "";
+        let receivedDone = false;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -798,6 +798,7 @@ export default function PropertyReportPage() {
               accumulated += payload.text;
               setStreamingText(accumulated);
             } else if (payload.type === "done") {
+              receivedDone = true;
               // Report saved on server — set it locally
               setReport({
                 id: payload.reportId,
@@ -831,6 +832,35 @@ export default function PropertyReportPage() {
             } else if (payload.type === "error") {
               throw new Error(payload.error || "Report generation failed");
             }
+          }
+        }
+
+        // Stream ended — check if we actually got a completed report
+        if (!receivedDone) {
+          if (accumulated.length > 0) {
+            // AI generated text but server couldn't save — try to reload
+            // the property in case the report was saved before the stream dropped
+            try {
+              const reloadRes = await fetch(`/api/properties/${propertyId}`);
+              if (reloadRes.ok) {
+                const reloadData = await reloadRes.json();
+                if (reloadData.reports && reloadData.reports.length > 0) {
+                  const r = reloadData.reports[0];
+                  setReport(r);
+                  const c = r.finalContent || r.aiDraftContent || "";
+                  setContent(c);
+                  savedContentRef.current = c;
+                  setPreviewHtml(renderMarkdownToHtml(c));
+                  setViewMode("split");
+                  return; // Report was saved — proceed normally
+                }
+              }
+            } catch {
+              // Reload failed — fall through to error
+            }
+            throw new Error("Report generation completed but the connection was interrupted. Please try again.");
+          } else {
+            throw new Error("Report generation failed — no response received from AI. Please try again.");
           }
         }
       } else {

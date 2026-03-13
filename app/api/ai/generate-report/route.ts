@@ -861,16 +861,23 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
               },
             });
 
-            // Create "AI Draft" version snapshot
-            await prisma.reportVersion.create({
+            // Send "done" immediately after report is saved — don't let
+            // version/logging failures prevent the client from receiving it
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ type: "done", reportId: report.id })}\n\n`
+              )
+            );
+
+            // Non-critical: version snapshot and logging (fire-and-forget)
+            prisma.reportVersion.create({
               data: {
                 reportId: report.id,
                 content: fullText,
                 label: "AI Draft",
               },
-            });
+            }).catch((e: unknown) => console.error("Version snapshot failed:", e));
 
-            // Log API usage (fire-and-forget)
             logApiUsage({
               arboristId,
               propertyId: body.propertyId,
@@ -887,12 +894,6 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
               reportType: body.reportType,
               treeCount: property.trees.length,
             });
-
-            controller.enqueue(
-              encoder.encode(
-                `data: ${JSON.stringify({ type: "done", reportId: report.id })}\n\n`
-              )
-            );
           } catch (err) {
             console.error("AI generation streaming error:", err);
             const errorMessage = err instanceof Error
