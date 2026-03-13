@@ -15,7 +15,6 @@ import { TreePhotos } from "@/components/tree-photos";
 import { TreeAudioNotes } from "@/components/tree-audio-notes";
 import { useToast } from "@/hooks/use-toast";
 import { VoiceInput } from "@/components/voice-input";
-import { SmartDictation } from "@/components/smart-dictation";
 import { HealthAssessmentFields } from "@/components/type-fields/health-assessment-fields";
 import { RemovalPermitFields } from "@/components/type-fields/removal-permit-fields";
 import { TreeValuationFields, type ValuationFieldValues } from "@/components/type-fields/tree-valuation-fields";
@@ -393,7 +392,6 @@ export function TreeSidePanel({
   }, [speciesCommon, dbhInches, checkProtection]);
 
   // ---- Floating dictation modal ----
-  const [showDictationModal, setShowDictationModal] = useState(false);
 
   // ---- Auto-save draft ----
   const draftKey = `treecertify_draft_${propertyId}_${tree?.id || "new_" + treeNumber}`;
@@ -765,30 +763,6 @@ export function TreeSidePanel({
             </label>
           </div>
         )}
-
-        {/* Smart Dictation — fill multiple fields from voice */}
-        <SmartDictation
-          onApply={(fields) => {
-            if (fields.speciesCommon !== undefined) setSpeciesCommon(fields.speciesCommon);
-            if (fields.speciesScientific !== undefined) setSpeciesScientific(fields.speciesScientific);
-            if (fields.dbhInches !== undefined) setDbhInches(String(fields.dbhInches));
-            if (fields.heightFt !== undefined) setHeightFt(String(fields.heightFt));
-            if (fields.canopySpreadFt !== undefined) setCanopySpreadFt(String(fields.canopySpreadFt));
-            if (fields.conditionRating !== undefined) setConditionRating(fields.conditionRating);
-            if (fields.healthNotes !== undefined) {
-              const existing = extractFreeText(healthNotes);
-              const combined = existing ? existing + " " + fields.healthNotes : fields.healthNotes;
-              setHealthNotes(buildNotesWithObserved(healthChecks, combined));
-            }
-            if (fields.structuralNotes !== undefined) {
-              const existing = extractFreeText(structuralNotes);
-              const combined = existing ? existing + " " + fields.structuralNotes : fields.structuralNotes;
-              setStructuralNotes(buildNotesWithObserved(structuralChecks, combined));
-            }
-            if (fields.recommendedAction !== undefined) setRecommendedAction(fields.recommendedAction);
-            if (fields.tagNumber !== undefined) setTagNumber(fields.tagNumber);
-          }}
-        />
 
         {/* Species */}
         <div className="space-y-2">
@@ -1382,66 +1356,6 @@ export function TreeSidePanel({
           </div>
         )}
 
-        {/* Spacer so floating button doesn't overlap content */}
-        <div className="h-14" />
-
-        {/* Floating dictation button */}
-        <div className="sticky bottom-2 flex justify-end pointer-events-none">
-          <button
-            type="button"
-            onClick={() => setShowDictationModal(true)}
-            className="pointer-events-auto w-12 h-12 rounded-full bg-forest hover:bg-forest-light active:bg-forest-light text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
-            title="Smart Dictate — fill fields with voice"
-          >
-            <Mic className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Dictation modal overlay */}
-        {showDictationModal && (
-          <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center bg-black/40">
-            <div className="bg-neutral-50 rounded-t-2xl md:rounded-2xl shadow-2xl w-full max-w-sm mx-auto p-5 space-y-3 animate-in slide-in-from-bottom-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold flex items-center gap-1.5">
-                  <Mic className="h-4 w-4 text-forest" />
-                  Smart Dictation
-                </h3>
-                <button
-                  onClick={() => setShowDictationModal(false)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Describe the tree and its condition. AI will extract species, DBH, condition, and notes.
-              </p>
-              <SmartDictation
-                onApply={(fields) => {
-                  if (fields.speciesCommon !== undefined) setSpeciesCommon(fields.speciesCommon);
-                  if (fields.speciesScientific !== undefined) setSpeciesScientific(fields.speciesScientific);
-                  if (fields.dbhInches !== undefined) setDbhInches(String(fields.dbhInches));
-                  if (fields.heightFt !== undefined) setHeightFt(String(fields.heightFt));
-                  if (fields.canopySpreadFt !== undefined) setCanopySpreadFt(String(fields.canopySpreadFt));
-                  if (fields.conditionRating !== undefined) setConditionRating(fields.conditionRating);
-                  if (fields.healthNotes !== undefined) {
-                    const existing = extractFreeText(healthNotes);
-                    const combined = existing ? existing + " " + fields.healthNotes : fields.healthNotes;
-                    setHealthNotes(buildNotesWithObserved(healthChecks, combined));
-                  }
-                  if (fields.structuralNotes !== undefined) {
-                    const existing = extractFreeText(structuralNotes);
-                    const combined = existing ? existing + " " + fields.structuralNotes : fields.structuralNotes;
-                    setStructuralNotes(buildNotesWithObserved(structuralChecks, combined));
-                  }
-                  if (fields.recommendedAction !== undefined) setRecommendedAction(fields.recommendedAction);
-                  if (fields.tagNumber !== undefined) setTagNumber(fields.tagNumber);
-                  setShowDictationModal(false);
-                }}
-              />
-            </div>
-          </div>
-        )}
         </TabsContent>
 
         {/* Photos Tab */}
