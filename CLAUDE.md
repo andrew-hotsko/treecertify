@@ -39,6 +39,8 @@
 - Standards referenced: ISA BMP, ISA TRAQ, ANSI A300, CTLA Trunk Formula Method (10th Edition), ANSI A300 Part 5 (construction).
 - Mock fallback (no ANTHROPIC_API_KEY) does not fabricate observations — uses "No concerns noted" language when arborist left fields blank. `real_estate_package` has a dedicated `generateMockRealEstateReport()` with correct RE sections (Introduction and Scope, Executive Tree Summary, Canopy Valuation Summary, Maintenance Outlook, etc.) and buyer-friendly language.
 - Streaming via SSE to the report editor UI. Excluded sections: "Tree Inventory" and "Arborist Certification Statement" (handled by PDF template).
+- **SSE resilience**: Client tracks `receivedDone` flag. If stream ends without "done" event, attempts to reload property from API to recover server-saved report. Server sends "done" event immediately after `prisma.report.create()` — version snapshot is fire-and-forget to avoid blocking confirmation.
+- **Generation UI**: Centered `max-w-lg` card with forest green brand colors, h-12 generate button, timed progress messages in modal (Connecting → Analyzing → Writing → Drafting → Finalizing). 90-second AbortController timeout with clear retry prompt. Amber error card with "Try Again" button.
 
 ## Brand Guide
 - Colors: Forest #1D4E3E (primary), Forest Light #2A6B55 (hover), Forest Muted #3D7D68 (accents). Warm neutral scale #FEFDFB–#0A0A09. No dark mode.
@@ -91,6 +93,7 @@
 
 ## Observation Checkboxes
 - ISA-standard health and structural observations are shown as checkbox grids in the tree side panel, above the free-text notes textareas.
+- **Collapsible sections**: Health Observations, Structural Observations, TRAQ Risk Assessment, and Maintenance Recommendations are wrapped in `CollapsibleSection` components (`components/ui/collapsible-section.tsx`). Each shows a badge with item count or risk rating. Sections auto-open when data exists. Multiple sections can be open simultaneously (non-exclusive). Animated expand/collapse with CSS grid transition.
 - 12 health observations (chlorosis, crown dieback, decay, pest damage, etc.) and 11 structural observations (codominant stems, included bark, cavities, etc.).
 - "No significant concerns" is an exclusive toggle — selecting it unchecks all others and vice versa. NOT part of the observation library — handled as `exclusiveOption` prop on MultiCheckbox.
 - Stored in existing `healthNotes`/`structuralNotes` fields using `"Observed: X, Y\n\n{free text}"` prefix format.
@@ -101,8 +104,8 @@
 
 ## Dictation
 - Inline mic button on each notes field = raw OpenAI Whisper transcription (no Claude parsing). Component: `components/voice-input.tsx`.
-- Inline VoiceInput also on Site Information fields (Scope of Assignment, Site Observations) in property-map-view.
-- Smart Dictation (separate modal) = full Claude field extraction with ISA terminology matching.
+- Inline VoiceInput also on Site Information fields (Scope of Assignment, Site Observations) in property-map-view, and TRAQ Target Description in `health-assessment-fields.tsx`.
+- Smart Dictation component (`components/smart-dictation.tsx`) exists but is **not rendered in UI** (removed from tree-side-panel in Session 39). Component code preserved for potential future use.
 - Voice input has a visible red pulsing recording state with elapsed timer for field usability.
 - "Site Audio Notes" card has been removed from property page. Existing PropertyAudioNote transcriptions are lazily migrated into siteObservations on page load.
 
@@ -411,7 +414,15 @@
 
 ---
 
-## Current Status (as of 2026-03-09)
+## UX Polish (Session 39)
+- **Tree tagging layout**: Map min-height increased from 400px to `calc(65vh - 48px)` for better field visibility. Container gap reduced. Redundant tree count badge removed from map overlay.
+- **Smart Dictation removed from UI**: Inline SmartDictation, floating FAB button, and dictation modal all removed from tree-side-panel. Component code preserved in `components/smart-dictation.tsx`.
+- **Collapsible sections**: `CollapsibleSection` component (`components/ui/collapsible-section.tsx`) wraps Health Observations, Structural Observations, TRAQ Risk Assessment, and Maintenance Recommendations. Badge shows item count or risk rating. Auto-opens when data exists. Multiple open simultaneously.
+- **TRAQ Target Description**: VoiceInput mic button added for field dictation.
+- **Estimated Maintenance Cost**: Removed from UI (DB field `estimatedMaintenanceCost` preserved on HealthAssessmentData).
+- **Report generation UX**: Centered max-w-lg card with forest green brand colors. h-12 generate button. Timed progress messages in streaming modal (Connecting → Analyzing → Writing → Drafting → Finalizing). 90-second AbortController timeout. SSE resilience: `receivedDone` tracking, server-saved report recovery, version snapshot fire-and-forget.
+
+## Current Status (as of 2026-03-12)
 
 ### What's Built and Working
 - **Full assessment workflow**: Property → trees → AI report → certification → PDF → share
