@@ -1739,29 +1739,10 @@ export default function PropertyReportPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
-                    {/* Downloads & sharing */}
                     {reportType !== "tree_valuation" && reportType !== "real_estate_package" && (
                       <DropdownMenuItem onClick={handleDownloadWord}>
                         <FileDown className="h-4 w-4 mr-2" />
                         Download Word
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={openDeliveryDialog}>
-                      <Send className="h-4 w-4 mr-2" />
-                      Email to Client
-                    </DropdownMenuItem>
-                    {reportType === "real_estate_package" && reRealtorEmail && (
-                      <DropdownMenuItem asChild>
-                        <a
-                          href={`mailto:${reRealtorEmail}?subject=${encodeURIComponent(
-                            `Tree Canopy Report — ${property?.address ?? ""}`
-                          )}&body=${encodeURIComponent(
-                            `Hi ${reRealtorName || ""},\n\nPlease find the Certified Tree Canopy Report for ${property?.address ?? "the property"} attached.\n\nBest regards`
-                          )}`}
-                        >
-                          <Mail className="h-4 w-4 mr-2" />
-                          Email Realtor
-                        </a>
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
@@ -1780,7 +1761,13 @@ export default function PropertyReportPage() {
 
                     <DropdownMenuSeparator />
 
-                    {/* Review & history */}
+                    <DropdownMenuItem
+                      onClick={() => setShowAmendDialog(true)}
+                      className="text-amber-700 focus:text-amber-700"
+                    >
+                      <FileEdit className="h-4 w-4 mr-2" />
+                      Request Amendment
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setViewMode("quickReview")}>
                       <Smartphone className="h-4 w-4 mr-2" />
                       Quick Review
@@ -1796,18 +1783,6 @@ export default function PropertyReportPage() {
 
                     <DropdownMenuSeparator />
 
-                    {/* Amendment */}
-                    <DropdownMenuItem
-                      onClick={() => setShowAmendDialog(true)}
-                      className="text-amber-700 focus:text-amber-700"
-                    >
-                      <FileEdit className="h-4 w-4 mr-2" />
-                      Request Amendment
-                    </DropdownMenuItem>
-
-                    <DropdownMenuSeparator />
-
-                    {/* Destructive */}
                     <DropdownMenuItem
                       onClick={() => setShowDeleteDialog(true)}
                       className="text-red-600 focus:text-red-600"
