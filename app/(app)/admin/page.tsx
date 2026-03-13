@@ -195,8 +195,9 @@ export default async function AdminDashboard() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">
-          TreeCertify Beta Dashboard
+        <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-1">Admin</p>
+        <h1 className="text-2xl md:text-3xl tracking-tight">
+          Beta Dashboard
         </h1>
         <p className="text-sm text-neutral-500 mt-1">
           Internal metrics — {now.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}

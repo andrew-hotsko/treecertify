@@ -37,12 +37,10 @@ export default async function OrdinancesPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight font-display text-foreground">
+        <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-1">Reference</p>
+        <h1 className="text-2xl md:text-3xl tracking-tight">
           Municipal Ordinance Database
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Protected tree ordinances for SF Peninsula cities
-        </p>
       </div>
 
       <div className="space-y-6">
