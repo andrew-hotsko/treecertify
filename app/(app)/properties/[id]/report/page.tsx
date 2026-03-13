@@ -53,7 +53,6 @@ import {
   DollarSign,
   CheckCircle,
   Home,
-  Mail,
   FileEdit,
   BadgeCheck,
   Flag,
@@ -971,6 +970,7 @@ export default function PropertyReportPage() {
   // Open delivery dialog (pre-fill from property data)
   // -------------------------------------------------------------------------
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const openDeliveryDialog = useCallback(() => {
     if (!property || !report) return;
     const reportLabel =
