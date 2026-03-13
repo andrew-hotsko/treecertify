@@ -22,35 +22,6 @@ import Anthropic from "@anthropic-ai/sdk";
 import { logApiUsage } from "@/lib/api-usage";
 import { logEvent } from "@/lib/analytics";
 
-interface TreeRecordData {
-  treeNumber: number;
-  tagNumber?: string | null;
-  speciesCommon: string;
-  speciesScientific: string | null;
-  dbhInches: number;
-  heightFt: number | null;
-  canopySpreadFt: number | null;
-  conditionRating: number;
-  healthNotes: string | null;
-  structuralNotes: string | null;
-  isProtected: boolean;
-  protectionReason: string | null;
-  recommendedAction: string;
-  mitigationRequired: string | null;
-  typeSpecificData?: string | null;
-}
-
-interface PropertyData {
-  address: string;
-  city: string;
-  state: string | null;
-  zip: string | null;
-  county: string | null;
-  parcelNumber: string | null;
-  scopeOfAssignment?: string | null;
-  siteObservations?: string | null;
-}
-
 /**
  * Format type-specific tree assessment data for inclusion in AI prompts.
  */
@@ -202,308 +173,6 @@ function formatTypeSpecificBlock(
   }
 }
 
-/**
- * Generate a mock real estate package report with the correct section structure.
- */
-function generateMockRealEstateReport(
-  property: PropertyData,
-  trees: TreeRecordData[]
-): string {
-  const date = new Date().toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-  const state = property.state || "CA";
-  const treeCount = trees.length;
-
-  const conditionLabels: Record<number, string> = {
-    0: "Dead", 1: "Critical", 2: "Poor", 3: "Fair", 4: "Good", 5: "Excellent",
-  };
-
-  const conditionCategories = {
-    excellent: trees.filter((t) => t.conditionRating >= 4).length,
-    fair: trees.filter((t) => t.conditionRating === 3).length,
-    needsAttention: trees.filter((t) => t.conditionRating <= 2 && t.conditionRating > 0).length,
-  };
-
-  const actionCounts = {
-    retain: trees.filter((t) => t.recommendedAction === "retain").length,
-    prune: trees.filter((t) => t.recommendedAction === "prune").length,
-    monitor: trees.filter((t) => t.recommendedAction === "monitor").length,
-    remove: trees.filter((t) => t.recommendedAction === "remove").length,
-  };
-
-  const reActionLabels: Record<string, string> = {
-    retain: "This tree is a healthy asset that enhances property value and should be preserved.",
-    remove: "Replacement planting is recommended to restore canopy coverage in this area.",
-    prune: "Routine maintenance pruning will maintain this tree's health and appearance.",
-    monitor: "This tree should be periodically inspected to ensure continued vigor.",
-  };
-
-  const individualAssessments = trees
-    .map((t) => {
-      const conditionDesc = conditionLabels[t.conditionRating] || `${t.conditionRating}/5`;
-      const dims = [
-        `${t.dbhInches}-inch DBH`,
-        t.heightFt ? `approximately ${t.heightFt} feet in height` : null,
-        t.canopySpreadFt ? `with a canopy spread of ${t.canopySpreadFt} feet` : null,
-      ].filter(Boolean).join(", ");
-
-      const healthLine = t.healthNotes
-        ? t.healthNotes
-        : t.conditionRating >= 4
-        ? "The specimen presented in good overall health with a full, well-distributed canopy."
-        : t.conditionRating >= 3
-        ? "The tree shows moderate stress that can be addressed with routine maintenance."
-        : "The tree requires professional attention to address current condition concerns.";
-
-      const action = reActionLabels[t.recommendedAction] || reActionLabels.monitor;
-
-      return `### Tree #${t.treeNumber} — ${t.speciesCommon}${t.speciesScientific ? ` (*${t.speciesScientific}*)` : ""}
-
-The ${t.speciesCommon} is a ${dims} specimen located on the subject property.
-
-**Condition: ${conditionDesc}** — ${healthLine}
-
-${action}`;
-    })
-    .join("\n\n");
-
-  return `# Certified Tree Canopy Report
-
-**Date:** ${date}
-**Property Address:** ${property.address}
-**City:** ${property.city}, ${state}
-**County:** ${property.county || "N/A"}
-**Report Type:** Real Estate Package — Tree Canopy Assessment
-
----
-
-## 1. Introduction and Scope
-
-This Certified Tree Canopy Report has been prepared for a real estate transaction involving the property at ${property.address}, ${property.city}, ${state}. The assessment evaluates the health, structural condition, and contributory value of the tree canopy assets on the subject property. All ${treeCount} tree${treeCount !== 1 ? "s were" : " was"} assessed from ground level using a Level 2 Basic visual assessment per ISA Best Management Practices.
-
----
-
-## 2. Site Description
-
-The subject property is located at ${property.address}, ${property.city}, ${state}.${property.siteObservations ? ` ${property.siteObservations}` : ""} The mature tree canopy contributes to the established character of the property and surrounding neighborhood.
-
----
-
-## 3. Executive Tree Summary
-
-**Total Trees Assessed:** ${treeCount}
-**Condition Overview:** ${conditionCategories.excellent} in Good/Excellent condition, ${conditionCategories.fair} Fair, ${conditionCategories.needsAttention} requiring attention
-**Actions:** ${actionCounts.retain} retain, ${actionCounts.prune} prune, ${actionCounts.monitor} monitor, ${actionCounts.remove} remove
-**Total Canopy Value:** *Formal CTLA valuation pending — complete tree assessment data to calculate appraised values.*
-
----
-
-## 4. Individual Tree Assessments
-
-${individualAssessments}
-
----
-
-## 5. Canopy Valuation Summary
-
-Tree values represent the contributory landscape value calculated using the Council of Tree and Landscape Appraisers (CTLA) Trunk Formula Method, 10th Edition. Values are based on trunk area, species rating, condition assessment, and location factors.
-
-*Formal valuation calculations will be completed once all assessment data has been entered for each tree.*
-
----
-
-## 6. Maintenance Outlook
-
-${actionCounts.prune > 0 ? `${actionCounts.prune} tree${actionCounts.prune !== 1 ? "s require" : " requires"} routine maintenance pruning per ANSI A300 standards. ` : ""}${actionCounts.monitor > 0 ? `${actionCounts.monitor} tree${actionCounts.monitor !== 1 ? "s should" : " should"} be periodically inspected by a certified arborist. ` : ""}The diverse species composition on this property provides resilient canopy coverage that should continue to enhance property value with routine care.
-
----
-
-## 7. Limitations and Assumptions
-
-This assessment was conducted as a Level 2 Basic visual assessment from ground level per ISA Best Management Practices. No below-ground examination, aerial inspection, or invasive testing was performed. This report is intended to inform real estate transaction decisions and does not constitute a real estate appraisal. Tree values represent contributory landscape value calculated using the CTLA Trunk Formula Method, 10th Edition.
-
----
-
-*This report was generated as a draft and requires review and certification by the assigned arborist.*
-`;
-}
-
-/**
- * Generate a mock/fallback report when no ANTHROPIC_API_KEY is configured.
- * This is a simplified structural draft — not the AI-quality output.
- */
-function generateMockReport(
-  property: PropertyData,
-  trees: TreeRecordData[],
-  reportType: string
-): string {
-  const reportTypeLabel = reportType
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-  const date = new Date().toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-  const state = property.state || "CA";
-  const treeCount = trees.length;
-  const protectedCount = trees.filter((t) => t.isProtected).length;
-
-  const conditionLabels: Record<number, string> = {
-    0: "Dead", 1: "Critical", 2: "Poor", 3: "Fair", 4: "Good", 5: "Excellent",
-  };
-
-  const individualAssessments = trees
-    .map((t) => {
-      const conditionDesc = conditionLabels[t.conditionRating] || `${t.conditionRating}/5`;
-      const dims = [
-        `${t.dbhInches}-inch DBH`,
-        t.heightFt ? `approximately ${t.heightFt} feet in height` : null,
-        t.canopySpreadFt ? `with a canopy spread of ${t.canopySpreadFt} feet` : null,
-      ].filter(Boolean).join(", ");
-
-      // Use arborist notes directly — do not fabricate observations
-      const healthLine = t.healthNotes
-        ? t.healthNotes
-        : t.conditionRating >= 4
-        ? "No specific health concerns were noted during the Level 2 visual assessment."
-        : t.conditionRating >= 3
-        ? "The tree exhibits moderate signs of stress consistent with its assigned condition rating. Further monitoring is recommended."
-        : t.conditionRating >= 1
-        ? "The tree exhibits signs of decline consistent with its assigned condition rating. Further diagnostic assessment may be warranted."
-        : "The tree is dead with no viable foliage or cambial activity detected.";
-
-      const structuralLine = t.structuralNotes
-        ? t.structuralNotes
-        : t.conditionRating >= 4
-        ? "No significant structural defects were observed during the visual assessment."
-        : t.conditionRating >= 3
-        ? "Minor structural concerns were noted. These should be addressed through maintenance pruning per ANSI A300 standards."
-        : t.conditionRating >= 1
-        ? "Structural defects were observed that warrant further assessment and may require corrective action."
-        : "Structural assessment is not applicable for a dead tree.";
-
-      const bottomLine =
-        t.recommendedAction === "retain"
-          ? `The ${t.speciesCommon} should be retained and preserved.`
-          : t.recommendedAction === "remove"
-          ? `Removal of this ${t.speciesCommon} is recommended.${t.isProtected ? ` A removal permit is required from the City of ${property.city}.` : ""}`
-          : t.recommendedAction === "prune"
-          ? `Pruning in accordance with ANSI A300 standards is recommended.`
-          : `Continued monitoring at regular intervals by a certified arborist is recommended.`;
-
-      return `### Tree #${t.treeNumber} \u2014 ${t.speciesCommon}${t.speciesScientific ? ` (*${t.speciesScientific}*)` : ""}
-
-The ${t.speciesCommon} is a ${dims} specimen located on the subject property.
-
-**Condition Rating: ${t.conditionRating}/5 (${conditionDesc})**
-
-**Health Observations:** ${healthLine}
-
-**Structural Assessment:** ${structuralLine}
-
-${bottomLine}`;
-    })
-    .join("\n\n");
-
-  const recommendationSummaries = trees
-    .map((t) => {
-      const actionDesc =
-        t.recommendedAction === "retain"
-          ? `Retain and preserve.`
-          : t.recommendedAction === "remove"
-          ? `Removal is recommended.${t.isProtected ? ` A removal permit must be obtained from the City of ${property.city}.` : ""}`
-          : t.recommendedAction === "prune"
-          ? `Pruning per ANSI A300 standards is recommended.`
-          : `Continued monitoring is recommended.`;
-
-      return `- **Tree #${t.treeNumber} (${t.speciesCommon}, ${t.dbhInches}" DBH):** ${actionDesc}`;
-    })
-    .join("\n");
-
-  const protectedTrees = trees.filter((t) => t.isProtected);
-  const protectedDetails = protectedTrees.length
-    ? protectedTrees
-        .map(
-          (t) =>
-            `- **Tree #${t.treeNumber} (${t.speciesCommon}, ${t.dbhInches}" DBH):** ${t.protectionReason || "Meets protection criteria under the municipal ordinance."}`
-        )
-        .join("\n")
-    : "No trees on this property meet the criteria for protected status under the applicable municipal ordinance.";
-
-  const treesNeedingMitigation = trees.filter(
-    (t) => t.isProtected && t.recommendedAction === "remove"
-  );
-  const mitigationContent = treesNeedingMitigation.length
-    ? treesNeedingMitigation
-        .map(
-          (t) =>
-            `- **Tree #${t.treeNumber} (${t.speciesCommon}):** ${t.mitigationRequired || `As a protected tree, removal will require mitigation in accordance with the ${property.city} municipal ordinance.`}`
-        )
-        .join("\n")
-    : "No mitigation is required at this time based on the current assessment and recommended actions.";
-
-  return `# ${reportTypeLabel}
-
-**Date:** ${date}
-**Property Address:** ${property.address}
-**City:** ${property.city}, ${state}
-**County:** ${property.county || "N/A"}
-**Parcel Number:** ${property.parcelNumber || "N/A"}
-**Total Trees Assessed:** ${treeCount}
-
----
-
-## 1. Assignment and Purpose
-
-This report has been prepared to provide a professional arborist assessment of ${treeCount} tree${treeCount !== 1 ? "s" : ""} located at ${property.address}, ${property.city}, ${state}. All trees were assessed from ground level using a Level 2 Basic visual assessment per ISA TRAQ methodology.
-
----
-
-## 2. Site Observations
-
-The subject trees are located on the property at ${property.address}.${property.siteObservations ? ` ${property.siteObservations}` : ""}
-
----
-
-## 3. Individual Tree Assessments
-
-${individualAssessments}
-
----
-
-## 4. Protected Status Summary
-
-**Protected Trees:** ${protectedCount} of ${treeCount} total
-
-${protectedDetails}
-
----
-
-## 5. Recommendations
-
-${recommendationSummaries}
-
----
-
-## 6. Mitigation Requirements
-
-${mitigationContent}
-
----
-
-## 7. Limitations and Assumptions
-
-This assessment was conducted as a Level 2 Basic visual assessment from ground level per ISA TRAQ methodology. No below-ground examination, aerial inspection, or invasive testing was performed. Trees are living organisms and conditions can change; this assessment reflects conditions at the time of inspection.
-
----
-
-*This report was generated as a draft and requires review and certification by the assigned arborist.*
-`;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -590,9 +259,18 @@ export async function POST(request: NextRequest) {
       select: { name: true, content: true, category: true },
     });
 
-    let aiDraftContent: string;
+    if (!process.env.ANTHROPIC_API_KEY) {
+      // No API key — return a clear error instead of silently falling back to mock
+      return NextResponse.json(
+        {
+          error: "AI generation is not configured. Please set ANTHROPIC_API_KEY in your environment.",
+          code: "MISSING_KEY",
+        },
+        { status: 503 }
+      );
+    }
 
-    if (process.env.ANTHROPIC_API_KEY) {
+    {
       const anthropic = new Anthropic({
         apiKey: process.env.ANTHROPIC_API_KEY,
       });
@@ -796,17 +474,19 @@ SCOPE OF ASSIGNMENT HANDLING:
 CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF template generates that separately. Do NOT include an "Arborist Certification Statement" — the certification is handled by the PDF template with the arborist's e-signature. End the report after the final content section.`;
 
       // Stream the response for real-time progress
-      const stream = anthropic.messages.stream({
-        model: "claude-sonnet-4-20250514",
+      const streamParams = {
+        model: "claude-sonnet-4-20250514" as const,
         max_tokens: 8192,
         messages: [
           {
-            role: "user",
+            role: "user" as const,
             content: `Generate the complete ${reportTypeLabel} report for the ${treeCount}-tree property at ${property.address}, ${property.city} based on the structured assessment data provided.\n\nIMPORTANT: Transform ALL raw field dictation into formal professional arborist report language. Never reproduce dictation verbatim. Every sentence must be suitable for municipal submission and legal review.`,
           },
         ],
         system: systemPrompt,
-      });
+      };
+
+      const stream = anthropic.messages.stream(streamParams);
 
       const encoder = new TextEncoder();
 
@@ -896,12 +576,98 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
             });
           } catch (err) {
             console.error("AI generation streaming error:", err);
-            const errorMessage = err instanceof Error
-              ? err.message
-              : String(err);
+            const status = (err as { status?: number })?.status;
+            const errMsg = err instanceof Error ? err.message : String(err);
+
+            // Retry once on 529 (overloaded) or 500/503 if no text was generated yet
+            if ((status === 529 || status === 500 || status === 503) && fullText.length === 0) {
+              console.warn(`Anthropic returned ${status}, retrying in 3s...`);
+              await new Promise((r) => setTimeout(r, 3000));
+              try {
+                const retryStream = anthropic.messages.stream(streamParams);
+                for await (const event of retryStream) {
+                  if (
+                    event.type === "content_block_delta" &&
+                    event.delta.type === "text_delta"
+                  ) {
+                    const text = event.delta.text;
+                    fullText += text;
+                    controller.enqueue(
+                      encoder.encode(
+                        `data: ${JSON.stringify({ type: "text", text })}\n\n`
+                      )
+                    );
+                  } else if (event.type === "message_delta") {
+                    usageOutput = (event as unknown as { usage?: { output_tokens?: number } }).usage?.output_tokens ?? 0;
+                  } else if (event.type === "message_start") {
+                    usageInput = (event as unknown as { message?: { usage?: { input_tokens?: number } } }).message?.usage?.input_tokens ?? 0;
+                  }
+                }
+
+                // Retry succeeded — save the report
+                if (arborist.aiStandardDisclaimer) {
+                  fullText += `\n\n---\n\n${arborist.aiStandardDisclaimer}`;
+                }
+
+                const retryReport = await prisma.report.create({
+                  data: {
+                    propertyId: body.propertyId,
+                    arboristId,
+                    reportType: body.reportType,
+                    aiDraftContent: fullText,
+                    ...(body.reportType === "real_estate_package" ? {
+                      valuationPurpose: "Real Estate Transaction",
+                      valuationBasisStatement: "This valuation is prepared for the purpose of real estate disclosure and is based on the CTLA Trunk Formula Method (10th Edition).",
+                      valuationTotalValue: property.trees.reduce(
+                        (sum: number, t: { valuationAppraisedValue?: number | null }) =>
+                          sum + (t.valuationAppraisedValue ?? 0),
+                        0
+                      ) || null,
+                    } : {}),
+                  },
+                });
+
+                controller.enqueue(
+                  encoder.encode(
+                    `data: ${JSON.stringify({ type: "done", reportId: retryReport.id })}\n\n`
+                  )
+                );
+
+                prisma.reportVersion.create({
+                  data: { reportId: retryReport.id, content: fullText, label: "AI Draft" },
+                }).catch((e: unknown) => console.error("Version snapshot failed:", e));
+
+                logApiUsage({
+                  arboristId,
+                  propertyId: body.propertyId,
+                  reportId: retryReport.id,
+                  provider: "anthropic",
+                  endpoint: "generate-report",
+                  model: "claude-sonnet-4-20250514",
+                  inputTokens: usageInput,
+                  outputTokens: usageOutput,
+                });
+
+                logEvent("report_generated", arboristId, {
+                  reportId: retryReport.id,
+                  reportType: body.reportType,
+                  treeCount: property.trees.length,
+                });
+
+                controller.close();
+                return;
+              } catch (retryErr) {
+                console.error("AI generation retry also failed:", retryErr);
+              }
+            }
+
+            // Send error to client
+            const userMessage = status === 529
+              ? "The AI service is currently overloaded. Please try again in a minute."
+              : `Report generation failed. ${errMsg}`;
             controller.enqueue(
               encoder.encode(
-                `data: ${JSON.stringify({ type: "error", error: errorMessage })}\n\n`
+                `data: ${JSON.stringify({ type: "error", error: userMessage })}\n\n`
               )
             );
           }
@@ -917,48 +683,7 @@ CRITICAL: Do NOT include a "Tree Inventory" section or table — the PDF templat
           Connection: "keep-alive",
         },
       });
-    } else {
-      aiDraftContent = body.reportType === "real_estate_package"
-        ? generateMockRealEstateReport(property, property.trees)
-        : generateMockReport(property, property.trees, body.reportType);
     }
-
-    // Mock path: non-streaming fallback
-    const report = await prisma.report.create({
-      data: {
-        propertyId: body.propertyId,
-        arboristId,
-        reportType: body.reportType,
-        aiDraftContent,
-        // Auto-set valuation metadata for real_estate_package
-        ...(body.reportType === "real_estate_package" ? {
-          valuationPurpose: "Real Estate Transaction",
-          valuationBasisStatement: "This valuation is prepared for the purpose of real estate disclosure and is based on the CTLA Trunk Formula Method (10th Edition).",
-          valuationTotalValue: property.trees.reduce(
-            (sum: number, t: { valuationAppraisedValue?: number | null }) =>
-              sum + (t.valuationAppraisedValue ?? 0),
-            0
-          ) || null,
-        } : {}),
-      },
-    });
-
-    // Create "AI Draft" version snapshot
-    await prisma.reportVersion.create({
-      data: {
-        reportId: report.id,
-        content: aiDraftContent,
-        label: "AI Draft",
-      },
-    });
-
-    logEvent("report_generated", arboristId, {
-      reportId: report.id,
-      reportType: body.reportType,
-      treeCount: property.trees.length,
-    });
-
-    return NextResponse.json(report, { status: 201 });
   } catch (error) {
     console.error("Error generating report:", error);
     return NextResponse.json(

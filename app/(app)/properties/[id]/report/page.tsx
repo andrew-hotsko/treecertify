@@ -36,7 +36,6 @@ import {
   Download,
   FileDown,
   Lock,
-  Unlock,
   RefreshCw,
   Clock,
   AlertTriangle,
@@ -153,6 +152,7 @@ interface Property {
   reportType?: string;
   homeownerName?: string | null;
   homeownerEmail?: string | null;
+  shareToken?: string | null;
   trees: TreeRecord[];
   reports: Report[];
 }
@@ -290,7 +290,7 @@ export default function PropertyReportPage() {
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [certifying, setCertifying] = useState(false);
-  const [unlocking, setUnlocking] = useState(false);
+  // unlocking state removed — amendment flow replaces unlock
   const [pdfLoading, setPdfLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -977,37 +977,6 @@ export default function PropertyReportPage() {
   };
 
   // -------------------------------------------------------------------------
-  // Unlock (uncertify) report
-  // -------------------------------------------------------------------------
-
-  const unlockReport = async () => {
-    if (
-      !window.confirm(
-        "Unlocking will revert the report to review status. The certification will be removed. Continue?"
-      )
-    )
-      return;
-
-    if (!report) return;
-    setUnlocking(true);
-    try {
-      const res = await fetch(`/api/reports/${report.id}/certify`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Failed to unlock");
-      const updated = await res.json();
-      setReport(updated);
-      setViewMode("editor");
-      setSignatureText("");
-      setCertifyAgreed(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unlock failed");
-    } finally {
-      setUnlocking(false);
-    }
-  };
-
-  // -------------------------------------------------------------------------
   // Open delivery dialog (pre-fill from property data)
   // -------------------------------------------------------------------------
 
@@ -1305,16 +1274,16 @@ export default function PropertyReportPage() {
 
   if (!report) {
     return (
-      <div>
-        <Link
-          href={`/properties/${propertyId}`}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {property.address}
-        </Link>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+        <div className="w-full max-w-lg">
+          <Link
+            href={`/properties/${propertyId}`}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {property.address}
+          </Link>
 
-        <div className="max-w-lg mx-auto mt-12">
           <Card className="shadow-sm">
             <CardContent className="pt-8 pb-6 px-6 space-y-5">
               <div className="text-center">
@@ -1377,23 +1346,22 @@ export default function PropertyReportPage() {
               )}
 
               {error && !generating && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-5 space-y-4">
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-amber-900">
-                        Report generation encountered an issue
+                        Report generation failed
                       </p>
                       <p className="text-sm text-amber-700 mt-1">
-                        This is usually temporary. Check your connection and try again.
+                        {error}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <Button
                       size="sm"
-                      variant="outline"
-                      className="border-amber-300 text-amber-800 hover:bg-amber-100"
+                      className="bg-forest hover:bg-forest-light"
                       onClick={() => {
                         setError(null);
                         generateReport();
@@ -1401,6 +1369,14 @@ export default function PropertyReportPage() {
                     >
                       <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
                       Try Again
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => router.push(`/properties/${propertyId}`)}
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+                      Back to Property
                     </Button>
                   </div>
                 </div>
@@ -1457,57 +1433,66 @@ export default function PropertyReportPage() {
                 </div>
               )}
 
-              {/* Streaming Progress Modal */}
+              {/* Streaming Progress Modal — centered, simple, confidence-building */}
               {generating && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                  <Card className="w-full max-w-3xl mx-4 max-h-[80vh] flex flex-col">
-                    <CardContent className="p-6 flex flex-col flex-1 overflow-hidden gap-4">
-                      <div className="flex items-center gap-3">
-                        <Loader2 className="h-5 w-5 animate-spin text-forest shrink-0" />
+                  <Card className="w-full max-w-md mx-4 shadow-lg">
+                    <CardContent className="pt-10 pb-8 px-8">
+                      <div className="text-center space-y-5">
+                        {/* Animated tree icon */}
+                        <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-forest/10 mx-auto">
+                          <Sparkles className="h-8 w-8 text-forest animate-pulse" />
+                        </div>
+
+                        {/* Title */}
                         <div>
-                          <h3 className="text-lg font-semibold">Generating Report</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {elapsedSeconds < 5
-                              ? "Connecting to AI..."
-                              : elapsedSeconds < 15
-                                ? "Analyzing tree data..."
-                                : elapsedSeconds < 30
-                                  ? `Writing ${getReportTypeConfig(reportType)?.label || "report"}...`
-                                  : elapsedSeconds < 60
-                                    ? "Drafting individual assessments..."
-                                    : "Finalizing report — almost done..."}
+                          <h3 className="text-lg font-semibold font-display tracking-tight">
+                            Generating your report...
+                          </h3>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {getReportTypeConfig(reportType)?.label || reportType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                           </p>
                         </div>
-                      </div>
-                      {streamingText ? (
-                        <ScrollArea className="flex-1 min-h-0 rounded-lg border bg-muted/30">
+
+                        {/* Progress bar */}
+                        <div className="w-full bg-neutral-200 rounded-full h-2 overflow-hidden">
                           <div
-                            className="p-4 prose prose-sm max-w-none text-sm"
-                            dangerouslySetInnerHTML={{
-                              __html: renderMarkdownToHtml(streamingText),
+                            className="bg-forest h-2 rounded-full transition-all duration-1000 ease-out"
+                            style={{
+                              width: `${Math.min(
+                                elapsedSeconds < 3 ? 5 :
+                                elapsedSeconds < 8 ? 15 :
+                                elapsedSeconds < 15 ? 30 :
+                                elapsedSeconds < 25 ? 55 :
+                                elapsedSeconds < 40 ? 75 :
+                                elapsedSeconds < 60 ? 88 : 95,
+                                95
+                              )}%`,
                             }}
                           />
-                        </ScrollArea>
-                      ) : (
-                        <div className="flex-1 flex items-center justify-center rounded-lg border bg-muted/30 min-h-[200px]">
-                          <div className="text-center text-muted-foreground">
-                            <Sparkles className="h-8 w-8 mx-auto mb-2 text-forest/40 animate-pulse" />
-                            <p className="text-sm">Preparing report structure...</p>
-                          </div>
                         </div>
-                      )}
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>
-                          {streamingText
-                            ? `${streamingText.split(/\s+/).length} words generated`
-                            : "Connecting to AI..."}
-                        </span>
-                        <span>
-                          {elapsedSeconds > 0 && `${elapsedSeconds}s · `}
-                          {elapsedSeconds > 60
-                            ? "Taking longer than usual — hang tight"
-                            : "Usually takes 30–60 seconds"}
-                        </span>
+
+                        {/* Timed status message */}
+                        <p className="text-sm text-muted-foreground">
+                          {elapsedSeconds < 3
+                            ? `Analyzing ${property.trees.length} tree${property.trees.length !== 1 ? "s" : ""} in ${property.city}...`
+                            : elapsedSeconds < 8
+                              ? "Loading municipal ordinance data..."
+                              : elapsedSeconds < 15
+                                ? "Generating report sections..."
+                                : elapsedSeconds < 25
+                                  ? "Writing site observations and recommendations..."
+                                  : elapsedSeconds < 40
+                                    ? "Formatting and reviewing..."
+                                    : "Almost there — complex reports take a bit longer..."}
+                        </p>
+
+                        {/* Word count (if streaming has started) */}
+                        {streamingText && (
+                          <p className="text-xs text-muted-foreground/60">
+                            {streamingText.split(/\s+/).length} words generated
+                          </p>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -1522,7 +1507,6 @@ export default function PropertyReportPage() {
 
   // -------------------------------------------------------------------------
   // Render: Report exists — editor / preview
-  // -------------------------------------------------------------------------
 
   const signatureNameMatch =
     arborist?.signatureName &&
@@ -1748,18 +1732,9 @@ export default function PropertyReportPage() {
               </>
             )}
 
-            {/* ---- Certified toolbar ---- */}
+            {/* ---- Certified toolbar: PDF + Share + ⋮ ---- */}
             {isCertified && !isAmending && (
               <>
-                <Button
-                  size="sm"
-                  className="bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform"
-                  onClick={handleShareWithClient}
-                >
-                  <Share2 className="h-3.5 w-3.5 mr-1.5" />
-                  Share with Client
-                </Button>
-
                 <Button
                   variant="outline"
                   size="sm"
@@ -1771,7 +1746,18 @@ export default function PropertyReportPage() {
                   ) : (
                     <Download className="h-3.5 w-3.5 mr-1.5" />
                   )}
-                  {pdfLoading ? "Generating..." : "PDF"}
+                  <span className="hidden sm:inline">{pdfLoading ? "Generating..." : "Download PDF"}</span>
+                  <span className="sm:hidden">{pdfLoading ? "..." : "PDF"}</span>
+                </Button>
+
+                <Button
+                  size="sm"
+                  className="bg-forest hover:bg-forest-light active:scale-[0.98] transition-transform"
+                  onClick={handleShareWithClient}
+                >
+                  <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                  <span className="hidden sm:inline">Share</span>
+                  <span className="sm:hidden">Share</span>
                 </Button>
 
                 <DropdownMenu>
@@ -1781,9 +1767,16 @@ export default function PropertyReportPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
+                    {/* Downloads & sharing */}
+                    {reportType !== "tree_valuation" && reportType !== "real_estate_package" && (
+                      <DropdownMenuItem onClick={handleDownloadWord}>
+                        <FileDown className="h-4 w-4 mr-2" />
+                        Download Word
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem onClick={openDeliveryDialog}>
                       <Send className="h-4 w-4 mr-2" />
-                      Send via Email
+                      Email to Client
                     </DropdownMenuItem>
                     {reportType === "real_estate_package" && reRealtorEmail && (
                       <DropdownMenuItem asChild>
@@ -1799,43 +1792,50 @@ export default function PropertyReportPage() {
                         </a>
                       </DropdownMenuItem>
                     )}
-
-                    <DropdownMenuSeparator />
-
-                    <DropdownMenuItem onClick={() => setViewMode("quickReview")}>
-                      <Smartphone className="h-4 w-4 mr-2" />
-                      Quick Review
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (property?.shareToken) {
+                          navigator.clipboard.writeText(`${window.location.origin}/share/${property.shareToken}`);
+                          toast({ title: "Share link copied to clipboard" });
+                        } else {
+                          handleShareWithClient();
+                        }
+                      }}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Copy Share Link
                     </DropdownMenuItem>
 
                     <DropdownMenuSeparator />
 
+                    {/* Review & history */}
+                    <DropdownMenuItem onClick={() => setViewMode("quickReview")}>
+                      <Smartphone className="h-4 w-4 mr-2" />
+                      Quick Review
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={openVersionHistory}>
+                      <History className="h-4 w-4 mr-2" />
+                      Version History
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push(`/properties/${propertyId}`)}>
+                      <Home className="h-4 w-4 mr-2" />
+                      View Property
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    {/* Amendment */}
                     <DropdownMenuItem
                       onClick={() => setShowAmendDialog(true)}
                       className="text-amber-700 focus:text-amber-700"
                     >
                       <FileEdit className="h-4 w-4 mr-2" />
-                      Issue Amendment
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={unlockReport} disabled={unlocking}>
-                      <Unlock className="h-4 w-4 mr-2" />
-                      {unlocking ? "Unlocking..." : "Unlock & Revise"}
+                      Request Amendment
                     </DropdownMenuItem>
 
                     <DropdownMenuSeparator />
 
-                    <DropdownMenuItem onClick={openVersionHistory}>
-                      <History className="h-4 w-4 mr-2" />
-                      Version History
-                    </DropdownMenuItem>
-                    {reportType !== "tree_valuation" && reportType !== "real_estate_package" && (
-                      <DropdownMenuItem onClick={handleDownloadWord}>
-                        <FileDown className="h-4 w-4 mr-2" />
-                        Download Word
-                      </DropdownMenuItem>
-                    )}
-
-                    <DropdownMenuSeparator />
-
+                    {/* Destructive */}
                     <DropdownMenuItem
                       onClick={() => setShowDeleteDialog(true)}
                       className="text-red-600 focus:text-red-600"
@@ -2015,12 +2015,12 @@ export default function PropertyReportPage() {
           /* Full Preview Mode (or certified read-only) */
           <div className="flex-1 overflow-hidden">
             <ScrollArea className="h-full">
-              <div className="max-w-3xl mx-auto py-8 px-4 sm:px-6">
+              <div className="mx-auto py-8 px-4 sm:px-6" style={{ maxWidth: "800px" }}>
                 {isCertified && (
                   <div className="flex items-center gap-2 rounded-lg border border-forest/20 bg-forest/5 p-3 text-sm text-forest mb-4">
                     <Lock className="h-4 w-4 shrink-0" />
                     This report has been certified and is locked. Use
-                    &ldquo;Unlock &amp; Revise&rdquo; to make changes.
+                    &ldquo;Request Amendment&rdquo; to make changes.
                   </div>
                 )}
                 {isCertified && report && (

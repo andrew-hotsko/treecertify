@@ -37,10 +37,11 @@
 - Report depth scales to assessment complexity: removal/critical trees get 2-3 detailed paragraphs; healthy retained trees get 2-4 concise sentences.
 - Scope of Assignment auto-generates per report type on property creation (server-side) and on page load (client-side). AI uses scope as foundation for Section 1.
 - Standards referenced: ISA BMP, ISA TRAQ, ANSI A300, CTLA Trunk Formula Method (10th Edition), ANSI A300 Part 5 (construction).
-- Mock fallback (no ANTHROPIC_API_KEY) does not fabricate observations — uses "No concerns noted" language when arborist left fields blank. `real_estate_package` has a dedicated `generateMockRealEstateReport()` with correct RE sections (Introduction and Scope, Executive Tree Summary, Canopy Valuation Summary, Maintenance Outlook, etc.) and buyer-friendly language.
+- **No mock fallback**: Missing `ANTHROPIC_API_KEY` returns explicit 503 error. Mock generation functions removed.
+- **Retry on failure**: Generation route retries once on 529/500/503 errors (3-second delay) if no text was generated yet. Only retries when `fullText.length === 0`.
 - Streaming via SSE to the report editor UI. Excluded sections: "Tree Inventory" and "Arborist Certification Statement" (handled by PDF template).
 - **SSE resilience**: Client tracks `receivedDone` flag. If stream ends without "done" event, attempts to reload property from API to recover server-saved report. Server sends "done" event immediately after `prisma.report.create()` — version snapshot is fire-and-forget to avoid blocking confirmation.
-- **Generation UI**: Centered `max-w-lg` card with forest green brand colors, h-12 generate button, timed progress messages in modal (Connecting → Analyzing → Writing → Drafting → Finalizing). 90-second AbortController timeout with clear retry prompt. Amber error card with "Try Again" button.
+- **Generation UI**: Centered `max-w-md` progress modal with animated progress bar and timed status messages (Analyzing trees → Loading ordinance data → Generating sections → Writing observations → Formatting → Almost there). 90-second AbortController timeout. Error card shows actual error message with forest-green "Try Again" button + "Back to Property" link.
 
 ## Brand Guide
 - Colors: Forest #1D4E3E (primary), Forest Light #2A6B55 (hover), Forest Muted #3D7D68 (accents). Warm neutral scale #FEFDFB–#0A0A09. No dark mode.
@@ -460,7 +461,19 @@
 - **Estimated Maintenance Cost**: Removed from UI (DB field `estimatedMaintenanceCost` preserved on HealthAssessmentData).
 - **Report generation UX**: Centered max-w-lg card with forest green brand colors. h-12 generate button. Timed progress messages in streaming modal (Connecting → Analyzing → Writing → Drafting → Finalizing). 90-second AbortController timeout. SSE resilience: `receivedDone` tracking, server-saved report recovery, version snapshot fire-and-forget.
 
-## Current Status (as of Session 40, 2026-03-12)
+## Report Generation & Certified View (Session 41)
+- **Report generation reliability**: Missing API key returns 503 (no silent mock fallback). Retry once on 529/500/503 with 3s delay when no text generated yet. Mock generation functions removed.
+- **Loading UI**: Centered `max-w-md` progress modal with animated progress bar and timed status messages cycling through 6 stages (Analyzing trees → Loading ordinance data → Generating sections → Writing observations → Formatting → Almost there). No raw streaming text shown.
+- **Error states**: Error card shows actual error message, forest-green "Try Again" button, "Back to Property" link. No amber/destructive styling.
+- **Certified toolbar**: Only 3 buttons visible — "Download PDF" (outline), "Share with Client" (forest green), ⋮ three-dot menu. Menu items: Word Download, Email to Client, Email Realtor (RE only), Copy Share Link, separator, Quick Review, Version History, View Property, separator, Request Amendment, separator, Delete Report.
+- **"Copy Share Link"**: New menu item — copies share URL to clipboard if shareToken exists, otherwise shows "Share first" toast.
+- **"Request Amendment"**: Renamed from "Issue Amendment". Confirmation dialog required before amending.
+- **Removed**: "Unlock & Revise" button and `unlockReport` function removed — amendment flow covers this use case.
+- **Report content**: Preview and section editor max-width changed from `max-w-3xl` (768px) to 800px for better reading width.
+- **Report type selector**: New property page shows 3 primary types (Removal Permit, Health Assessment, Construction Encroachment) in 3-column grid. "Show all report types" expands to reveal 2 secondary types (Tree Valuation, Real Estate Package) in 2-column grid. Auto-expands if a secondary type is selected.
+- **Generate UI centering**: "No report" state centered vertically with `min-h-[60vh]` for visual balance.
+
+## Current Status (as of Session 41, 2026-03-12)
 
 ### What's Built and Working
 - **Full assessment workflow**: Property → trees → AI report → certification → PDF → share

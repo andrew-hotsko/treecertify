@@ -17,6 +17,7 @@ import {
   Home,
   Check,
   Calendar,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import { REPORT_TYPES } from "@/lib/report-types";
@@ -102,6 +103,7 @@ export default function NewPropertyPage() {
 
   // Report type
   const [reportType, setReportType] = useState<string | null>(null);
+  const [showAllTypes, setShowAllTypes] = useState(false);
 
   // Property details
   const [address, setAddress] = useState("");
@@ -219,9 +221,16 @@ export default function NewPropertyPage() {
       </div>
 
       <div className="space-y-6">
-        {/* Report Type Selection */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {REPORT_TYPES.map((rt) => {
+        {/* Report Type Selection — primary types + expandable "Show all" */}
+        {(() => {
+          const PRIMARY_IDS = ["removal_permit", "health_assessment", "construction_encroachment"];
+          const primaryTypes = REPORT_TYPES.filter((rt) => PRIMARY_IDS.includes(rt.id));
+          const secondaryTypes = REPORT_TYPES.filter((rt) => !PRIMARY_IDS.includes(rt.id));
+          // If user selected a secondary type, always show expanded
+          const isSecondarySelected = reportType && secondaryTypes.some((rt) => rt.id === reportType);
+          const expanded = showAllTypes || isSecondarySelected;
+
+          const renderCard = (rt: (typeof REPORT_TYPES)[0]) => {
             const Icon = ICON_MAP[rt.icon];
             const colors = COLOR_MAP[rt.color] || COLOR_MAP.green;
             const selected = reportType === rt.id;
@@ -257,8 +266,30 @@ export default function NewPropertyPage() {
                 </p>
               </button>
             );
-          })}
-        </div>
+          };
+
+          return (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {primaryTypes.map(renderCard)}
+              </div>
+              {expanded ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {secondaryTypes.map(renderCard)}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowAllTypes(true)}
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mx-auto"
+                >
+                  Show all report types
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Property Address */}
         <Card>
