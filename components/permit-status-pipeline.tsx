@@ -157,68 +157,83 @@ export function PermitStatusPipeline({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* ---- Pipeline visualization ---- */}
-        <div className="flex items-center gap-0 overflow-x-auto pb-2">
+        <div className="flex items-center justify-between overflow-x-auto pb-2">
           {allStages.map((stage, idx) => {
             const isComplete = idx < currentStage;
             const isCurrent = idx === currentStage;
             const isTerminal = idx === 3;
             const isTerminalDenied = isTerminal && permitStatus === "denied";
             const isTerminalRevision = isTerminal && permitStatus === "revision_requested";
+            const isTerminalApproved = isTerminal && (permitStatus === "approved" || permitStatus === "approved_with_conditions");
 
-            // Colors
-            let circleColor = "bg-neutral-300 text-neutral-400";
-            let lineColor = "bg-neutral-300";
-            let textColor = "text-neutral-400";
+            // Circle styles
+            let circleClasses = "bg-neutral-200 border-2 border-neutral-300";
+            let iconClasses = "text-neutral-400";
+            let textClasses = "text-neutral-400";
 
             if (isComplete) {
-              circleColor = "bg-forest text-white";
-              lineColor = "bg-forest";
-              textColor = "text-forest";
+              circleClasses = "bg-forest border-2 border-forest";
+              iconClasses = "text-white";
+              textClasses = "text-forest font-medium";
             } else if (isCurrent) {
-              circleColor = "bg-amber-500 text-white";
-              textColor = "text-amber-700 font-semibold";
               if (isTerminalDenied) {
-                circleColor = "bg-red-500 text-white";
-                textColor = "text-red-700 font-semibold";
+                circleClasses = "bg-red-500 border-2 border-red-500";
+                iconClasses = "text-white";
+                textClasses = "text-red-700 font-semibold";
               } else if (isTerminalRevision) {
-                circleColor = "bg-amber-500 text-white";
-                textColor = "text-amber-700 font-semibold";
-              } else if (isTerminal && permitStatus === "approved") {
-                circleColor = "bg-forest text-white";
-                textColor = "text-forest font-semibold";
+                circleClasses = "bg-amber-500 border-2 border-amber-500";
+                iconClasses = "text-white";
+                textClasses = "text-amber-700 font-semibold";
+              } else if (isTerminalApproved) {
+                circleClasses = "bg-forest border-2 border-forest";
+                iconClasses = "text-white";
+                textClasses = "text-forest font-semibold";
+              } else {
+                circleClasses = "bg-white border-2 border-forest ring-4 ring-forest/20";
+                iconClasses = "text-forest";
+                textClasses = "text-foreground font-semibold";
               }
             }
+
+            // Line color: green if both left node is complete
+            const lineComplete = idx <= currentStage;
+            const lineClasses = lineComplete
+              ? isTerminalDenied ? "bg-red-300" : isTerminalRevision ? "bg-amber-300" : "bg-forest"
+              : "bg-neutral-200";
 
             const StageIcon = stage.icon;
             const label = friendlyLabels ? stage.friendlyLabel : stage.label;
 
             return (
-              <div key={stage.key} className="flex items-center">
+              <div key={stage.key} className="flex items-center flex-1 last:flex-none">
                 {/* Connector line (before each stage except first) */}
                 {idx > 0 && (
                   <div
                     className={cn(
-                      "h-0.5 w-6 sm:w-10 shrink-0",
-                      isComplete || isCurrent ? (isTerminalDenied ? "bg-red-300" : isTerminalRevision ? "bg-amber-300" : "bg-forest/30") : lineColor
+                      "h-0.5 flex-1 min-w-4 sm:min-w-8 shrink-0",
+                      lineClasses
                     )}
                   />
                 )}
 
                 {/* Stage node */}
-                <div className="flex flex-col items-center gap-1 shrink-0">
+                <div className="flex flex-col items-center gap-1.5 shrink-0">
                   <div
                     className={cn(
-                      "flex items-center justify-center w-8 h-8 rounded-full transition-colors",
-                      circleColor
+                      "flex items-center justify-center w-7 h-7 rounded-full transition-all",
+                      circleClasses
                     )}
                   >
-                    {isComplete ? (
-                      <CheckCircle2 className="h-4 w-4" />
+                    {isComplete || isTerminalApproved ? (
+                      <CheckCircle2 className={cn("h-3.5 w-3.5", iconClasses)} />
                     ) : (
-                      <StageIcon className="h-4 w-4" />
+                      <StageIcon className={cn("h-3.5 w-3.5", iconClasses)} />
                     )}
                   </div>
-                  <span className={cn("text-[10px] sm:text-xs text-center whitespace-nowrap", textColor)}>
+                  <span className={cn(
+                    "text-[10px] font-mono uppercase tracking-wider text-center whitespace-nowrap",
+                    textClasses
+                  )}>
                     {label}
                   </span>
                 </div>
