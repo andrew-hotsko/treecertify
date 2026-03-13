@@ -473,7 +473,16 @@
 - **Report type selector**: New property page shows 3 primary types (Removal Permit, Health Assessment, Construction Encroachment) in 3-column grid. "Show all report types" expands to reveal 2 secondary types (Tree Valuation, Real Estate Package) in 2-column grid. Auto-expands if a secondary type is selected.
 - **Generate UI centering**: "No report" state centered vertically with `min-h-[60vh]` for visual balance.
 
-## Current Status (as of Session 41, 2026-03-12)
+## Report Flow Polish (Session 42)
+- **Certification scroll fix**: Certification dialog modal CardContent now has `max-h-[85vh] overflow-y-auto` so Sign button is reachable on small viewports.
+- **PDF generation fix**: Replaced direct `puppeteer.launch()` with shared `lib/pdf-browser.ts` that uses `@sparticuz/chromium` + `puppeteer-core` on Vercel serverless, falls back to regular `puppeteer` locally. `vercel.json` configures memory (1024MB) and maxDuration (60s/120s) for PDF and AI routes.
+- **Report generation modal**: Lifted generation progress modal out of the Generate card to a standalone `fixed` overlay with `backdrop-blur-sm`. Card hidden during generation. No duplicate UI behind the modal.
+- **Report page layout**: Removed API cost display from header. Cleaned up "Saved X ago" to only show when no unsaved changes.
+- **Permit status pipeline**: Visual redesign — completed steps show filled forest-green circles with checkmarks, current step shows ring animation with forest border, future steps are gray. Labels use `text-[10px] font-mono uppercase tracking-wider`. Connector lines fill green as stages complete.
+- **Certified three-dot menu**: Simplified — Download Word, Copy Share Link, Request Amendment, Quick Review, Version History, View Property, Delete Report. Removed Email to Client and Email Realtor items.
+- **Section editor sidebar**: Widened from `w-48` to `w-[280px] min-w-[280px]`. Text wrapping enabled (removed truncate). Hidden on mobile (`hidden md:flex`). Section cards max-width set to 800px.
+
+## Current Status (as of Session 42, 2026-03-12)
 
 ### What's Built and Working
 - **Full assessment workflow**: Property → trees → AI report → certification → PDF → share
