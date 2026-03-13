@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/status-badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ReportPreview } from "@/components/report-preview";
+import { SectionEditor } from "@/components/section-editor";
 import { renderMarkdownToHtml } from "@/lib/markdown";
 import { getReportTypeConfig } from "@/lib/report-types";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,12 +35,9 @@ import {
   Loader2,
   Download,
   FileDown,
-  Eye,
-  Pencil,
   Lock,
   Unlock,
   RefreshCw,
-  List,
   Clock,
   AlertTriangle,
   XCircle,
@@ -223,12 +221,6 @@ interface ArboristInfo {
   billingPaymentInstructions?: string | null;
 }
 
-interface Section {
-  id: string;
-  title: string;
-  level: number;
-}
-
 interface ValidationCheck {
   id: string;
   label: string;
@@ -254,30 +246,6 @@ interface ReportVersionItem {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
-
-function extractSections(markdown: string): Section[] {
-  const sections: Section[] = [];
-  for (const line of markdown.split("\n")) {
-    if (line.startsWith("### ")) {
-      const title = line.slice(4).trim();
-      sections.push({ id: slugify(title), title, level: 3 });
-    } else if (line.startsWith("## ")) {
-      const title = line.slice(3).trim();
-      sections.push({ id: slugify(title), title, level: 2 });
-    } else if (line.startsWith("# ")) {
-      const title = line.slice(2).trim();
-      sections.push({ id: slugify(title), title, level: 1 });
-    }
-  }
-  return sections;
-}
 
 function timeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -306,7 +274,6 @@ export default function PropertyReportPage() {
   const [arborist, setArborist] = useState<ArboristInfo | null>(null);
   const [reportType, setReportType] = useState("");
   const [content, setContent] = useState("");
-  const [previewHtml, setPreviewHtml] = useState("");
 
   // Certification state
   const [signatureText, setSignatureText] = useState("");
@@ -328,8 +295,7 @@ export default function PropertyReportPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [showSectionNav, setShowSectionNav] = useState(true);
-  const [viewMode, setViewMode] = useState<"edit" | "split" | "preview" | "quickReview">("split");
+  const [viewMode, setViewMode] = useState<"editor" | "preview" | "quickReview">("editor");
   const [showQualityDialog, setShowQualityDialog] = useState(false);
   const [qualityWarnings, setQualityWarnings] = useState<string[]>([]);
   const [streamingText, setStreamingText] = useState("");
@@ -406,15 +372,11 @@ export default function PropertyReportPage() {
   const [editorTemplates, setEditorTemplates] = useState<DocTemplate[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [templateSearch, setTemplateSearch] = useState("");
-  const [selectedText, setSelectedText] = useState("");
   const [showSaveTemplateDialog, setShowSaveTemplateDialog] = useState(false);
   const [savingNewTemplate, setSavingNewTemplate] = useState(false);
   const [newTemplateForm, setNewTemplateForm] = useState({ name: "", content: "", category: "", cityTag: "", reportTypeTag: "" });
 
   // Refs
-  const editorRef = useRef<HTMLTextAreaElement>(null);
-  const previewRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSaveRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const savedContentRef = useRef("");
   const lastSavedRef = useRef<Date | null>(null);
@@ -424,7 +386,6 @@ export default function PropertyReportPage() {
   // Derived state
   const isCertified = report?.status === "certified" || report?.status === "filed";
   const isAmending = report?.status === "amendment_in_progress";
-  const sections = useMemo(() => extractSections(content), [content]);
   const parsedTreeSections = useMemo(() => parseReportSections(content), [content]);
 
   // -------------------------------------------------------------------------
@@ -455,14 +416,13 @@ export default function PropertyReportPage() {
           const c = r.finalContent || r.aiDraftContent || "";
           setContent(c);
           savedContentRef.current = c;
-          setPreviewHtml(renderMarkdownToHtml(c));
           setReportType(r.reportType);
           // Check query param for Quick Review entry
           const requestedView = searchParams.get("view");
           if (requestedView === "quickReview") {
             setViewMode("quickReview");
           } else {
-            setViewMode(r.status === "certified" || r.status === "filed" ? "preview" : "split");
+            setViewMode(r.status === "certified" || r.status === "filed" ? "preview" : "editor");
           }
           // Parse report options
           try {
@@ -533,13 +493,6 @@ export default function PropertyReportPage() {
   // Debounced preview (500ms)
   // -------------------------------------------------------------------------
 
-  const updatePreview = useCallback((md: string) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setPreviewHtml(renderMarkdownToHtml(md));
-    }, 500);
-  }, []);
-
   // -------------------------------------------------------------------------
   // Content change handler
   // -------------------------------------------------------------------------
@@ -548,9 +501,8 @@ export default function PropertyReportPage() {
     (value: string) => {
       setContent(value);
       setHasUnsavedChanges(value !== savedContentRef.current);
-      updatePreview(value);
     },
-    [updatePreview]
+    []
   );
 
   // -------------------------------------------------------------------------
@@ -833,8 +785,7 @@ export default function PropertyReportPage() {
               });
               setContent(accumulated);
               savedContentRef.current = accumulated;
-              setPreviewHtml(renderMarkdownToHtml(accumulated));
-              setViewMode("split");
+              setViewMode("editor");
             } else if (payload.type === "error") {
               throw new Error(payload.error || "Report generation failed");
             }
@@ -856,8 +807,7 @@ export default function PropertyReportPage() {
                   const c = r.finalContent || r.aiDraftContent || "";
                   setContent(c);
                   savedContentRef.current = c;
-                  setPreviewHtml(renderMarkdownToHtml(c));
-                  setViewMode("split");
+                  setViewMode("editor");
                   return; // Report was saved — proceed normally
                 }
               }
@@ -876,8 +826,7 @@ export default function PropertyReportPage() {
         const c = newReport.aiDraftContent || "";
         setContent(c);
         savedContentRef.current = c;
-        setPreviewHtml(renderMarkdownToHtml(c));
-        setViewMode("split");
+        setViewMode("editor");
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
@@ -971,7 +920,7 @@ export default function PropertyReportPage() {
       setReport(updated);
       setShowAmendDialog(false);
       setAmendmentReason("");
-      setViewMode("split");
+      setViewMode("editor");
       toast({ title: `Amendment #${updated.amendmentNumber} issued`, description: "The report is now open for editing." });
     } catch (err) {
       toast({
@@ -1048,7 +997,7 @@ export default function PropertyReportPage() {
       if (!res.ok) throw new Error("Failed to unlock");
       const updated = await res.json();
       setReport(updated);
-      setViewMode("split");
+      setViewMode("editor");
       setSignatureText("");
       setCertifyAgreed(false);
     } catch (err) {
@@ -1279,7 +1228,6 @@ export default function PropertyReportPage() {
         setContent(version.content);
         savedContentRef.current = version.content;
         setHasUnsavedChanges(false);
-        setPreviewHtml(renderMarkdownToHtml(version.content));
         setShowVersionPreview(false);
         setPreviewVersion(null);
         setShowVersionHistory(false);
@@ -1318,16 +1266,7 @@ export default function PropertyReportPage() {
   // Section nav click — scroll preview to heading
   // -------------------------------------------------------------------------
 
-  const scrollToSection = (sectionId: string) => {
-    if (previewRef.current) {
-      const heading = previewRef.current.querySelector(
-        `[data-section-id="${sectionId}"]`
-      );
-      if (heading) {
-        heading.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    }
-  };
+  // scrollToSection is now handled by SectionEditor component
 
   // -------------------------------------------------------------------------
   // Render: Loading
@@ -1691,26 +1630,6 @@ export default function PropertyReportPage() {
                   Templates
                 </Button>
 
-                {selectedText.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setNewTemplateForm({
-                        name: "",
-                        content: selectedText,
-                        category: "",
-                        cityTag: property?.city || "",
-                        reportTypeTag: reportType || "",
-                      });
-                      setShowSaveTemplateDialog(true);
-                    }}
-                  >
-                    <Save className="h-3.5 w-3.5 mr-1.5" />
-                    Save as Template
-                  </Button>
-                )}
-
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -2001,54 +1920,6 @@ export default function PropertyReportPage() {
 
       {/* ---- Main Content ---- */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Section Navigation Sidebar */}
-        {sections.length > 0 && showSectionNav && (viewMode === "edit" || viewMode === "split") && (!isCertified || isAmending) && (
-          <div className="flex-none w-48 border-r bg-muted/30 overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-3 py-2 border-b">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Sections
-              </span>
-              <button
-                onClick={() => setShowSectionNav(false)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <List className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <ScrollArea className="flex-1">
-              <div className="p-2 space-y-0.5">
-                {sections.map((section, idx) => (
-                  <button
-                    key={`${section.id}-${idx}`}
-                    onClick={() => scrollToSection(section.id)}
-                    className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-accent transition-colors truncate ${
-                      section.level === 1
-                        ? "font-semibold"
-                        : section.level === 2
-                          ? "pl-4 text-muted-foreground"
-                          : "pl-6 text-muted-foreground/70"
-                    }`}
-                    title={section.title}
-                  >
-                    {section.title}
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
-        )}
-
-        {/* Toggle section nav when hidden */}
-        {!showSectionNav && (viewMode === "edit" || viewMode === "split") && (!isCertified || isAmending) && sections.length > 0 && (
-          <button
-            onClick={() => setShowSectionNav(true)}
-            className="flex-none w-8 border-r bg-muted/30 flex items-center justify-center hover:bg-muted transition-colors"
-            title="Show section navigation"
-          >
-            <List className="h-4 w-4 text-muted-foreground" />
-          </button>
-        )}
-
         {/* Amendment banner */}
         {isAmending && report && (
           <div className="flex-none border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 flex items-center gap-2">
@@ -2110,7 +1981,7 @@ export default function PropertyReportPage() {
               catch { return []; }
             })()}
             onExitQuickReview={() => {
-              setViewMode(isCertified ? "preview" : "split");
+              setViewMode(isCertified ? "preview" : "editor");
             }}
             onStartCertification={() => {
               setCertifyStep(1);
@@ -2133,103 +2004,13 @@ export default function PropertyReportPage() {
               setReport({ ...report, reviewFlags: flagsJson });
             }}
           />
-        ) : (viewMode === "edit" || viewMode === "split") && (!isCertified || isAmending) ? (
-          <div className="flex-1 flex overflow-hidden">
-            {/* Markdown Editor — full width in edit mode, 35% in split */}
-            {(viewMode === "edit" || viewMode === "split") && (
-              <div className={`flex flex-col border-r ${viewMode === "split" ? "w-[35%]" : "flex-1"}`}>
-                <div className="flex-none px-3 py-1.5 border-b bg-muted/30 text-xs text-muted-foreground flex items-center gap-2">
-                  <Pencil className="h-3 w-3" />
-                  Markdown Editor
-                  {viewMode === "edit" && (
-                    <span className="ml-auto">
-                      Use # headings, **bold**, *italic*, - lists, | tables |
-                    </span>
-                  )}
-                </div>
-                <textarea
-                  ref={editorRef}
-                  value={content}
-                  onChange={(e) => handleContentChange(e.target.value)}
-                  onSelect={() => {
-                    const el = editorRef.current;
-                    if (el && el.selectionStart !== el.selectionEnd) {
-                      setSelectedText(content.substring(el.selectionStart, el.selectionEnd));
-                    } else {
-                      setSelectedText("");
-                    }
-                  }}
-                  className="flex-1 resize-none border-0 bg-background p-4 font-mono text-sm leading-relaxed focus:outline-none focus:ring-0"
-                  spellCheck={false}
-                />
-              </div>
-            )}
-
-            {/* Live Preview — 65% in split mode */}
-            {viewMode === "split" && (
-            <div className="w-[65%] flex flex-col overflow-hidden">
-              <div className="flex-none px-3 py-1.5 border-b bg-muted/30 text-xs text-muted-foreground flex items-center gap-2">
-                <Eye className="h-3 w-3" />
-                Live Preview
-              </div>
-              <ScrollArea className="flex-1">
-                <div
-                  ref={previewRef}
-                  className="p-6 prose prose-sm max-w-none report-live-preview"
-                >
-                  <style>{`
-                    .report-live-preview h1,
-                    .report-live-preview h2,
-                    .report-live-preview h3 {
-                      color: #2d5016;
-                      scroll-margin-top: 16px;
-                    }
-                    .dark .report-live-preview h1,
-                    .dark .report-live-preview h2,
-                    .dark .report-live-preview h3 {
-                      color: #6fcf3b;
-                    }
-                    .report-live-preview table {
-                      width: 100%;
-                      border-collapse: collapse;
-                      font-size: 0.8rem;
-                    }
-                    .report-live-preview table th {
-                      background: #2d5016;
-                      color: white;
-                      padding: 4px 8px;
-                      text-align: left;
-                    }
-                    .dark .report-live-preview table th {
-                      background: #1a3a0a;
-                    }
-                    .report-live-preview table td {
-                      padding: 4px 8px;
-                      border: 1px solid #ddd;
-                    }
-                    .dark .report-live-preview table td {
-                      border-color: #3f3f46;
-                    }
-                    .report-live-preview table tr:nth-child(even) {
-                      background: #f9f9f6;
-                    }
-                    .dark .report-live-preview table tr:nth-child(even) {
-                      background: #18181b;
-                    }
-                    .report-live-preview hr {
-                      border: none;
-                      border-top: 1px solid #ddd;
-                      margin: 16px 0;
-                    }
-                  `}</style>
-                  <div
-                    dangerouslySetInnerHTML={{ __html: addSectionIds(previewHtml) }}
-                  />
-                </div>
-              </ScrollArea>
-            </div>
-            )}
-          </div>
+        ) : viewMode === "editor" && (!isCertified || isAmending) ? (
+          <SectionEditor
+            content={content}
+            reportId={report?.id || ""}
+            trees={property?.trees || []}
+            onContentChange={handleContentChange}
+          />
         ) : (
           /* Full Preview Mode (or certified read-only) */
           <div className="flex-1 overflow-hidden">
@@ -3389,12 +3170,8 @@ export default function PropertyReportPage() {
                             key={t.id}
                             className="w-full text-left rounded-lg border p-3 hover:bg-neutral-50 transition-colors"
                             onClick={() => {
-                              const el = editorRef.current;
-                              const pos = el?.selectionStart ?? content.length;
-                              const before = content.substring(0, pos);
-                              const after = content.substring(pos);
-                              const sep = before.length > 0 && !before.endsWith("\n") ? "\n\n" : "";
-                              handleContentChange(before + sep + t.content + after);
+                              const sep = content.length > 0 && !content.endsWith("\n") ? "\n\n" : "";
+                              handleContentChange(content + sep + t.content);
                               fetch(`/api/templates/${t.id}`, {
                                 method: "PUT",
                                 headers: { "Content-Type": "application/json" },
@@ -3425,12 +3202,8 @@ export default function PropertyReportPage() {
                             key={t.id}
                             className="w-full text-left rounded-lg border p-3 hover:bg-neutral-50 transition-colors"
                             onClick={() => {
-                              const el = editorRef.current;
-                              const pos = el?.selectionStart ?? content.length;
-                              const before = content.substring(0, pos);
-                              const after = content.substring(pos);
-                              const sep = before.length > 0 && !before.endsWith("\n") ? "\n\n" : "";
-                              handleContentChange(before + sep + t.content + after);
+                              const sep = content.length > 0 && !content.endsWith("\n") ? "\n\n" : "";
+                              handleContentChange(content + sep + t.content);
                               fetch(`/api/templates/${t.id}`, {
                                 method: "PUT",
                                 headers: { "Content-Type": "application/json" },
@@ -3520,7 +3293,6 @@ export default function PropertyReportPage() {
                     });
                     if (!res.ok) throw new Error();
                     setShowSaveTemplateDialog(false);
-                    setSelectedText("");
                     toast({ description: "Template saved" });
                   } catch {
                     toast({ variant: "destructive", description: "Failed to save template" });
@@ -3544,16 +3316,4 @@ export default function PropertyReportPage() {
 // Adds data-section-id attributes to headings in HTML for section nav scrolling
 // ---------------------------------------------------------------------------
 
-function addSectionIds(html: string): string {
-  return html.replace(
-    /<(h[1-3])>(.*?)<\/h[1-3]>/g,
-    (match, tag, content) => {
-      const text = content.replace(/<[^>]+>/g, "");
-      const id = text
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
-      return `<${tag} data-section-id="${id}">${content}</${tag}>`;
-    }
-  );
-}
+// addSectionIds removed — section navigation is now handled by SectionEditor component
