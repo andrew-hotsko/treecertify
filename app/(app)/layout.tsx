@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/sidebar";
 import { MobileNav } from "@/components/mobile-nav";
 import { ConnectivityIndicator } from "@/components/connectivity-indicator";
 import { AppProviders } from "@/components/app-providers";
-import { FeedbackButton } from "@/components/feedback-button";
+
 
 export default async function AppLayout({
   children,
@@ -36,7 +36,7 @@ export default async function AppLayout({
         <main className="pl-0 md:pl-64">
           <div className="animate-page-in mx-auto max-w-7xl px-4 md:px-6 pt-6 md:pt-8 pb-20 md:pb-8">{children}</div>
         </main>
-        <FeedbackButton />
+
       </div>
     </AppProviders>
   );
