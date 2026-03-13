@@ -2,10 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   MapPin,
   ArrowLeft,
@@ -60,11 +58,11 @@ const ICON_MAP = {
 
 const COLOR_MAP: Record<string, { border: string; bg: string; ring: string; icon: string; check: string }> = {
   green: {
-    border: "border-l-forest",
-    bg: "bg-forest/5",
-    ring: "ring-forest",
-    icon: "text-forest",
-    check: "bg-forest",
+    border: "border-l-[#1D4E3E]",
+    bg: "bg-[#1D4E3E]/5",
+    ring: "ring-[#1D4E3E]",
+    icon: "text-[#1D4E3E]",
+    check: "bg-[#1D4E3E]",
   },
   red: {
     border: "border-l-red-600",
@@ -157,7 +155,6 @@ export default function NewPropertyPage() {
           lng = geoData.lng;
         }
       } catch {
-        // Geocoding failure is non-fatal
         console.warn("Geocoding failed, proceeding without coordinates");
       }
 
@@ -178,7 +175,6 @@ export default function NewPropertyPage() {
           ...(homeownerName.trim() && { homeownerName: homeownerName.trim() }),
           ...(homeownerEmail.trim() && { homeownerEmail: homeownerEmail.trim() }),
           ...(homeownerPhone.trim() && { homeownerPhone: homeownerPhone.trim() }),
-          // Construction encroachment project fields
           ...(reportType === "construction_encroachment" && {
             ...(projectDescription.trim() && { projectDescription: projectDescription.trim() }),
             ...(permitNumber.trim() && { permitNumber: permitNumber.trim() }),
@@ -204,7 +200,8 @@ export default function NewPropertyPage() {
   const isValid = address.trim() && city && reportType;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto pb-24 sm:pb-8">
+      {/* Back link */}
       <Link
         href="/properties"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
@@ -213,97 +210,100 @@ export default function NewPropertyPage() {
         Properties
       </Link>
 
+      {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight font-display text-foreground">New Property</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Select a report type and enter the property address to get started.
+        <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-1">
+          New Property
         </p>
+        <h1 className="text-2xl md:text-3xl tracking-tight">
+          Create Property
+        </h1>
       </div>
 
-      <div className="space-y-6">
-        {/* Report Type Selection — primary types + expandable "Show all" */}
-        {(() => {
-          const PRIMARY_IDS = ["removal_permit", "health_assessment", "construction_encroachment"];
-          const primaryTypes = REPORT_TYPES.filter((rt) => PRIMARY_IDS.includes(rt.id));
-          const secondaryTypes = REPORT_TYPES.filter((rt) => !PRIMARY_IDS.includes(rt.id));
-          // If user selected a secondary type, always show expanded
-          const isSecondarySelected = reportType && secondaryTypes.some((rt) => rt.id === reportType);
-          const expanded = showAllTypes || isSecondarySelected;
+      <div className="space-y-8">
+        {/* Report Type Selection */}
+        <div>
+          <p className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-3">
+            Report Type *
+          </p>
+          {(() => {
+            const PRIMARY_IDS = ["removal_permit", "health_assessment", "construction_encroachment"];
+            const primaryTypes = REPORT_TYPES.filter((rt) => PRIMARY_IDS.includes(rt.id));
+            const secondaryTypes = REPORT_TYPES.filter((rt) => !PRIMARY_IDS.includes(rt.id));
+            const isSecondarySelected = reportType && secondaryTypes.some((rt) => rt.id === reportType);
+            const expanded = showAllTypes || isSecondarySelected;
 
-          const renderCard = (rt: (typeof REPORT_TYPES)[0]) => {
-            const Icon = ICON_MAP[rt.icon];
-            const colors = COLOR_MAP[rt.color] || COLOR_MAP.green;
-            const selected = reportType === rt.id;
+            const renderCard = (rt: (typeof REPORT_TYPES)[0]) => {
+              const Icon = ICON_MAP[rt.icon];
+              const colors = COLOR_MAP[rt.color] || COLOR_MAP.green;
+              const selected = reportType === rt.id;
+
+              return (
+                <button
+                  key={rt.id}
+                  onClick={() => setReportType(rt.id)}
+                  className={cn(
+                    "relative text-left p-5 rounded-lg border-2 border-l-4 transition-all",
+                    colors.border,
+                    selected
+                      ? `${colors.bg} ring-2 ${colors.ring} border-transparent`
+                      : "bg-card hover:bg-accent/30 border-border"
+                  )}
+                >
+                  {selected && (
+                    <div
+                      className={cn(
+                        "absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center",
+                        colors.check
+                      )}
+                    >
+                      <Check className="h-3.5 w-3.5 text-white" />
+                    </div>
+                  )}
+                  <Icon className={cn("h-7 w-7 mb-3", colors.icon)} />
+                  <h3 className="font-semibold text-sm text-foreground">
+                    {rt.label}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    {rt.description}
+                  </p>
+                </button>
+              );
+            };
 
             return (
-              <button
-                key={rt.id}
-                onClick={() => setReportType(rt.id)}
-                className={cn(
-                  "relative text-left p-5 rounded-lg border-2 border-l-4 transition-all",
-                  colors.border,
-                  selected
-                    ? `${colors.bg} ring-2 ${colors.ring} border-transparent`
-                    : "bg-neutral-50 hover:bg-neutral-100 border-border"
-                )}
-              >
-                {selected && (
-                  <div
-                    className={cn(
-                      "absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center",
-                      colors.check
-                    )}
-                  >
-                    <Check className="h-3.5 w-3.5 text-white" />
-                  </div>
-                )}
-                <Icon className={cn("h-7 w-7 mb-3", colors.icon)} />
-                <h3 className="font-semibold text-sm text-foreground">
-                  {rt.label}
-                </h3>
-                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                  {rt.description}
-                </p>
-              </button>
-            );
-          };
-
-          return (
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {primaryTypes.map(renderCard)}
-              </div>
-              {expanded ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {secondaryTypes.map(renderCard)}
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {primaryTypes.map(renderCard)}
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setShowAllTypes(true)}
-                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mx-auto"
-                >
-                  Show all report types
-                  <ChevronDown className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          );
-        })()}
+                {expanded ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {secondaryTypes.map(renderCard)}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllTypes(true)}
+                    className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-[#1D4E3E] transition-colors mx-auto"
+                  >
+                    Show all report types
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            );
+          })()}
+        </div>
 
-        {/* Property Address */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <MapPin className="h-4 w-4 text-forest" />
-              Property Location
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        {/* Property Location */}
+        <div>
+          <p className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-3">
+            Property Location
+          </p>
+          <div className="space-y-4 rounded-xl border border-border bg-card p-5">
             <div>
-              <Label htmlFor="address">Street Address *</Label>
+              <label className="text-xs text-muted-foreground">Street Address *</label>
               <Input
-                id="address"
                 placeholder="123 Main St"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
@@ -311,32 +311,41 @@ export default function NewPropertyPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>City *</Label>
+                <label className="text-xs text-muted-foreground">City *</label>
                 <Input
-                  placeholder="e.g., Palo Alto"
+                  placeholder="Palo Alto"
                   value={city}
                   onChange={(e) => handleCityChange(e.target.value)}
                   className="mt-1"
                 />
               </div>
               <div>
-                <Label>County</Label>
+                <label className="text-xs text-muted-foreground">County</label>
                 <Input
                   value={county}
                   onChange={(e) => setCounty(e.target.value)}
                   className="mt-1"
-                  placeholder="e.g., San Mateo"
+                  placeholder="San Mateo"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Auto-detected ordinance */}
+            {county && (
+              <div className="flex items-center gap-2 bg-[#1D4E3E]/5 rounded-lg p-3 text-sm border border-[#1D4E3E]/10">
+                <MapPin className="h-4 w-4 text-[#1D4E3E] shrink-0" />
+                <span className="text-[#1D4E3E] font-medium text-xs">
+                  {county} County ordinance detected
+                </span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="zip">ZIP Code</Label>
+                <label className="text-xs text-muted-foreground">ZIP Code</label>
                 <Input
-                  id="zip"
                   placeholder="94301"
                   value={zip}
                   onChange={(e) => setZip(e.target.value)}
@@ -344,9 +353,8 @@ export default function NewPropertyPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="apn">APN / Parcel Number</Label>
+                <label className="text-xs text-muted-foreground">APN / Parcel Number</label>
                 <Input
-                  id="apn"
                   placeholder="132-40-001"
                   value={parcelNumber}
                   onChange={(e) => setParcelNumber(e.target.value)}
@@ -356,46 +364,40 @@ export default function NewPropertyPage() {
             </div>
 
             <div>
-              <Label htmlFor="neededByDate" className="flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+              <label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5" />
                 Needed By Date
-              </Label>
+              </label>
               <Input
-                id="neededByDate"
                 type="date"
                 value={neededByDate}
                 onChange={(e) => setNeededByDate(e.target.value)}
                 className="mt-1"
               />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Construction encroachment project info */}
         {reportType === "construction_encroachment" && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <HardHat className="h-4 w-4 text-blue-600" />
-                Project Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div>
+            <p className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-3">
+              Project Information
+            </p>
+            <div className="space-y-4 rounded-xl border border-border bg-card p-5">
               <div>
-                <Label htmlFor="projectDescription">Project Description</Label>
+                <label className="text-xs text-muted-foreground">Project Description</label>
                 <Input
-                  id="projectDescription"
                   placeholder="New addition, foundation work, etc."
                   value={projectDescription}
                   onChange={(e) => setProjectDescription(e.target.value)}
                   className="mt-1"
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="permitNumber">Permit Number</Label>
+                  <label className="text-xs text-muted-foreground">Permit Number</label>
                   <Input
-                    id="permitNumber"
                     placeholder="BP-2024-001234"
                     value={permitNumber}
                     onChange={(e) => setPermitNumber(e.target.value)}
@@ -403,9 +405,8 @@ export default function NewPropertyPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="developerName">Developer / Contractor</Label>
+                  <label className="text-xs text-muted-foreground">Developer / Contractor</label>
                   <Input
-                    id="developerName"
                     placeholder="ABC Construction"
                     value={developerName}
                     onChange={(e) => setDeveloperName(e.target.value)}
@@ -414,65 +415,56 @@ export default function NewPropertyPage() {
                 </div>
               </div>
               <div>
-                <Label htmlFor="architectName">Architect</Label>
+                <label className="text-xs text-muted-foreground">Architect</label>
                 <Input
-                  id="architectName"
                   placeholder="Jane Smith, AIA"
                   value={architectName}
                   onChange={(e) => setArchitectName(e.target.value)}
                   className="mt-1"
                 />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
-        {/* Homeowner Info (optional) */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              Homeowner Information{" "}
-              <span className="text-muted-foreground font-normal text-sm">
-                (Optional)
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        {/* Homeowner Info */}
+        <div>
+          <p className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-3">
+            Client Information <span className="normal-case tracking-normal font-sans text-muted-foreground/60">(optional)</span>
+          </p>
+          <div className="space-y-4 rounded-xl border border-border bg-card p-5">
             <div>
-              <Label htmlFor="homeownerName">Name</Label>
+              <label className="text-xs text-muted-foreground">Client Name</label>
               <Input
-                id="homeownerName"
-                placeholder="John Smith"
+                placeholder="Property owner name"
                 value={homeownerName}
                 onChange={(e) => setHomeownerName(e.target.value)}
                 className="mt-1"
               />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="homeownerEmail">Email</Label>
+                <label className="text-xs text-muted-foreground">Email</label>
                 <Input
-                  id="homeownerEmail"
                   type="email"
-                  placeholder="john@example.com"
+                  placeholder="client@email.com"
                   value={homeownerEmail}
                   onChange={(e) => setHomeownerEmail(e.target.value)}
                   className="mt-1"
                 />
               </div>
               <div>
-                <Label htmlFor="homeownerPhone">Phone</Label>
+                <label className="text-xs text-muted-foreground">Phone</label>
                 <Input
-                  id="homeownerPhone"
-                  placeholder="(650) 555-0100"
+                  placeholder="(650) 555-0123"
                   value={homeownerPhone}
                   onChange={(e) => setHomeownerPhone(e.target.value)}
                   className="mt-1"
                 />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Error display */}
         {error && (
@@ -483,13 +475,17 @@ export default function NewPropertyPage() {
 
         {/* Submit */}
         <div className="flex justify-end gap-3">
-          <Button variant="outline" asChild>
+          <Button
+            variant="outline"
+            asChild
+            className="border-[#1D4E3E]/20 hover:bg-[#1D4E3E]/5 hover:border-[#1D4E3E]/40"
+          >
             <Link href="/properties">Cancel</Link>
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={!isValid || submitting}
-            className="bg-forest hover:bg-forest-light"
+            className="bg-[#1D4E3E] hover:bg-[#2A6B55] text-white"
           >
             {submitting ? (
               <>
@@ -497,10 +493,7 @@ export default function NewPropertyPage() {
                 Creating...
               </>
             ) : (
-              <>
-                <MapPin className="h-4 w-4 mr-2" />
-                Create &amp; Open Map
-              </>
+              "Create Property"
             )}
           </Button>
         </div>
