@@ -2,7 +2,9 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
@@ -16,15 +18,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Plus,
-  TreePine,
   Search,
   Trash2,
-  X,
   ChevronRight,
+  Leaf,
+  X,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { getReportTypeConfig } from "@/lib/report-types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,6 +41,7 @@ interface PropertyTree {
 interface PropertyReport {
   id: string;
   status: string;
+  reportType?: string | null;
   permitStatus?: string | null;
   submittedAt?: string | null;
   approvedAt?: string | null;
@@ -67,70 +70,51 @@ interface PropertiesListProps {
 }
 
 // ---------------------------------------------------------------------------
-// Tab system
+// Status filter config — matches dashboard pipeline stages
 // ---------------------------------------------------------------------------
 
-type Tab = "all" | "needsTrees" | "inProgress" | "ready" | "certified";
+type StatusFilter = "all" | "draft" | "report_draft" | "certified" | "delivered";
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "needsTrees", label: "Needs Trees" },
-  { key: "inProgress", label: "In Progress" },
-  { key: "ready", label: "Ready" },
-  { key: "certified", label: "Certified" },
+const STATUS_FILTERS: { value: StatusFilter; label: string; color: string }[] = [
+  { value: "all", label: "All", color: "#1D4E3E" },
+  { value: "draft", label: "Draft", color: "#9C9C93" },
+  { value: "report_draft", label: "Report Draft", color: "#3D7D68" },
+  { value: "certified", label: "Certified", color: "#1D4E3E" },
+  { value: "delivered", label: "Delivered", color: "#1D4E3E" },
 ];
 
-function getTabCategory(property: PropertyItem): Exclude<Tab, "all"> {
-  if (property.trees.length === 0) return "needsTrees";
+function getPropertyStage(property: PropertyItem): Exclude<StatusFilter, "all"> {
+  if (property.trees.length === 0) return "draft";
   const r = property.reports[0];
-  if (!r) return "inProgress";
+  if (!r) return "draft";
   if (r.status === "certified") return "certified";
-  return "ready"; // draft, review, amendment_in_progress
+  if (r.status === "draft" || r.status === "review" || r.status === "amendment_in_progress") return "report_draft";
+  return "draft";
 }
 
-/** Map dashboard ?filter= values to initial tab */
-function dashboardFilterToTab(filter?: string): Tab {
+/** Map dashboard ?filter= values to initial status */
+function dashboardFilterToStatus(filter?: string): StatusFilter {
   switch (filter) {
-    case "needs-trees": return "needsTrees";
-    case "ready-to-generate": return "inProgress";
-    case "ready-to-certify": return "ready";
+    case "needs-trees": return "draft";
+    case "ready-to-generate": return "draft";
+    case "ready-to-certify": return "report_draft";
     default: return "all";
   }
 }
 
-/** Map legacy ?status= values to tab */
-function legacyFilterToTab(filter?: string): Tab {
+/** Map legacy ?status= values */
+function legacyFilterToStatus(filter?: string): StatusFilter {
   switch (filter) {
-    case "inProgress": return "inProgress";
-    case "draft": return "ready";
+    case "inProgress": return "draft";
+    case "draft": return "report_draft";
     case "certified": return "certified";
     default: return "all";
   }
 }
 
 // ---------------------------------------------------------------------------
-// Card helpers
+// Helpers
 // ---------------------------------------------------------------------------
-
-const STATUS_DOT: Record<Exclude<Tab, "all">, string> = {
-  needsTrees: "bg-amber-400",
-  inProgress: "bg-blue-400",
-  ready: "bg-forest",
-  certified: "bg-emerald-500",
-};
-
-const STATUS_LABEL: Record<Exclude<Tab, "all">, string> = {
-  needsTrees: "Needs Trees",
-  inProgress: "In Progress",
-  ready: "Ready",
-  certified: "Certified",
-};
-
-function formatReportType(reportType: string) {
-  return reportType
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 const PERMIT_STATUS_LABELS: Record<string, string> = {
   submitted: "Submitted",
@@ -141,7 +125,7 @@ const PERMIT_STATUS_LABELS: Record<string, string> = {
   revision_requested: "Revision Requested",
 };
 
-function formatPermitStatus(report: PropertyReport): string | null {
+function formatPermitLine(report: PropertyReport): string | null {
   const ps = report.permitStatus;
   if (!ps || report.status !== "certified") return null;
   const label = PERMIT_STATUS_LABELS[ps] ?? ps;
@@ -149,22 +133,10 @@ function formatPermitStatus(report: PropertyReport): string | null {
   if (date) {
     const d = new Date(date);
     const formatted = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    return `Permit: ${label} \u00b7 ${formatted}`;
+    return `Permit: ${label} · ${formatted}`;
   }
   return `Permit: ${label}`;
 }
-
-// ---------------------------------------------------------------------------
-// Empty state messages per tab
-// ---------------------------------------------------------------------------
-
-const EMPTY_STATES: Record<Tab, { title: string; subtitle?: string }> = {
-  all: { title: "No properties yet", subtitle: "Create your first property to get started." },
-  needsTrees: { title: "All properties have trees assessed", subtitle: "Nice work." },
-  inProgress: { title: "No reports in progress" },
-  ready: { title: "No reports awaiting certification" },
-  certified: { title: "No certified reports yet" },
-};
 
 // ---------------------------------------------------------------------------
 // Permit filter labels (for ?permitStatus= from older links)
@@ -188,26 +160,25 @@ export function PropertiesList({
   initialDashboardFilter,
 }: PropertiesListProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const [properties, setProperties] = useState(initialProperties);
 
-  // Determine initial tab from query params (dashboard filter takes priority)
-  const initialTab = initialDashboardFilter
-    ? dashboardFilterToTab(initialDashboardFilter)
+  // Determine initial status filter from query params
+  const initialStatus = initialDashboardFilter
+    ? dashboardFilterToStatus(initialDashboardFilter)
     : initialFilter
-      ? legacyFilterToTab(initialFilter)
+      ? legacyFilterToStatus(initialFilter)
       : "all";
 
-  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialStatus);
 
-  // awaiting-payment and mitigation-due don't map to tabs — show as secondary banners
+  // Secondary filters from dashboard
   const [awaitingPaymentFilter, setAwaitingPaymentFilter] = useState(
     initialDashboardFilter === "awaiting-payment"
   );
-
   const [mitigationDueFilter, setMitigationDueFilter] = useState(
     initialDashboardFilter === "mitigation-due"
   );
-
   const [permitFilter, setPermitFilter] = useState<string | null>(
     initialPermitFilter && Object.keys(PERMIT_FILTER_LABELS).includes(initialPermitFilter)
       ? initialPermitFilter
@@ -218,22 +189,22 @@ export function PropertiesList({
   const [deletePropertyId, setDeletePropertyId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Compute tab counts
-  const tabCounts = useMemo(() => {
-    const counts: Record<Tab, number> = {
+  // Compute status counts
+  const statusCounts = useMemo(() => {
+    const counts: Record<StatusFilter, number> = {
       all: properties.length,
-      needsTrees: 0,
-      inProgress: 0,
-      ready: 0,
+      draft: 0,
+      report_draft: 0,
       certified: 0,
+      delivered: 0,
     };
     for (const p of properties) {
-      counts[getTabCategory(p)]++;
+      counts[getPropertyStage(p)]++;
     }
     return counts;
   }, [properties]);
 
-  // Filter + search (always sorted by most recent first)
+  // Filter + search
   const filteredProperties = useMemo(() => {
     let result = properties;
 
@@ -245,7 +216,7 @@ export function PropertiesList({
       });
     }
 
-    // Mitigation deadline filter (permits expiring within 30 days)
+    // Mitigation deadline filter
     if (mitigationDueFilter) {
       const now = new Date();
       const thirtyDaysOut = new Date();
@@ -258,7 +229,7 @@ export function PropertiesList({
       });
     }
 
-    // Permit filter (from older ?permitStatus= links)
+    // Permit filter
     if (permitFilter) {
       result = result.filter((p) => {
         const ps = p.reports[0]?.permitStatus;
@@ -272,12 +243,12 @@ export function PropertiesList({
       });
     }
 
-    // Tab filter
-    if (activeTab !== "all") {
-      result = result.filter((p) => getTabCategory(p) === activeTab);
+    // Status filter
+    if (statusFilter !== "all") {
+      result = result.filter((p) => getPropertyStage(p) === statusFilter);
     }
 
-    // Search within active tab
+    // Search
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       result = result.filter(
@@ -287,13 +258,11 @@ export function PropertiesList({
       );
     }
 
-    // Fixed sort: most recent first
-    result = [...result].sort(
+    // Sort most recent first
+    return [...result].sort(
       (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     );
-
-    return result;
-  }, [properties, activeTab, awaitingPaymentFilter, mitigationDueFilter, permitFilter, search]);
+  }, [properties, statusFilter, awaitingPaymentFilter, mitigationDueFilter, permitFilter, search]);
 
   const deleteTarget = properties.find((p) => p.id === deletePropertyId);
 
@@ -323,17 +292,33 @@ export function PropertiesList({
   };
 
   const showingEmpty = filteredProperties.length === 0;
-  const emptyState = search.trim()
-    ? { title: "No properties match your search" }
-    : EMPTY_STATES[activeTab];
 
   return (
-    <div className="space-y-4">
-      {/* Awaiting payment banner */}
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-1">
+            Properties
+          </p>
+          <h1 className="text-2xl md:text-3xl tracking-tight">
+            {properties.length} {properties.length === 1 ? "Property" : "Properties"}
+          </h1>
+        </div>
+        <Link
+          href="/properties/new"
+          className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-[#1D4E3E] hover:bg-[#2A6B55] text-white active:scale-[0.98] transition-all"
+        >
+          <Plus className="h-4 w-4" />
+          New Property
+        </Link>
+      </div>
+
+      {/* Secondary filter banners */}
       {awaitingPaymentFilter && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-forest/5 border border-forest/20 text-sm">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1D4E3E]/5 border border-[#1D4E3E]/20 text-sm">
           <span className="text-neutral-700">
-            Showing: <span className="font-semibold text-forest">Awaiting Payment</span>
+            Showing: <span className="font-semibold text-[#1D4E3E]">Awaiting Payment</span>
           </span>
           <button
             onClick={() => setAwaitingPaymentFilter(false)}
@@ -345,7 +330,6 @@ export function PropertiesList({
         </div>
       )}
 
-      {/* Mitigation deadline banner */}
       {mitigationDueFilter && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-sm">
           <span className="text-neutral-700">
@@ -361,11 +345,10 @@ export function PropertiesList({
         </div>
       )}
 
-      {/* Permit filter banner */}
       {permitFilter && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-forest/5 border border-forest/20 text-sm">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1D4E3E]/5 border border-[#1D4E3E]/20 text-sm">
           <span className="text-neutral-700">
-            Showing: <span className="font-semibold text-forest">{PERMIT_FILTER_LABELS[permitFilter]}</span>
+            Showing: <span className="font-semibold text-[#1D4E3E]">{PERMIT_FILTER_LABELS[permitFilter]}</span>
           </span>
           <button
             onClick={() => setPermitFilter(null)}
@@ -377,135 +360,144 @@ export function PropertiesList({
         </div>
       )}
 
-      {/* Search bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search properties..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
-      </div>
-
-      {/* Status tabs */}
-      <div className="flex gap-1 overflow-x-auto scrollbar-none border-b border-neutral-200 -mx-1 px-1">
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.key;
-          const count = tabCounts[tab.key];
-          return (
-            <button
-              key={tab.key}
-              onClick={() => {
-                setActiveTab(tab.key);
-                // Clear secondary filters when switching tabs
-                if (awaitingPaymentFilter) setAwaitingPaymentFilter(false);
-                if (mitigationDueFilter) setMitigationDueFilter(false);
-              }}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors shrink-0",
-                isActive
-                  ? "border-forest text-forest"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-neutral-300"
-              )}
-            >
-              {tab.label}
-              <span
-                className={cn(
-                  "text-xs tabular-nums px-1.5 py-0.5 rounded-full",
-                  isActive
-                    ? "bg-forest/10 text-forest"
-                    : "bg-neutral-100 text-muted-foreground"
-                )}
-              >
-                {count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Property list or empty state */}
-      {showingEmpty ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <p className="text-sm font-medium text-foreground">{emptyState.title}</p>
-          {emptyState.subtitle && (
-            <p className="mt-1 text-sm text-muted-foreground">{emptyState.subtitle}</p>
-          )}
-          {activeTab === "all" && properties.length === 0 && (
-            <Button
-              asChild
-              size="sm"
-              className="mt-4 bg-forest hover:bg-forest-light"
-            >
-              <Link href="/properties/new">
-                <Plus className="mr-2 h-4 w-4" />
-                New Property
-              </Link>
-            </Button>
-          )}
+      {/* Search + Status Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search address or city..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
         </div>
+        <div className="flex gap-1 flex-wrap">
+          {STATUS_FILTERS.map((s) => {
+            const isActive = statusFilter === s.value;
+            const count = statusCounts[s.value];
+            return (
+              <button
+                key={s.value}
+                onClick={() => {
+                  setStatusFilter(s.value);
+                  if (awaitingPaymentFilter) setAwaitingPaymentFilter(false);
+                  if (mitigationDueFilter) setMitigationDueFilter(false);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider transition-colors ${
+                  isActive
+                    ? "text-white"
+                    : "bg-secondary text-muted-foreground hover:bg-accent"
+                }`}
+                style={isActive ? { backgroundColor: s.color } : undefined}
+              >
+                {s.label}
+                {count > 0 && (
+                  <span className={`ml-1.5 ${isActive ? "opacity-80" : ""}`}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Property List */}
+      {showingEmpty ? (
+        <Card className="border-dashed border-2 border-border">
+          <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+            <div className="h-10 w-10 rounded-full bg-[#1D4E3E]/10 flex items-center justify-center mb-3">
+              {search || statusFilter !== "all" ? (
+                <Search className="h-5 w-5 text-[#1D4E3E]" />
+              ) : (
+                <Leaf className="h-5 w-5 text-[#1D4E3E]" />
+              )}
+            </div>
+            <p className="text-sm font-medium mb-1">
+              {search
+                ? "No matching properties"
+                : statusFilter !== "all"
+                  ? `No ${STATUS_FILTERS.find(s => s.value === statusFilter)?.label.toLowerCase()} properties`
+                  : "No properties yet"}
+            </p>
+            <p className="text-xs text-muted-foreground mb-4">
+              {search || statusFilter !== "all"
+                ? "Try adjusting your filters."
+                : "Create your first property to get started."}
+            </p>
+            {!search && statusFilter === "all" && properties.length === 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="gap-1.5"
+              >
+                <Link href="/properties/new">
+                  <Plus className="h-3.5 w-3.5" /> Create Property
+                </Link>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-1">
           {filteredProperties.map((property) => {
+            const stage = getPropertyStage(property);
+            const stageConfig = STATUS_FILTERS.find((s) => s.value === stage);
             const treeCount = property.trees.length;
-            const category = getTabCategory(property);
-            const dotColor = STATUS_DOT[category];
-            const statusLabel = STATUS_LABEL[category];
+            const rtc = property.reportType
+              ? getReportTypeConfig(property.reportType)
+              : null;
+            const permitLine = property.reports[0]
+              ? formatPermitLine(property.reports[0])
+              : null;
 
             return (
               <div key={property.id} className="group relative">
-                <Link
-                  href={`/properties/${property.id}`}
-                  className="block rounded-lg border bg-card p-4 hover:border-forest/30 hover:shadow-md transition-all"
+                <button
+                  onClick={() => router.push(`/properties/${property.id}`)}
+                  className="w-full flex items-center gap-4 py-3 px-4 rounded-lg hover:bg-accent/50 transition-colors text-left group"
                 >
-                  {/* Row 1: Address + City */}
-                  <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-sm font-semibold text-foreground truncate">
+                  {/* Status dot */}
+                  <div
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: stageConfig?.color }}
+                  />
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate group-hover:text-[#1D4E3E] transition-colors">
                       {property.address}
-                    </h3>
-                    <span className="text-xs text-muted-foreground shrink-0">
-                      {property.city}
-                    </span>
-                  </div>
-
-                  {/* Row 2: Report type · trees · status dot */}
-                  <div className="flex items-center justify-between gap-3 mt-1.5">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
-                      <span className="truncate">
-                        {formatReportType(property.reportType)}
-                      </span>
-                      <span className="text-neutral-300">·</span>
-                      <span className="flex items-center gap-1 shrink-0">
-                        <TreePine className="h-3 w-3" />
-                        {treeCount} tree{treeCount !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className={cn("h-2 w-2 rounded-full", dotColor)} />
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {statusLabel}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Row 3: Permit status (certified cards with active permit only) */}
-                  {property.reports[0] && formatPermitStatus(property.reports[0]) && (
-                    <p className="text-xs text-teal-700 mt-1.5">
-                      {formatPermitStatus(property.reports[0])}
                     </p>
-                  )}
-
-                  {/* Row 4: Timestamp + chevron */}
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs text-muted-foreground">
-                      {category === "certified" && property.reports[0]?.status === "certified"
-                        ? `Certified ${formatDistanceToNow(new Date(property.updatedAt), { addSuffix: true })}`
-                        : `Updated ${formatDistanceToNow(new Date(property.updatedAt), { addSuffix: true })}`}
-                    </span>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground truncate">
+                      {property.city && `${property.city} · `}
+                      {rtc?.label || formatReportType(property.reportType)}
+                      {treeCount > 0 && ` · ${treeCount} tree${treeCount !== 1 ? "s" : ""}`}
+                    </p>
+                    {permitLine && (
+                      <p className="text-xs text-teal-700 mt-0.5 truncate">
+                        {permitLine}
+                      </p>
+                    )}
                   </div>
-                </Link>
+
+                  {/* Status badge + time + chevron */}
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-xs text-muted-foreground hidden md:block">
+                      {formatDistanceToNow(new Date(property.updatedAt), { addSuffix: true })}
+                    </span>
+                    <span
+                      className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 hidden sm:block"
+                      style={{
+                        color: stageConfig?.color,
+                        backgroundColor: `${stageConfig?.color}15`,
+                      }}
+                    >
+                      {stageConfig?.label}
+                    </span>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-[#1D4E3E] transition-colors shrink-0" />
+                  </div>
+                </button>
 
                 {/* Delete button — hover on desktop */}
                 <button
@@ -514,7 +506,7 @@ export function PropertiesList({
                     e.stopPropagation();
                     setDeletePropertyId(property.id);
                   }}
-                  className="absolute top-3 right-12 z-10 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity bg-neutral-50/80 hover:bg-red-50 text-muted-foreground hover:text-red-600"
+                  className="absolute top-1/2 -translate-y-1/2 right-14 z-10 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity bg-neutral-50/80 hover:bg-red-50 text-muted-foreground hover:text-red-600"
                   title="Delete property"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -528,7 +520,7 @@ export function PropertiesList({
       {/* Mobile FAB */}
       <Link
         href="/properties/new"
-        className="fixed bottom-20 right-6 z-40 sm:hidden flex h-14 w-14 items-center justify-center rounded-full bg-forest text-white shadow-lg hover:bg-forest-light active:scale-[0.98] transition-all"
+        className="fixed bottom-20 right-6 z-40 sm:hidden flex h-14 w-14 items-center justify-center rounded-full bg-[#1D4E3E] text-white shadow-lg hover:bg-[#2A6B55] active:scale-[0.98] transition-all"
         aria-label="New Property"
       >
         <Plus className="h-6 w-6" />
@@ -568,4 +560,14 @@ export function PropertiesList({
       </AlertDialog>
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function formatReportType(reportType: string) {
+  return reportType
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
