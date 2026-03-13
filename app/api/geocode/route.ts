@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 
-interface MapboxFeature {
-  place_name: string;
-  center: [number, number]; // [lng, lat]
+interface GoogleGeocodeResult {
+  formatted_address: string;
+  geometry: {
+    location: {
+      lat: number;
+      lng: number;
+    };
+  };
 }
 
-interface MapboxResponse {
-  features: MapboxFeature[];
+interface GoogleGeocodeResponse {
+  status: string;
+  results: GoogleGeocodeResult[];
+  error_message?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -26,43 +33,50 @@ export async function POST(request: NextRequest) {
     if (body.state) parts.push(body.state);
     const fullAddress = parts.join(", ");
 
-    const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-    if (!mapboxToken) {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
       return NextResponse.json(
-        { error: "Mapbox token not configured" },
+        { error: "Google Maps API key not configured" },
         { status: 500 }
       );
     }
 
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(fullAddress)}.json?access_token=${mapboxToken}&limit=1`;
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${apiKey}`;
 
     const response = await fetch(url);
 
     if (!response.ok) {
-      console.error("Mapbox API error:", response.status, response.statusText);
+      console.error("Google Geocoding API error:", response.status, response.statusText);
       return NextResponse.json(
         { error: "Geocoding service error" },
         { status: 502 }
       );
     }
 
-    const data: MapboxResponse = await response.json();
+    const data: GoogleGeocodeResponse = await response.json();
 
-    if (!data.features || data.features.length === 0) {
+    if (data.status === "ZERO_RESULTS" || !data.results || data.results.length === 0) {
       return NextResponse.json(
         { error: "No results found for the given address" },
         { status: 404 }
       );
     }
 
-    const feature = data.features[0];
-    // Mapbox returns center as [lng, lat]
-    const [lng, lat] = feature.center;
+    if (data.status !== "OK") {
+      console.error("Google Geocoding status:", data.status, data.error_message);
+      return NextResponse.json(
+        { error: "Geocoding service error" },
+        { status: 502 }
+      );
+    }
+
+    const result = data.results[0];
+    const { lat, lng } = result.geometry.location;
 
     return NextResponse.json({
       lat,
       lng,
-      formattedAddress: feature.place_name,
+      formattedAddress: result.formatted_address,
     });
   } catch (error) {
     console.error("Error geocoding address:", error);

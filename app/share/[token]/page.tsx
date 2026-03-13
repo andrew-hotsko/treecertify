@@ -453,23 +453,28 @@ export default async function SharedPropertyPage({
     // Never let analytics break the share page
   }
 
-  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  const googleMapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const hasCoords = property.lat != null && property.lng != null;
 
-  // Build static Mapbox URL with tree pins
+  // Build static Google Maps URL with tree pins
   let mapImageUrl: string | null = null;
-  if (hasCoords && mapboxToken) {
+  if (hasCoords && googleMapsKey) {
     const lng = property.lng!;
     const lat = property.lat!;
 
-    const treePins = property.trees
+    const markerParams = property.trees
       .filter((t) => t.pinLat != null && t.pinLng != null)
       .slice(0, 50)
-      .map((t) => `pin-s-${t.treeNumber}+16a34a(${t.pinLng},${t.pinLat})`)
-      .join(",");
+      .map((t) => {
+        const label = t.treeNumber <= 9
+          ? String(t.treeNumber)
+          : String.fromCharCode(65 + (t.treeNumber - 10) % 26);
+        return `markers=color:0x1D4E3E|label:${label}|${t.pinLat},${t.pinLng}`;
+      })
+      .join("&");
 
-    const markers = treePins ? `${treePins}/` : "";
-    mapImageUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/static/${markers}${lng},${lat},17,0/800x400@2x?access_token=${mapboxToken}`;
+    const markersStr = markerParams ? `&${markerParams}` : "";
+    mapImageUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=17&size=800x400&scale=2&maptype=satellite${markersStr}&key=${googleMapsKey}`;
   }
 
   // Pre-compute summary data

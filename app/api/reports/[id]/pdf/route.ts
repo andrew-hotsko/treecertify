@@ -938,43 +938,60 @@ export async function GET(
     }
 
     // =========================================================================
-    // SITE MAP — Mapbox Static Image with colored tree pins
+    // SITE MAP — Google Maps Static API with colored tree pins
     // =========================================================================
     let siteMapHtml = "";
-    const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    const googleMapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
     if (
       includeSiteMap &&
       property.lat &&
       property.lng &&
-      mapboxToken
+      googleMapsKey
     ) {
       try {
-        // Build pin overlays for Mapbox Static API
-        const pinOverlays: string[] = [];
+        // Build marker params for Google Static Maps API
+        // Google format: markers=color:0xHEX|label:L|lat,lng
+        const markerGroups: Record<string, Array<{ lat: number; lng: number; label: string }>> = {};
+        let treeCount = 0;
+
         for (const t of trees) {
           if (t.pinLat == null || t.pinLng == null) continue;
+          treeCount++;
 
           // Determine pin color (same logic as property-map.tsx)
-          let color = "9ca3af"; // gray — unassessed
+          let color = "0x9ca3af"; // gray — unassessed
           if (t.recommendedAction === "remove") {
-            color = "dc2626"; // red
+            color = "0xdc2626";
           } else if (t.conditionRating != null) {
-            if (t.conditionRating <= 1) color = "dc2626"; // red
-            else if (t.conditionRating === 2) color = "ea580c"; // orange
-            else if (t.conditionRating === 3) color = "eab308"; // yellow
-            else if (t.conditionRating === 4) color = "84cc16"; // lime
-            else if (t.conditionRating >= 5) color = "22c55e"; // green
+            if (t.conditionRating <= 1) color = "0xdc2626";
+            else if (t.conditionRating === 2) color = "0xea580c";
+            else if (t.conditionRating === 3) color = "0xeab308";
+            else if (t.conditionRating === 4) color = "0x84cc16";
+            else if (t.conditionRating >= 5) color = "0x22c55e";
           }
 
-          pinOverlays.push(
-            `pin-s-${t.treeNumber}+${color}(${t.pinLng},${t.pinLat})`
-          );
+          // Google Static API labels: single char only (1-9, then A-Z)
+          const label = t.treeNumber <= 9
+            ? String(t.treeNumber)
+            : String.fromCharCode(65 + (t.treeNumber - 10) % 26);
+
+          if (!markerGroups[color]) markerGroups[color] = [];
+          markerGroups[color].push({ lat: t.pinLat, lng: t.pinLng, label });
         }
 
-        if (pinOverlays.length > 0) {
-          const overlay = pinOverlays.join(",");
-          const staticUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/static/${overlay}/${property.lng},${property.lat},18,0/1200x800@2x?access_token=${mapboxToken}`;
+        if (treeCount > 0) {
+          // Build markers parameter — group by color for URL efficiency
+          const markerParams: string[] = [];
+          for (const [color, points] of Object.entries(markerGroups)) {
+            for (const p of points) {
+              markerParams.push(
+                `markers=color:${color}|label:${p.label}|${p.lat},${p.lng}`
+              );
+            }
+          }
+
+          const staticUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${property.lat},${property.lng}&zoom=18&size=1200x800&scale=2&maptype=satellite&${markerParams.join("&")}&key=${googleMapsKey}`;
 
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 10000);
@@ -1009,7 +1026,7 @@ export async function GET(
               <h2 class="section-title">Site Map</h2>
               <div class="site-map-container">
                 <img class="site-map-image" src="${mapBase64}" alt="Satellite map showing assessed trees" />
-                <p class="site-map-caption">${esc(property.address)}, ${esc(property.city)} &mdash; ${pinOverlays.length} tree${pinOverlays.length !== 1 ? "s" : ""} assessed</p>
+                <p class="site-map-caption">${esc(property.address)}, ${esc(property.city)} &mdash; ${treeCount} tree${treeCount !== 1 ? "s" : ""} assessed</p>
                 <div class="site-map-legend">${legendItems.join("")}</div>
               </div>`;
           }

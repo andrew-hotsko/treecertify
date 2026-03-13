@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { Crosshair, Navigation, Loader2 } from "lucide-react";
+import { loadGoogleMaps } from "@/lib/google-maps-loader";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -23,64 +24,68 @@ export function PinDropMap({
   onConfirm,
 }: PinDropMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [locating, setLocating] = useState(false);
   const [mapReady, setMapReady] = useState(false);
 
-  // ---- Initialize Mapbox ----
+  // ---- Initialize Google Maps ----
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    // Dynamic import to avoid SSR issues
-    import("mapbox-gl").then((mapboxgl) => {
-      mapboxgl.default.accessToken =
-        process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+    let cancelled = false;
 
-      const map = new mapboxgl.default.Map({
-        container: mapContainerRef.current!,
-        style: "mapbox://styles/mapbox/satellite-streets-v12",
-        center: [initialCenter.lng, initialCenter.lat],
+    loadGoogleMaps().then(() => {
+      if (cancelled || !mapContainerRef.current) return;
+
+      const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID;
+
+      const map = new google.maps.Map(mapContainerRef.current!, {
+        center: { lat: initialCenter.lat, lng: initialCenter.lng },
         zoom: 19,
-        attributionControl: false,
-        pitchWithRotate: false,
-        dragRotate: false,
+        mapTypeId: "satellite" as google.maps.MapTypeId,
+        tilt: 0,
+        disableDefaultUI: true,
+        zoomControl: true,
+        gestureHandling: "greedy",
+        ...(mapId ? { mapId } : {}),
       });
 
       mapRef.current = map;
 
-      map.on("load", () => {
-        setMapReady(true);
-
-        // Add existing tree pins as small numbered circles
-        if (existingPins.length > 0) {
-          existingPins.forEach((pin) => {
-            const el = document.createElement("div");
-            el.className = "pin-drop-existing-marker";
-            el.style.cssText = `
-              width: 24px; height: 24px; border-radius: 50%;
-              background: rgba(156, 163, 175, 0.85);
-              border: 2px solid white;
-              display: flex; align-items: center; justify-content: center;
-              font-size: 10px; font-weight: 700; color: white;
-              font-family: ui-monospace, monospace;
-              box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-              pointer-events: none;
-            `;
-            el.textContent = String(pin.treeNumber);
-
-            new mapboxgl.default.Marker({ element: el })
-              .setLngLat([pin.lng, pin.lat])
-              .addTo(map);
-          });
-        }
+      map.addListener("idle", () => {
+        if (!cancelled) setMapReady(true);
       });
 
-      return () => {
-        map.remove();
-        mapRef.current = null;
-      };
+      // Add existing tree pins as small numbered context dots
+      if (existingPins.length > 0) {
+        existingPins.forEach((pin) => {
+          const el = document.createElement("div");
+          el.style.cssText = `
+            width: 24px; height: 24px; border-radius: 50%;
+            background: rgba(156, 163, 175, 0.85);
+            border: 2px solid white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: 700; color: white;
+            font-family: ui-monospace, monospace;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            pointer-events: none;
+          `;
+          el.textContent = String(pin.treeNumber);
+
+          new google.maps.marker.AdvancedMarkerElement({
+            map,
+            position: { lat: pin.lat, lng: pin.lng },
+            content: el,
+          });
+        });
+      }
     });
+
+    return () => {
+      cancelled = true;
+      mapRef.current = null;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -93,11 +98,8 @@ export function PinDropMap({
         const { latitude, longitude, accuracy } = pos.coords;
         setGpsAccuracy(Math.round(accuracy));
         setLocating(false);
-        mapRef.current?.flyTo({
-          center: [longitude, latitude],
-          zoom: 20,
-          duration: 1000,
-        });
+        mapRef.current?.panTo({ lat: latitude, lng: longitude });
+        mapRef.current?.setZoom(20);
       },
       () => {
         setLocating(false);
@@ -110,7 +112,9 @@ export function PinDropMap({
   const handleConfirm = useCallback(() => {
     if (!mapRef.current) return;
     const center = mapRef.current.getCenter();
-    onConfirm(center.lat, center.lng);
+    if (center) {
+      onConfirm(center.lat(), center.lng());
+    }
     // Haptic
     if (typeof navigator !== "undefined" && navigator.vibrate) {
       navigator.vibrate(10);
@@ -163,7 +167,9 @@ export function PinDropMap({
       {/* Confirm Location button — full width at bottom */}
       <div
         className="absolute bottom-0 left-0 right-0 z-20 px-4"
-        style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)" }}
+        style={{
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)",
+        }}
       >
         <button
           type="button"
