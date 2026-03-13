@@ -755,11 +755,17 @@ export default function PropertyReportPage() {
     setGenerating(true);
     setStreamingText("");
     setError(null);
+
+    // 90-second timeout — abort if AI takes too long
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90_000);
+
     try {
       const res = await fetch("/api/ai/generate-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ propertyId, reportType }),
+        signal: controller.signal,
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({ error: "Failed to generate report" }));
@@ -874,8 +880,13 @@ export default function PropertyReportPage() {
         setViewMode("split");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Generation failed");
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setError("Report generation timed out after 90 seconds. This can happen with large assessments or slow connections. Please try again.");
+      } else {
+        setError(err instanceof Error ? err.message : "Generation failed");
+      }
     } finally {
+      clearTimeout(timeoutId);
       setGenerating(false);
       setStreamingText("");
     }
@@ -1364,20 +1375,18 @@ export default function PropertyReportPage() {
           {property.address}
         </Link>
 
-        <div className="max-w-2xl mx-auto mt-8">
-          <Card>
-            <CardContent className="pt-6 space-y-4">
+        <div className="max-w-lg mx-auto mt-12">
+          <Card className="shadow-sm">
+            <CardContent className="pt-8 pb-6 px-6 space-y-5">
               <div className="text-center">
-                <Sparkles className="h-10 w-10 text-blue-600 mx-auto mb-3" />
-                <h2 className="text-xl font-bold">Generate AI Report</h2>
-                <p className="text-muted-foreground mt-1">
+                <div className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-forest/10 mb-4">
+                  <Sparkles className="h-7 w-7 text-forest" />
+                </div>
+                <h2 className="text-xl font-semibold font-display tracking-tight">Generate AI Report</h2>
+                <p className="text-sm text-muted-foreground mt-1.5">
                   {property.address}, {property.city}
                 </p>
-              </div>
-
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-sm font-medium">Report Type:</span>
-                <Badge variant="outline">
+                <Badge variant="outline" className="mt-2">
                   {getReportTypeConfig(reportType)?.label ||
                     reportType
                       .replace(/_/g, " ")
@@ -1385,14 +1394,14 @@ export default function PropertyReportPage() {
                 </Badge>
               </div>
 
-              <div className="rounded-lg bg-blue-50 border border-blue-100 p-4 text-sm text-blue-800">
-                <p className="font-medium mb-2">
+              <div className="rounded-lg bg-forest/5 border border-forest/10 p-4 text-sm text-neutral-700">
+                <p className="font-medium mb-2 text-neutral-800">
                   The AI will generate a comprehensive report including:
                 </p>
-                <ul className="list-disc list-inside space-y-1 text-blue-700">
+                <ul className="list-disc list-inside space-y-1 text-neutral-600">
                   <li>Scope of Assignment &amp; Site Observations</li>
                   <li>
-                    Tree Inventory table ({property.trees.length} trees)
+                    Tree Inventory table ({property.trees.length} tree{property.trees.length !== 1 ? "s" : ""})
                   </li>
                   <li>Individual Tree Assessments</li>
                   <li>Recommendations &amp; Mitigation</li>
@@ -1407,7 +1416,7 @@ export default function PropertyReportPage() {
               <Button
                 onClick={handleGenerateClick}
                 disabled={generating || property.trees.length === 0}
-                className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] transition-transform"
+                className="w-full h-12 bg-forest hover:bg-forest-light active:scale-[0.98] transition-all text-base"
               >
                 {generating ? (
                   <>
@@ -1515,11 +1524,19 @@ export default function PropertyReportPage() {
                   <Card className="w-full max-w-3xl mx-4 max-h-[80vh] flex flex-col">
                     <CardContent className="p-6 flex flex-col flex-1 overflow-hidden gap-4">
                       <div className="flex items-center gap-3">
-                        <Loader2 className="h-5 w-5 animate-spin text-blue-600 shrink-0" />
+                        <Loader2 className="h-5 w-5 animate-spin text-forest shrink-0" />
                         <div>
                           <h3 className="text-lg font-semibold">Generating Report</h3>
                           <p className="text-sm text-muted-foreground">
-                            AI is writing your {getReportTypeConfig(reportType)?.label || "report"}...
+                            {elapsedSeconds < 5
+                              ? "Connecting to AI..."
+                              : elapsedSeconds < 15
+                                ? "Analyzing tree data..."
+                                : elapsedSeconds < 30
+                                  ? `Writing ${getReportTypeConfig(reportType)?.label || "report"}...`
+                                  : elapsedSeconds < 60
+                                    ? "Drafting individual assessments..."
+                                    : "Finalizing report — almost done..."}
                           </p>
                         </div>
                       </div>
@@ -1535,7 +1552,7 @@ export default function PropertyReportPage() {
                       ) : (
                         <div className="flex-1 flex items-center justify-center rounded-lg border bg-muted/30 min-h-[200px]">
                           <div className="text-center text-muted-foreground">
-                            <Sparkles className="h-8 w-8 mx-auto mb-2 text-blue-400 animate-pulse" />
+                            <Sparkles className="h-8 w-8 mx-auto mb-2 text-forest/40 animate-pulse" />
                             <p className="text-sm">Preparing report structure...</p>
                           </div>
                         </div>
@@ -1547,10 +1564,10 @@ export default function PropertyReportPage() {
                             : "Connecting to AI..."}
                         </span>
                         <span>
-                          {elapsedSeconds > 0 && `${elapsedSeconds}s elapsed · `}
-                          {elapsedSeconds > 45
+                          {elapsedSeconds > 0 && `${elapsedSeconds}s · `}
+                          {elapsedSeconds > 60
                             ? "Taking longer than usual — hang tight"
-                            : "This may take 30–60 seconds"}
+                            : "Usually takes 30–60 seconds"}
                         </span>
                       </div>
                     </CardContent>
