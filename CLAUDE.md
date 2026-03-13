@@ -126,10 +126,48 @@
 - Offline: amber "Offline — data will sync" bar when disconnected. Saves queue via existing api-queue.ts.
 - Desktop TreeSidePanel completely unaffected.
 
+## Google Maps Integration (Session 40)
+- **Replaced Mapbox with Google Maps** across all map surfaces for better satellite imagery at residential property level.
+- Singleton loader: `lib/google-maps-loader.ts` — one `<script>` tag, one Promise, reused by `property-map.tsx` and `pin-drop-map.tsx`.
+- **Interactive map** (`components/property-map.tsx`): `google.maps.Map` with `AdvancedMarkerElement` for tree pins. Satellite/roadmap/terrain toggle. `google.maps.Circle` for TPZ/SRZ overlays (solid strokes — no dash pattern support in Google Maps).
+- **Pin drop map** (`components/pin-drop-map.tsx`): Google Maps in satellite mode with CSS crosshair overlay.
+- **Geocoding** (`app/api/geocode/route.ts`): Google Geocoding REST API replacing Mapbox Geocoding v5. Same return shape `{ lat, lng, formattedAddress }`.
+- **Static maps**: PDF route and share page use Google Maps Static API. Pin labels: single character (1-9 numbers, 10+ letters A-Z). Pin colors use `0x{hex}` format.
+- **Environment**: `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` required. Optional `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` for AdvancedMarkerElement features (falls back to basic markers without it).
+- **Condition-based pin colors**: 5→#1D4E3E (forest), 4→#3D7D68 (forest muted), 3→#D4A017 (gold), 2→#E07B3C (orange), 1/0→#C0392B (red), null→#9CA3AF (gray).
+- **Pin states**: 32px circles with IBM Plex Mono numbers, 44px tap targets. Hover: scale(1.15). Selected: scale(1.2) + white ring (box-shadow: 0 0 0 3px white) + z-index 20. Dimmed (other pins): opacity 0.5.
+- **Protection/heritage borders**: Protected: 2.5px solid #F59E0B (amber). Heritage: 2.5px solid #A855F7 (purple).
+- `pinColorHex()` exported from `property-map.tsx` for static map color matching.
+
+## Map Layout & Interaction (Session 40)
+- **Map fills viewport**: Desktop `calc(100vh - 4rem)`, mobile `h-[55vh]`. Tree list panel widened to `w-[400px]`.
+- **"Tag a Tree" toggle**: Floating button on map (bottom-left) + inline toolbar button. Repurposes `quickAddMode` state.
+  - Active: forest green bg, crosshair cursor on map, map click → `onPinAdd(lat, lng)`.
+  - Inactive: white bg, normal cursor, map click → deselect tree & close side panel.
+- **Copy-from-last-tree**: Copies species, condition, action, observation checkboxes (NOT measurements). Updated in both `tree-side-panel.tsx` and `mobile-field-mode.tsx`.
+
 ## Map Snapshot
-- PDF site map uses Mapbox Static Images API with colored pin overlays matching the interactive map's condition-based color scheme.
-- Configurable via `includeSiteMap` in report options (default: true). Graceful degradation if Mapbox fetch fails.
-- Pin colors: green (good/excellent), yellow (fair), orange (poor), red (critical/remove), gray (unassessed).
+- PDF site map uses Google Maps Static API with colored pin overlays matching the interactive map's condition-based color scheme.
+- Configurable via `includeSiteMap` in report options (default: true). Graceful degradation if Google Maps fetch fails.
+- Pin colors: forest (good/excellent), gold (fair), orange (poor), red (critical/remove), gray (unassessed).
+
+## Section-Based Report Editor (Session 40)
+- **Replaces split textarea/preview editor** with a document-like reading view where sections are individually editable.
+- **Component**: `components/section-editor.tsx` (~550 lines). Props: `{ content, reportId, trees, onContentChange, readOnly? }`.
+- **Section parsing**: `parseIntoSections()` splits report markdown by `#`, `##`, `###` headings into `ParsedSection[]` objects (id, title, level, content, body). `reassembleSections()` reconstructs full markdown from edited sections.
+- **Default state**: Rendered HTML sections styled to match PDF typography (forest green headings, branded tables). Each section card shows hover ghost "Edit" (Pencil) and "AI Rewrite" (Sparkles) buttons top-right.
+- **Edit mode** (per section): Click "Edit" → textarea with raw markdown. "Save" (forest green) updates section and triggers `onContentChange`. "Cancel" reverts. Only one section editable at a time.
+- **AI Rewrite mode** (per section): Click "AI Rewrite" → instruction input appears ("What should change?"). "Rewrite" button → calls `POST /api/ai/rewrite-section`. Loading state with spinner. Result shows diff-like view: original dimmed + rewritten highlighted, with "Accept" / "Reject" buttons.
+- **API route**: `app/api/ai/rewrite-section/route.ts` — POST body: `{ reportId, sectionTitle, sectionContent, instruction }`. Returns `{ content: string }`. Uses `buildArboristStyleInstructions()` and `getMasterVoiceInstructions()` for consistent voice. Logs API usage via `logApiUsage()`. Mock fallback when ANTHROPIC_API_KEY not set.
+- **Auto-generated sections**: Valuation Summary, TRAQ Risk Assessment, Limiting Conditions, Arborist Certification detected by title match — rendered as collapsible, non-editable cards with "Auto-generated" badge.
+- **Photo thumbnails**: Tree sections (`### Tree #N`) show photo thumbnails via `getTreePhotosHtml()` using `TreePhoto` data passed from report page.
+- **Built-in section navigation**: Left sidebar lists all section titles. Click → smooth scroll to that section.
+- **Report page changes** (`app/(app)/properties/[id]/report/page.tsx`):
+  - `viewMode` changed from `"edit" | "split" | "preview" | "quickReview"` to `"editor" | "preview" | "quickReview"`.
+  - Split textarea + live preview editor replaced with `<SectionEditor>` component.
+  - Removed: raw textarea, `previewHtml` state, `editorRef`, section navigation sidebar (built into SectionEditor now), "Save as Template" button (depended on textarea text selection).
+  - Template insert: appends to end of content instead of cursor position.
+  - Auto-save (debounced 30s) and certification flow unchanged.
 
 ## Onboarding (First-Run Experience)
 - 3-step onboarding at `/onboarding`: Step 1 "Your Info" (name, ISA cert#, service area — 3 fields only), Step 2 "See It In Action" (inline sample report preview + callout cards), Step 3 "First Assessment" (create property or skip to dashboard).
@@ -389,7 +427,7 @@
 - **Section flagging**: Each report section (split by `## ` headings) has a "Flag this section" button. Arborist can add a note describing what needs to change. Flagged sections show amber left border + flag note. Flags stored as `ReviewFlag[]` (sectionId, sectionTitle, note, createdAt).
 - **Bottom action bar** (three states): No flags → "Certify Report" (forest green). Has flags → "Send Back for Revision (N flags)" (amber) + "Certify anyway" link. Certified → "Share with Client" + Download button.
 - **"Send Back for Revision"**: Saves flags to `Report.reviewFlags` JSON field and sets status to `"review"`. In the full editor, an amber banner shows "N sections flagged for revision" with section names and a "Clear flags" button.
-- **Report page integration**: `viewMode` expanded to `"edit" | "split" | "preview" | "quickReview"`. Quick Review button added to view mode toggle (visible on all screen sizes, but the only visible option on mobile since Edit/Split/Preview are `hidden sm:flex`). Certified reports also get a Quick Review button in the toolbar. Auto-opens via `?view=quickReview` query parameter.
+- **Report page integration**: `viewMode` is `"editor" | "preview" | "quickReview"` (Session 40 replaced split editor with section-based editor). Quick Review button added to view mode toggle (visible on all screen sizes, but the only visible option on mobile since Editor/Preview are `hidden sm:flex`). Certified reports also get a Quick Review button in the toolbar. Auto-opens via `?view=quickReview` query parameter.
 - **Dashboard integration**: "Ready to certify" action card links to `/properties?filter=ready-to-certify` where arborists can open Quick Review for any draft report.
 - Schema: `Report.reviewFlags String?` — JSON array of `ReviewFlag` objects. API: `PUT /api/reports/[id]` accepts `reviewFlags`.
 
@@ -401,7 +439,7 @@
 - **Ordinance caching**: `getOrdinanceByCity()` in `lib/ordinances.ts` now uses in-memory `Map` cache with 1-hour TTL. Null results also cached to avoid repeated lookups for unsupported cities.
 - **Loading skeletons**: Added `loading.tsx` for 4 routes (dashboard, properties, properties/[id], settings). Uses `Skeleton` component from `components/ui/skeleton.tsx`. Previously zero loading files — users saw blank screens during server rendering.
 - **Bundle sizes (post-optimization)**: Dashboard 2.72 kB (103 kB first load), Properties 6.86 kB (129 kB), Property detail 49.2 kB (199 kB), Report 54 kB (198 kB), Settings 29.8 kB (133 kB), Share 3.71 kB (103 kB). Shared chunks 87.9 kB.
-- **Remaining bottlenecks (not addressed)**: Property detail/report pages are ~200 kB first load — driven by Mapbox GL + rich editor bundles, already dynamically imported. No further easy wins without feature removal.
+- **Remaining bottlenecks (not addressed)**: Property detail/report pages are ~200 kB first load — driven by Google Maps + rich editor bundles, already dynamically imported. No further easy wins without feature removal.
 
 ## Onboarding Rewrite (Session 35)
 - **Redesigned first-run experience**: 3-step flow targeting <3 minutes to first "aha" moment. Step 1 (Your Info): 3 fields only (name, ISA cert#, service area). Step 2 (See It In Action): inline sample report preview + callout cards. Step 3 (First Assessment): create property or skip.
@@ -422,13 +460,15 @@
 - **Estimated Maintenance Cost**: Removed from UI (DB field `estimatedMaintenanceCost` preserved on HealthAssessmentData).
 - **Report generation UX**: Centered max-w-lg card with forest green brand colors. h-12 generate button. Timed progress messages in streaming modal (Connecting → Analyzing → Writing → Drafting → Finalizing). 90-second AbortController timeout. SSE resilience: `receivedDone` tracking, server-saved report recovery, version snapshot fire-and-forget.
 
-## Current Status (as of 2026-03-12)
+## Current Status (as of Session 40, 2026-03-12)
 
 ### What's Built and Working
 - **Full assessment workflow**: Property → trees → AI report → certification → PDF → share
 - **5 report types**: removal_permit, health_assessment, tree_valuation, real_estate_package, construction_encroachment
 - **21 jurisdictions**: Ordinance database with species-specific thresholds (5 verified Peninsula, 9 expansion Peninsula, 7 North Bay/Tahoe/Reno)
-- **AI report generation**: Claude-powered narrative with ISA-quality prose, voice dictation, per-tree regeneration
+- **Google Maps integration**: Satellite imagery for property-level tree assessment, color-coded condition pins, static maps for PDF/share
+- **Section-based report editor**: Click-to-edit sections with per-section AI rewrite (instruction-based)
+- **AI report generation**: Claude-powered narrative with ISA-quality prose, voice dictation, per-tree regeneration, per-section rewrite
 - **CTLA valuation**: Full Trunk Formula Technique engine with 100+ species ratings
 - **Mobile field mode**: Full-screen assessment flow with haptic feedback, camera integration
 - **PDF output**: Professional Puppeteer-rendered PDFs with cover page, TOC, QR code, photo documentation
@@ -444,7 +484,7 @@
 - **No MunicipalOrdinance data** for North Bay, Tahoe, or Reno in database — `checkTreeProtection()` returns "protection status unknown" for these cities. Ordinance data only in `lib/city-contacts.ts` (share page), not in `prisma/seed.ts` (protection checker).
 - **TreeRecord.photos field DEPRECATED**: Legacy JSON string field still in schema. All writes use TreePhoto model. Safe to drop column.
 - **`lib/city-submission-guides.ts` still exists**: 159 lines, not imported anywhere. Replaced by `lib/city-contacts.ts`. Safe to delete.
-- **Largest page bundles**: property detail (200 kB first load) and report editor (199 kB first load) — driven by Mapbox GL + rich editor. Already dynamically imported; no easy wins without feature removal.
+- **Largest page bundles**: property detail (200 kB first load) and report editor (199 kB first load) — driven by Google Maps + rich editor. Already dynamically imported; no easy wins without feature removal.
 
 ### Architecture Decisions
 - **Prisma `db push`** (not migrations) for schema changes — project uses Neon PostgreSQL
@@ -461,7 +501,7 @@
 | `app/api/` | 40+ API routes | AI generation, CRUD, PDF, auth, feedback |
 | `app/onboarding/` | First-run experience | `page.tsx` (3-step flow) |
 | `app/share/[token]/` | Public homeowner view | `page.tsx` (RSC) |
-| `components/` | 58 components | UI primitives (shadcn), business components, type-specific fields |
+| `components/` | 59 components | UI primitives (shadcn), business components, type-specific fields |
 | `lib/` | Business logic | Ordinances, valuation, report templates, city contacts, analytics |
 | `prisma/` | Database | `schema.prisma` (13 models), `seed.ts` (21 cities) |
 | `scripts/` | Utilities | `smoke-test.ts`, `test-ordinances.ts`, `migrate-onboarding.ts` |
@@ -469,7 +509,8 @@
 ### Environment Variables
 ```
 DATABASE_URL                          # PostgreSQL (Neon)
-NEXT_PUBLIC_MAPBOX_TOKEN              # Mapbox GL + Static Images
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY       # Google Maps JS + Static + Geocoding
+NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID        # Google Maps Map ID (optional, for AdvancedMarkerElement)
 OPENAI_API_KEY                        # Whisper transcription
 ANTHROPIC_API_KEY                     # Claude report generation
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY     # Clerk auth (public)
