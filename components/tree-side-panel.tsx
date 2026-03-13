@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ButtonSelector } from "@/components/ui/button-selector";
 import { MultiCheckbox } from "@/components/ui/multi-checkbox";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { SpeciesSearch } from "@/components/species-search";
 import { ConditionRating } from "@/components/condition-rating";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -951,9 +952,12 @@ export function TreeSidePanel({
         )}
 
         {/* Health Observations + Notes */}
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Health Observations</Label>
+        <CollapsibleSection
+          title="Health Observations"
+          badge={healthChecks.filter(c => c !== "No significant concerns").length}
+          defaultOpen={healthChecks.length > 0 && healthChecks[0] !== "No significant concerns"}
+        >
+          <div className="space-y-3">
             <MultiCheckbox
               options={effectiveHealthObs}
               selected={healthChecks}
@@ -966,40 +970,43 @@ export function TreeSidePanel({
               columns={2}
               exclusiveOption="No significant concerns"
             />
-          </div>
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="sp-health" className="text-xs">
-                Additional Health Notes
-              </Label>
-              <VoiceInput
-                onTranscript={(text) => {
-                  const existing = extractFreeText(healthNotes);
-                  const combined = existing ? existing + " " + text : text;
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="sp-health" className="text-xs">
+                  Additional Health Notes
+                </Label>
+                <VoiceInput
+                  onTranscript={(text) => {
+                    const existing = extractFreeText(healthNotes);
+                    const combined = existing ? existing + " " + text : text;
+                    setHealthNotes(
+                      buildNotesWithObserved(healthChecks, combined)
+                    );
+                  }}
+                />
+              </div>
+              <Textarea
+                id="sp-health"
+                placeholder="Additional observations not covered above..."
+                value={extractFreeText(healthNotes)}
+                onChange={(e) =>
                   setHealthNotes(
-                    buildNotesWithObserved(healthChecks, combined)
-                  );
-                }}
+                    buildNotesWithObserved(healthChecks, e.target.value)
+                  )
+                }
+                rows={2}
               />
             </div>
-            <Textarea
-              id="sp-health"
-              placeholder="Additional observations not covered above..."
-              value={extractFreeText(healthNotes)}
-              onChange={(e) =>
-                setHealthNotes(
-                  buildNotesWithObserved(healthChecks, e.target.value)
-                )
-              }
-              rows={2}
-            />
           </div>
-        </div>
+        </CollapsibleSection>
 
         {/* Structural Observations + Notes */}
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Structural Observations</Label>
+        <CollapsibleSection
+          title="Structural Observations"
+          badge={structuralChecks.filter(c => c !== "No significant concerns").length}
+          defaultOpen={structuralChecks.length > 0 && structuralChecks[0] !== "No significant concerns"}
+        >
+          <div className="space-y-3">
             <MultiCheckbox
               options={effectiveStructuralObs}
               selected={structuralChecks}
@@ -1015,35 +1022,35 @@ export function TreeSidePanel({
               columns={2}
               exclusiveOption="No significant concerns"
             />
-          </div>
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="sp-structural" className="text-xs">
-                Additional Structural Notes
-              </Label>
-              <VoiceInput
-                onTranscript={(text) => {
-                  const existing = extractFreeText(structuralNotes);
-                  const combined = existing ? existing + " " + text : text;
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="sp-structural" className="text-xs">
+                  Additional Structural Notes
+                </Label>
+                <VoiceInput
+                  onTranscript={(text) => {
+                    const existing = extractFreeText(structuralNotes);
+                    const combined = existing ? existing + " " + text : text;
+                    setStructuralNotes(
+                      buildNotesWithObserved(structuralChecks, combined)
+                    );
+                  }}
+                />
+              </div>
+              <Textarea
+                id="sp-structural"
+                placeholder="Additional structural observations not covered above..."
+                value={extractFreeText(structuralNotes)}
+                onChange={(e) =>
                   setStructuralNotes(
-                    buildNotesWithObserved(structuralChecks, combined)
-                  );
-                }}
+                    buildNotesWithObserved(structuralChecks, e.target.value)
+                  )
+                }
+                rows={2}
               />
             </div>
-            <Textarea
-              id="sp-structural"
-              placeholder="Additional structural observations not covered above..."
-              value={extractFreeText(structuralNotes)}
-              onChange={(e) =>
-                setStructuralNotes(
-                  buildNotesWithObserved(structuralChecks, e.target.value)
-                )
-              }
-              rows={2}
-            />
           </div>
-        </div>
+        </CollapsibleSection>
 
         {/* Recommended Action — Pill Buttons */}
         <div className="space-y-1.5">
