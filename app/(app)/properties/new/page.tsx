@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { loadGoogleMaps } from "@/lib/google-maps-loader";
 import {
   MapPin,
   ArrowLeft,
@@ -114,6 +115,72 @@ export default function NewPropertyPage() {
   const [homeownerEmail, setHomeownerEmail] = useState("");
   const [homeownerPhone, setHomeownerPhone] = useState("");
 
+  // Geocoded coordinates from Google Places
+  const [geocodedLat, setGeocodedLat] = useState<number | undefined>();
+  const [geocodedLng, setGeocodedLng] = useState<number | undefined>();
+
+  // Address autocomplete
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    loadGoogleMaps().then(() => {
+      if (!mounted || !addressInputRef.current || autocompleteRef.current) return;
+      const autocomplete = new google.maps.places.Autocomplete(addressInputRef.current, {
+        types: ["address"],
+        componentRestrictions: { country: "us" },
+        fields: ["formatted_address", "address_components", "geometry"],
+      });
+      autocompleteRef.current = autocomplete;
+
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        if (!place.address_components) return;
+
+        // Extract address components
+        let streetNumber = "";
+        let route = "";
+        let cityValue = "";
+        let zipValue = "";
+        let countyValue = "";
+
+        for (const comp of place.address_components) {
+          const type = comp.types[0];
+          if (type === "street_number") streetNumber = comp.long_name;
+          else if (type === "route") route = comp.long_name;
+          else if (type === "locality") cityValue = comp.long_name;
+          else if (type === "sublocality_level_1" && !cityValue) cityValue = comp.long_name;
+          else if (type === "administrative_area_level_2") countyValue = comp.long_name.replace(" County", "");
+          else if (type === "postal_code") zipValue = comp.long_name;
+        }
+
+        // Set street address (street number + route, not full formatted address)
+        const streetAddr = [streetNumber, route].filter(Boolean).join(" ");
+        if (streetAddr) setAddress(streetAddr);
+
+        // Auto-fill other fields
+        if (cityValue) {
+          setCity(cityValue);
+          // Also check county map
+          const mapped = COUNTY_MAP[cityValue];
+          if (mapped) setCounty(mapped);
+          else if (countyValue) setCounty(countyValue);
+        }
+        if (zipValue) setZip(zipValue);
+
+        // Geocoded coordinates
+        if (place.geometry?.location) {
+          setGeocodedLat(place.geometry.location.lat());
+          setGeocodedLng(place.geometry.location.lng());
+        }
+      });
+    }).catch(() => {
+      // Google Maps failed to load — autocomplete won't work but form still functions
+    });
+    return () => { mounted = false; };
+  }, []);
+
   // Construction encroachment project fields
   const [projectDescription, setProjectDescription] = useState("");
   const [permitNumber, setPermitNumber] = useState("");
@@ -139,23 +206,25 @@ export default function NewPropertyPage() {
     setError(null);
 
     try {
-      // 1. Geocode the address
-      let lat: number | undefined;
-      let lng: number | undefined;
+      // 1. Use Places-provided coordinates, fall back to Geocode API
+      let lat = geocodedLat;
+      let lng = geocodedLng;
 
-      try {
-        const geoRes = await fetch("/api/geocode", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ address: address.trim(), city, state: "CA" }),
-        });
-        if (geoRes.ok) {
-          const geoData = await geoRes.json();
-          lat = geoData.lat;
-          lng = geoData.lng;
+      if (!lat || !lng) {
+        try {
+          const geoRes = await fetch("/api/geocode", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ address: address.trim(), city, state: "CA" }),
+          });
+          if (geoRes.ok) {
+            const geoData = await geoRes.json();
+            lat = geoData.lat;
+            lng = geoData.lng;
+          }
+        } catch {
+          console.warn("Geocoding failed, proceeding without coordinates");
         }
-      } catch {
-        console.warn("Geocoding failed, proceeding without coordinates");
       }
 
       // 2. Create the property
@@ -304,10 +373,12 @@ export default function NewPropertyPage() {
             <div>
               <label className="text-xs text-muted-foreground">Street Address *</label>
               <Input
-                placeholder="123 Main St"
+                ref={addressInputRef}
+                placeholder="Start typing an address..."
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 className="mt-1"
+                autoComplete="off"
               />
             </div>
 

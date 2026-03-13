@@ -23,7 +23,7 @@ export function loadGoogleMaps(): Promise<void> {
     }
 
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker&v=weekly`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker,places&v=weekly`;
     script.async = true;
     script.defer = true;
     script.onload = () => resolve();
