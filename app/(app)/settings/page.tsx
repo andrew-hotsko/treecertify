@@ -204,9 +204,9 @@ function SortableObservationItem({
         onClick={onToggle}
         className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ${
           isLocked
-            ? "bg-forest/50 cursor-not-allowed"
+            ? "bg-[#1D4E3E]/50 cursor-not-allowed"
             : obs.enabled
-            ? "bg-forest/50 cursor-pointer"
+            ? "bg-[#1D4E3E]/50 cursor-pointer"
             : "bg-neutral-300 cursor-pointer"
         }`}
       >
@@ -236,12 +236,12 @@ function SortableObservationItem({
               setEditing(false);
             }
           }}
-          className="flex-1 text-sm border border-forest/30 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-forest"
+          className="flex-1 text-sm border border-[#1D4E3E]/30 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-[#1D4E3E]"
           autoFocus
         />
       ) : (
         <span
-          className="flex-1 text-sm cursor-pointer hover:text-forest"
+          className="flex-1 text-sm cursor-pointer hover:text-[#1D4E3E]"
           onClick={() => {
             setEditLabel(obs.label);
             setEditing(true);
@@ -842,16 +842,16 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-2xl font-semibold tracking-tight font-display mb-1">Settings</h1>
-      <p className="text-muted-foreground mb-6">
-        Manage your arborist profile and company branding
-      </p>
+      <div className="mb-6">
+        <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-1">Settings</p>
+        <h1 className="text-2xl md:text-3xl tracking-tight">Arborist Profile</h1>
+      </div>
 
       {message && (
         <div
           className={`rounded-lg border p-3 text-sm mb-6 ${
             message.type === "success"
-              ? "bg-forest/5 border-forest/20 text-forest"
+              ? "bg-[#1D4E3E]/5 border-[#1D4E3E]/20 text-[#1D4E3E]"
               : "bg-red-50 border-red-200 text-red-700"
           }`}
         >
@@ -862,8 +862,8 @@ export default function SettingsPage() {
       {/* Profile Photo */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base font-display">
-            <Camera className="h-5 w-5 text-forest" />
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
+            <Camera className="h-5 w-5 text-[#1D4E3E]" />
             Profile Photo
           </CardTitle>
         </CardHeader>
@@ -928,8 +928,8 @@ export default function SettingsPage() {
       {/* Company Logo */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base font-display">
-            <ImageIcon className="h-5 w-5 text-forest" />
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
+            <ImageIcon className="h-5 w-5 text-[#1D4E3E]" />
             Company Logo
           </CardTitle>
         </CardHeader>
@@ -996,8 +996,8 @@ export default function SettingsPage() {
       {/* Arborist Info */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base font-display">
-            <User className="h-5 w-5 text-forest" />
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
+            <User className="h-5 w-5 text-[#1D4E3E]" />
             Arborist Information
           </CardTitle>
         </CardHeader>
@@ -1059,7 +1059,7 @@ export default function SettingsPage() {
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, traqCertified: e.target.checked }))
               }
-              className="h-4 w-4 rounded border-neutral-300 text-forest focus:ring-forest-light"
+              className="h-4 w-4 rounded border-neutral-300 text-[#1D4E3E] focus:ring-[#2A6B55]"
             />
             <Label htmlFor="traq-certified" className="cursor-pointer">
               TRAQ Qualified (ISA Tree Risk Assessment Qualification)
@@ -1083,8 +1083,8 @@ export default function SettingsPage() {
       {/* Company Info */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base font-display">
-            <Globe className="h-5 w-5 text-forest" />
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
+            <Globe className="h-5 w-5 text-[#1D4E3E]" />
             Company Details
           </CardTitle>
         </CardHeader>
@@ -1142,8 +1142,8 @@ export default function SettingsPage() {
       {/* Report Defaults */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base font-display">
-            <FileText className="h-5 w-5 text-forest" />
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
+            <FileText className="h-5 w-5 text-[#1D4E3E]" />
             Report Defaults
           </CardTitle>
         </CardHeader>
@@ -1171,8 +1171,8 @@ export default function SettingsPage() {
                       [key]: !prev[key],
                     }))
                   }
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-light focus-visible:ring-offset-2 ${
-                    reportDefaults[key] ? "bg-forest/50" : "bg-neutral-300"
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2A6B55] focus-visible:ring-offset-2 ${
+                    reportDefaults[key] ? "bg-[#1D4E3E]/50" : "bg-neutral-300"
                   }`}
                 >
                   <span
@@ -1298,7 +1298,7 @@ export default function SettingsPage() {
                     </Label>
                     <button
                       type="button"
-                      className="text-xs text-neutral-500 hover:text-forest transition-colors flex items-center gap-1"
+                      className="text-xs text-neutral-500 hover:text-[#1D4E3E] transition-colors flex items-center gap-1"
                       onClick={() => {
                         setReportDefaults((prev) => ({
                           ...prev,
@@ -1341,8 +1341,8 @@ export default function SettingsPage() {
       {/* ================================================================ */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base font-display">
-            <Stethoscope className="h-5 w-5 text-forest" />
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
+            <Stethoscope className="h-5 w-5 text-[#1D4E3E]" />
             Observation Library
             {obsChanged && (
               <span className="h-2 w-2 rounded-full bg-amber-500" title="Unsaved changes" />
@@ -1451,7 +1451,7 @@ export default function SettingsPage() {
               </Button>
               <button
                 type="button"
-                className="text-xs text-neutral-500 hover:text-forest transition-colors flex items-center gap-1"
+                className="text-xs text-neutral-500 hover:text-[#1D4E3E] transition-colors flex items-center gap-1"
                 onClick={() => {
                   setHealthObs(getDefaultHealthObservations());
                   setObsChanged(true);
@@ -1561,7 +1561,7 @@ export default function SettingsPage() {
               </Button>
               <button
                 type="button"
-                className="text-xs text-neutral-500 hover:text-forest transition-colors flex items-center gap-1"
+                className="text-xs text-neutral-500 hover:text-[#1D4E3E] transition-colors flex items-center gap-1"
                 onClick={() => {
                   setStructuralObs(getDefaultStructuralObservations());
                   setObsChanged(true);
@@ -1578,7 +1578,7 @@ export default function SettingsPage() {
             <Button
               onClick={saveObservations}
               disabled={savingObs || !obsChanged}
-              className="bg-forest hover:bg-forest-light"
+              className="bg-[#1D4E3E] hover:bg-[#2A6B55]"
               size="sm"
             >
               <Save className="h-4 w-4 mr-2" />
@@ -1593,8 +1593,8 @@ export default function SettingsPage() {
       {/* ================================================================ */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base font-display">
-            <TreePine className="h-5 w-5 text-forest" />
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
+            <TreePine className="h-5 w-5 text-[#1D4E3E]" />
             Species Presets
           </CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -1608,7 +1608,7 @@ export default function SettingsPage() {
               {commonSpecies.map((sp) => (
                 <span
                   key={sp}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-forest/10 text-forest text-sm"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#1D4E3E]/10 text-[#1D4E3E] text-sm"
                 >
                   {sp}
                   <button
@@ -1643,7 +1643,7 @@ export default function SettingsPage() {
                     <button
                       key={sp.common}
                       type="button"
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-forest/5 transition-colors"
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-[#1D4E3E]/5 transition-colors"
                       onClick={() => {
                         setCommonSpecies((prev) => [...prev, sp.common]);
                         setSpeciesSearch("");
@@ -1670,7 +1670,7 @@ export default function SettingsPage() {
             <Button
               onClick={saveSpeciesPresets}
               disabled={savingSpecies}
-              className="bg-forest hover:bg-forest-light"
+              className="bg-[#1D4E3E] hover:bg-[#2A6B55]"
               size="sm"
             >
               <Save className="h-4 w-4 mr-2" />
@@ -1685,8 +1685,8 @@ export default function SettingsPage() {
       {/* ================================================================ */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base font-display">
-            <FileText className="h-5 w-5 text-forest" />
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
+            <FileText className="h-5 w-5 text-[#1D4E3E]" />
             PDF &amp; Share Preferences
           </CardTitle>
         </CardHeader>
@@ -1711,8 +1711,8 @@ export default function SettingsPage() {
                       [key]: !prev[key],
                     }))
                   }
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-light focus-visible:ring-offset-2 ${
-                    pdfShareForm[key] ? "bg-forest/50" : "bg-neutral-300"
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2A6B55] focus-visible:ring-offset-2 ${
+                    pdfShareForm[key] ? "bg-[#1D4E3E]/50" : "bg-neutral-300"
                   }`}
                 >
                   <span
@@ -1776,7 +1776,7 @@ export default function SettingsPage() {
             <Button
               onClick={savePdfSharePrefs}
               disabled={savingPdfShare}
-              className="bg-forest hover:bg-forest-light"
+              className="bg-[#1D4E3E] hover:bg-[#2A6B55]"
               size="sm"
             >
               <Save className="h-4 w-4 mr-2" />
@@ -1789,7 +1789,7 @@ export default function SettingsPage() {
       {/* ── Valuation Defaults ── */}
       <Card className="mb-6">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base font-display">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
             <DollarSign className="h-4 w-4 text-amber-600" />
             Valuation Defaults
           </CardTitle>
@@ -1838,7 +1838,7 @@ export default function SettingsPage() {
             onClick={saveValuationDefaults}
             disabled={savingValuation}
             size="sm"
-            className="bg-forest hover:bg-forest-light"
+            className="bg-[#1D4E3E] hover:bg-[#2A6B55]"
           >
             {savingValuation ? (
               <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
@@ -1853,8 +1853,8 @@ export default function SettingsPage() {
       {/* Client Billing */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base font-display">
-            <Receipt className="h-5 w-5 text-forest" />
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
+            <Receipt className="h-5 w-5 text-[#1D4E3E]" />
             Client Billing
           </CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -1912,8 +1912,8 @@ export default function SettingsPage() {
       {/* Report Writing Style */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base font-display">
-            <Sparkles className="h-5 w-5 text-forest" />
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
+            <Sparkles className="h-5 w-5 text-[#1D4E3E]" />
             Report Writing Style
           </CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -1937,7 +1937,7 @@ export default function SettingsPage() {
                     value={opt.value}
                     checked={aiTonePreference === opt.value}
                     onChange={() => setAiTonePreference(opt.value)}
-                    className="mt-1 h-4 w-4 text-forest focus:ring-forest"
+                    className="mt-1 h-4 w-4 text-[#1D4E3E] focus:ring-[#1D4E3E]"
                   />
                   <div>
                     <span className="text-sm font-medium">{opt.label}</span>
@@ -1956,7 +1956,7 @@ export default function SettingsPage() {
             </p>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {aiPreferredTerms.map((term, idx) => (
-                <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-forest/10 text-forest text-xs font-medium">
+                <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#1D4E3E]/10 text-[#1D4E3E] text-xs font-medium">
                   {term}
                   <button
                     onClick={() => setAiPreferredTerms(aiPreferredTerms.filter((_, i) => i !== idx))}
@@ -2087,8 +2087,8 @@ export default function SettingsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2 text-base font-display">
-                <BookOpen className="h-5 w-5 text-forest" />
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <BookOpen className="h-5 w-5 text-[#1D4E3E]" />
                 Document Templates
               </CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
@@ -2121,7 +2121,7 @@ export default function SettingsPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-sm">{t.name}</span>
                       {t.category && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-forest/10 text-forest font-medium">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#1D4E3E]/10 text-[#1D4E3E] font-medium">
                           {t.category}
                         </span>
                       )}
@@ -2242,7 +2242,7 @@ export default function SettingsPage() {
               <Button
                 onClick={saveTemplate}
                 disabled={savingTemplate || !templateForm.name.trim() || !templateForm.content.trim()}
-                className="bg-forest hover:bg-forest-light"
+                className="bg-[#1D4E3E] hover:bg-[#2A6B55]"
               >
                 {savingTemplate ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                 {editingTemplate ? "Update" : "Create"}
@@ -2257,7 +2257,7 @@ export default function SettingsPage() {
         <Button
           onClick={saveProfile}
           disabled={saving}
-          className="bg-forest hover:bg-forest-light"
+          className="bg-[#1D4E3E] hover:bg-[#2A6B55]"
         >
           <Save className="h-4 w-4 mr-2" />
           {saving ? "Saving..." : "Save Profile"}
@@ -2267,8 +2267,8 @@ export default function SettingsPage() {
       {/* Usage & Costs */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base font-display">
-            <DollarSign className="h-5 w-5 text-forest" />
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
+            <DollarSign className="h-5 w-5 text-[#1D4E3E]" />
             Usage &amp; Costs
           </CardTitle>
         </CardHeader>
