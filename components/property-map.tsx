@@ -70,15 +70,28 @@ const MAP_STYLES: Array<{ id: string; label: string }> = [
 
 /** Color by condition rating + recommended action */
 function pinColor(pin: TreePin): string {
-  if (pin.recommendedAction === "remove") return "#ef4444";
+  if (pin.recommendedAction === "remove") return "#C0392B"; // red
   if (pin.conditionRating != null) {
-    if (pin.conditionRating <= 1) return "#ef4444";
-    if (pin.conditionRating === 2) return "#f97316";
-    if (pin.conditionRating === 3) return "#eab308";
-    if (pin.conditionRating === 4) return "#84cc16";
-    if (pin.conditionRating >= 5) return "#22c55e";
+    if (pin.conditionRating <= 1) return "#C0392B"; // red (Dead/Critical)
+    if (pin.conditionRating === 2) return "#E07B3C"; // orange (Poor)
+    if (pin.conditionRating === 3) return "#D4A017"; // gold (Fair)
+    if (pin.conditionRating === 4) return "#3D7D68"; // forest muted (Good)
+    if (pin.conditionRating >= 5) return "#1D4E3E"; // forest (Excellent)
   }
-  return "#9ca3af";
+  return "#9CA3AF"; // gray — unassessed
+}
+
+/** Hex color for static map pins (same scheme, without # prefix) */
+export function pinColorHex(conditionRating: number | null, recommendedAction?: string): string {
+  if (recommendedAction === "remove") return "C0392B";
+  if (conditionRating != null) {
+    if (conditionRating <= 1) return "C0392B";
+    if (conditionRating === 2) return "E07B3C";
+    if (conditionRating === 3) return "D4A017";
+    if (conditionRating === 4) return "3D7D68";
+    if (conditionRating >= 5) return "1D4E3E";
+  }
+  return "9CA3AF";
 }
 
 /** Create the HTML content element for a map marker */
@@ -87,18 +100,30 @@ function createMarkerContent(
   isSelected: boolean,
   isDimmed: boolean
 ): HTMLDivElement {
-  const pinSize = isSelected ? 26 : 22;
+  const pinSize = 32; // consistent 32px pins
 
-  // Wrapper provides a 36px tap target
+  // Wrapper provides a 44px tap target (mobile-friendly)
   const wrapper = document.createElement("div");
-  wrapper.style.width = "36px";
-  wrapper.style.height = "36px";
+  wrapper.style.width = "44px";
+  wrapper.style.height = "44px";
   wrapper.style.display = "flex";
   wrapper.style.alignItems = "center";
   wrapper.style.justifyContent = "center";
   wrapper.style.cursor = "pointer";
   wrapper.style.position = "relative";
   wrapper.style.overflow = "visible";
+  wrapper.style.transition = "transform 0.15s ease, opacity 0.2s ease";
+
+  // Scale + opacity based on selection state
+  if (isSelected) {
+    wrapper.style.transform = "scale(1.2)";
+    wrapper.style.zIndex = "20";
+  } else if (isDimmed) {
+    wrapper.style.opacity = "0.5";
+    wrapper.style.zIndex = "1";
+  } else {
+    wrapper.style.zIndex = "10";
+  }
 
   const el = document.createElement("div");
   el.style.width = `${pinSize}px`;
@@ -107,32 +132,29 @@ function createMarkerContent(
   el.style.textAlign = "center";
   el.style.borderRadius = "50%";
   el.style.color = "white";
-  el.style.fontWeight = "600";
-  el.style.fontSize = "10px";
+  el.style.fontWeight = "700";
+  el.style.fontSize = "12px";
+  el.style.fontFamily = "'IBM Plex Mono', ui-monospace, monospace";
   el.style.cursor = "pointer";
   el.style.userSelect = "none";
   el.style.backgroundColor = pinColor(pin);
-  el.style.border = "2px solid white";
-  el.style.transition = "box-shadow 0.15s, opacity 0.2s";
+  el.style.transition = "box-shadow 0.15s ease";
 
-  if (isDimmed) {
-    el.style.opacity = "0.3";
-  }
-
-  // Protection / heritage ring
+  // Border: protection/heritage takes priority, then default white
   if (pin.isHeritage) {
-    el.style.outline = "2px solid #eab308";
-    el.style.outlineOffset = "1px";
+    el.style.border = "2.5px solid #A855F7"; // purple
   } else if (pin.isProtected) {
-    el.style.outline = "2px solid #22c55e";
-    el.style.outlineOffset = "1px";
+    el.style.border = "2.5px solid #F59E0B"; // amber
+  } else {
+    el.style.border = "2px solid rgba(255,255,255,0.9)";
   }
 
+  // Selected ring
   if (isSelected) {
     el.style.boxShadow =
-      "0 0 0 3px rgba(22, 163, 74, 0.4), 0 2px 4px rgba(0,0,0,0.3)";
+      "0 0 0 3px white, 0 0 0 5px rgba(29,78,62,0.3), 0 2px 8px rgba(0,0,0,0.3)";
   } else {
-    el.style.boxShadow = "0 1px 3px rgba(0,0,0,0.3)";
+    el.style.boxShadow = "0 1px 4px rgba(0,0,0,0.35)";
   }
 
   el.textContent = String(pin.treeNumber);
@@ -154,7 +176,7 @@ function createMarkerContent(
   tooltip.style.pointerEvents = "none";
   tooltip.style.opacity = "0";
   tooltip.style.transition = "opacity 0.15s";
-  tooltip.style.zIndex = "10";
+  tooltip.style.zIndex = "30";
   tooltip.style.lineHeight = "1.3";
 
   const species = pin.speciesCommon || "Unidentified";
@@ -168,17 +190,18 @@ function createMarkerContent(
 
   wrapper.appendChild(tooltip);
 
-  // Hover effect
+  // Hover effect: scale up + show tooltip
   wrapper.addEventListener("mouseenter", () => {
-    if (!isSelected) {
-      el.style.boxShadow =
-        "0 0 0 2px rgba(22, 163, 74, 0.3), 0 2px 4px rgba(0,0,0,0.3)";
-      tooltip.style.opacity = "1";
+    if (!isSelected && !isDimmed) {
+      wrapper.style.transform = "scale(1.15)";
+      wrapper.style.zIndex = "15";
     }
+    tooltip.style.opacity = "1";
   });
   wrapper.addEventListener("mouseleave", () => {
     if (!isSelected) {
-      el.style.boxShadow = "0 1px 3px rgba(0,0,0,0.3)";
+      wrapper.style.transform = isDimmed ? "scale(1)" : "scale(1)";
+      wrapper.style.zIndex = isDimmed ? "1" : "10";
     }
     tooltip.style.opacity = "0";
   });

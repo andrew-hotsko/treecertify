@@ -959,16 +959,16 @@ export async function GET(
           if (t.pinLat == null || t.pinLng == null) continue;
           treeCount++;
 
-          // Determine pin color (same logic as property-map.tsx)
-          let color = "0x9ca3af"; // gray — unassessed
+          // Determine pin color (matches property-map.tsx new scheme)
+          let color = "0x9CA3AF"; // gray — unassessed
           if (t.recommendedAction === "remove") {
-            color = "0xdc2626";
+            color = "0xC0392B"; // red
           } else if (t.conditionRating != null) {
-            if (t.conditionRating <= 1) color = "0xdc2626";
-            else if (t.conditionRating === 2) color = "0xea580c";
-            else if (t.conditionRating === 3) color = "0xeab308";
-            else if (t.conditionRating === 4) color = "0x84cc16";
-            else if (t.conditionRating >= 5) color = "0x22c55e";
+            if (t.conditionRating <= 1) color = "0xC0392B"; // red
+            else if (t.conditionRating === 2) color = "0xE07B3C"; // orange
+            else if (t.conditionRating === 3) color = "0xD4A017"; // gold
+            else if (t.conditionRating === 4) color = "0x3D7D68"; // forest muted
+            else if (t.conditionRating >= 5) color = "0x1D4E3E"; // forest
           }
 
           // Google Static API labels: single char only (1-9, then A-Z)
@@ -1015,11 +1015,11 @@ export async function GET(
             }
 
             const legendItems: string[] = [];
-            if (condCounts.good > 0) legendItems.push(`<span class="legend-item"><span class="legend-dot" style="background:#22c55e"></span> Good/Excellent (${condCounts.good})</span>`);
-            if (condCounts.fair > 0) legendItems.push(`<span class="legend-item"><span class="legend-dot" style="background:#eab308"></span> Fair (${condCounts.fair})</span>`);
-            if (condCounts.poor > 0) legendItems.push(`<span class="legend-item"><span class="legend-dot" style="background:#ea580c"></span> Poor (${condCounts.poor})</span>`);
-            if (condCounts.critical > 0) legendItems.push(`<span class="legend-item"><span class="legend-dot" style="background:#dc2626"></span> Critical/Remove (${condCounts.critical})</span>`);
-            if (condCounts.unassessed > 0) legendItems.push(`<span class="legend-item"><span class="legend-dot" style="background:#9ca3af"></span> Unassessed (${condCounts.unassessed})</span>`);
+            if (condCounts.good > 0) legendItems.push(`<span class="legend-item"><span class="legend-dot" style="background:#1D4E3E"></span> Good/Excellent (${condCounts.good})</span>`);
+            if (condCounts.fair > 0) legendItems.push(`<span class="legend-item"><span class="legend-dot" style="background:#D4A017"></span> Fair (${condCounts.fair})</span>`);
+            if (condCounts.poor > 0) legendItems.push(`<span class="legend-item"><span class="legend-dot" style="background:#E07B3C"></span> Poor (${condCounts.poor})</span>`);
+            if (condCounts.critical > 0) legendItems.push(`<span class="legend-item"><span class="legend-dot" style="background:#C0392B"></span> Critical/Remove (${condCounts.critical})</span>`);
+            if (condCounts.unassessed > 0) legendItems.push(`<span class="legend-item"><span class="legend-dot" style="background:#9CA3AF"></span> Unassessed (${condCounts.unassessed})</span>`);
 
             siteMapHtml = `
               <div class="page-break"></div>
