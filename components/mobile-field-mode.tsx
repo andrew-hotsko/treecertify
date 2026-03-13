@@ -354,11 +354,20 @@ export function MobileFieldMode({
 
   const handleCopyFromLast = useCallback(() => {
     if (!lastSavedTree) return;
+    // Copy species, condition, action (NOT measurements — those vary per tree)
     setSpeciesCommon(lastSavedTree.speciesCommon ?? "");
     setSpeciesScientific(lastSavedTree.speciesScientific ?? "");
-    setDbhInches(lastSavedTree.dbhInches ? String(lastSavedTree.dbhInches) : "");
-    setHeightFt(lastSavedTree.heightFt ? String(lastSavedTree.heightFt) : "");
-    setCanopySpreadFt(lastSavedTree.canopySpreadFt ? String(lastSavedTree.canopySpreadFt) : "");
+    setConditionRating(lastSavedTree.conditionRating ?? 0);
+    setRecommendedAction(lastSavedTree.recommendedAction ?? "retain");
+
+    // Copy observation checkboxes
+    const copiedHealthChecks = parseObservedLine(lastSavedTree.healthNotes ?? "");
+    const copiedStructuralChecks = parseObservedLine(lastSavedTree.structuralNotes ?? "");
+    setHealthChecks(copiedHealthChecks);
+    setStructuralChecks(copiedStructuralChecks);
+    setHealthNotes(buildNotesWithObserved(copiedHealthChecks, ""));
+    setStructuralNotes(buildNotesWithObserved(copiedStructuralChecks, ""));
+
     setProtectionResult(null);
     haptic(10);
   }, [lastSavedTree]);

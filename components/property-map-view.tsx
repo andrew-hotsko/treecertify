@@ -61,7 +61,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Dynamically import PropertyMap with SSR disabled (Mapbox GL needs window/DOM)
+// Dynamically import PropertyMap with SSR disabled (Google Maps needs window/DOM)
 const PropertyMap = dynamic(
   () => import("@/components/property-map").then((mod) => mod.PropertyMap),
   {
@@ -534,14 +534,22 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   ];
 
   // ---- Handlers ----
-  const handlePinAdd = useCallback(
+  const handleMapClick = useCallback(
     (lat: number, lng: number) => {
-      setPendingPin({ lat, lng });
-      setSelectedTreeId(null);
-      setShowSidePanel(true);
-      setShowPlacementPrompt(false);
+      if (quickAddMode) {
+        // Add mode: drop a pin
+        setPendingPin({ lat, lng });
+        setSelectedTreeId(null);
+        setShowSidePanel(true);
+        setShowPlacementPrompt(false);
+      } else {
+        // Non-add mode: deselect current tree, close panel
+        setSelectedTreeId(null);
+        setPendingPin(null);
+        setShowSidePanel(false);
+      }
     },
-    []
+    [quickAddMode]
   );
 
   const handlePinClick = useCallback(
@@ -1143,25 +1151,20 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
               />
             </div>
           )}
-          {/* Quick Add toggle — assessment phases */}
+          {/* Tag a Tree button — inline for toolbar, floating on map below */}
           {(lifecycleState === "no_trees" || lifecycleState === "assessing") && (
-            <div className="flex items-center gap-1.5">
-              <label
-                htmlFor="quick-add-toggle"
-                className={`flex items-center gap-1 text-xs cursor-pointer select-none ${
-                  quickAddMode ? "text-amber-700 font-medium" : "text-muted-foreground"
-                }`}
-              >
-                <Zap className={`h-3.5 w-3.5 ${quickAddMode ? "text-amber-500" : ""}`} />
-                <span className="hidden sm:inline">Quick Add</span>
-              </label>
-              <Switch
-                id="quick-add-toggle"
-                checked={quickAddMode}
-                onCheckedChange={setQuickAddMode}
-                className="scale-75"
-              />
-            </div>
+            <button
+              type="button"
+              onClick={() => setQuickAddMode(!quickAddMode)}
+              className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                quickAddMode
+                  ? "bg-forest text-white"
+                  : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+              }`}
+            >
+              <TreePine className="h-3.5 w-3.5" />
+              <span>{quickAddMode ? "Adding Trees..." : "Tag a Tree"}</span>
+            </button>
           )}
           <Button
             variant="outline"
@@ -1743,7 +1746,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
 
         {/* Tree List Panel — desktop only */}
         {showTreeList && trees.length > 0 && (
-          <div className="hidden md:flex flex-col w-60 border-r bg-neutral-50 overflow-hidden flex-shrink-0">
+          <div className="hidden md:flex flex-col w-[400px] border-r bg-neutral-50 overflow-hidden flex-shrink-0">
             <div className="p-3 border-b flex items-center justify-between">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Trees ({trees.length})
@@ -1829,7 +1832,10 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         )}
 
         {/* Map area — with relative positioning for overlays */}
-        <div className="w-full md:flex-1 relative" style={{ minHeight: "calc(65vh - 48px)" }}>
+        <div
+          className={`w-full md:flex-1 relative h-[55vh] md:h-auto ${quickAddMode ? "cursor-crosshair" : ""}`}
+          style={{ minHeight: "calc(100vh - 4rem)" }}
+        >
           {/* Map empty state overlay — no trees */}
           {trees.length === 0 && (
             <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
@@ -1853,6 +1859,22 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             >
               <PanelLeftOpen className="h-3.5 w-3.5" />
               Trees
+            </button>
+          )}
+
+          {/* Floating "Tag a Tree" button on map */}
+          {(lifecycleState === "no_trees" || lifecycleState === "assessing") && (
+            <button
+              type="button"
+              onClick={() => setQuickAddMode(!quickAddMode)}
+              className={`absolute bottom-20 left-4 z-10 flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg text-sm font-semibold transition-all ${
+                quickAddMode
+                  ? "bg-forest text-white ring-2 ring-forest/30"
+                  : "bg-white text-forest hover:bg-forest/5 border"
+              }`}
+            >
+              <TreePine className="h-4 w-4" />
+              <span>{quickAddMode ? "Adding Trees..." : "Tag a Tree"}</span>
             </button>
           )}
 
@@ -1944,7 +1966,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                     )
                 : undefined
             }
-            onPinAdd={handlePinAdd}
+            onPinAdd={handleMapClick}
             onPinClick={handlePinClick}
             onPinMove={handlePinMove}
             selectedPinId={pendingPin ? "pending" : selectedTreeId}

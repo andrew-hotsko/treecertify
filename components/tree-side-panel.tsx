@@ -524,14 +524,22 @@ export function TreeSidePanel({
 
   function handleCopyFromLast() {
     if (!lastSavedTree) return;
+    // Copy: species, condition, action, observation checkboxes
     setSpeciesCommon(lastSavedTree.speciesCommon ?? "");
     setSpeciesScientific(lastSavedTree.speciesScientific ?? "");
-    setDbhInches(lastSavedTree.dbhInches != null ? String(lastSavedTree.dbhInches) : "");
-    setHeightFt(lastSavedTree.heightFt != null ? String(lastSavedTree.heightFt) : "");
-    setCanopySpreadFt(lastSavedTree.canopySpreadFt != null ? String(lastSavedTree.canopySpreadFt) : "");
     setConditionRating(lastSavedTree.conditionRating ?? 0);
     setRecommendedAction(lastSavedTree.recommendedAction ?? "");
-    // Don't copy: healthNotes, structuralNotes, photos, pin location
+    // Copy observation checkboxes from last tree
+    const lastHealthObs = parseObservedLine(lastSavedTree.healthNotes ?? "");
+    const lastStructuralObs = parseObservedLine(lastSavedTree.structuralNotes ?? "");
+    setHealthChecks(lastHealthObs);
+    setStructuralChecks(lastStructuralObs);
+    // Rebuild notes with copied observations (preserve any existing free text)
+    const existingHealthFree = extractFreeText(healthNotes);
+    const existingStructuralFree = extractFreeText(structuralNotes);
+    setHealthNotes(buildNotesWithObserved(lastHealthObs, existingHealthFree));
+    setStructuralNotes(buildNotesWithObserved(lastStructuralObs, existingStructuralFree));
+    // Don't copy: DBH, height, spread, photos, pin location, free-text notes
   }
 
   function handleSave() {
@@ -717,7 +725,7 @@ export function TreeSidePanel({
             className="w-full text-xs text-forest hover:text-forest hover:bg-forest/5 py-1.5 px-3 rounded border border-forest/20 border-dashed transition-colors flex items-center justify-center gap-1.5"
           >
             <Copy className="h-3 w-3" />
-            Copy species &amp; size from Tree #{lastSavedTree.treeNumber}
+            Copy from Tree #{lastSavedTree.treeNumber}
           </button>
         )}
 
