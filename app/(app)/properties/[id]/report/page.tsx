@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { ReportPreview } from "@/components/report-preview";
 import { SectionEditor } from "@/components/section-editor";
 import { renderMarkdownToHtml } from "@/lib/markdown";
 import { getReportTypeConfig } from "@/lib/report-types";
+import { generateClientPdf, type ClientPdfData } from "@/lib/generate-pdf-client";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
@@ -56,7 +57,6 @@ import {
   FileEdit,
   BadgeCheck,
   Flag,
-  Smartphone,
   MoreVertical,
   BookOpen,
   Search,
@@ -91,7 +91,7 @@ import {
   SubmissionChecklistDialog,
   SubmissionChecklistSummary,
 } from "@/components/submission-checklist-dialog";
-import { QuickReview, ReviewFlag } from "@/components/quick-review";
+import { ReviewFlag } from "@/components/quick-review";
 import { useToast } from "@/hooks/use-toast";
 
 // ---------------------------------------------------------------------------
@@ -264,7 +264,6 @@ export default function PropertyReportPage() {
   const params = useParams();
   const propertyId = params.id as string;
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   // Data state
@@ -294,7 +293,7 @@ export default function PropertyReportPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [viewMode, setViewMode] = useState<"editor" | "preview" | "quickReview">("editor");
+  const [viewMode, setViewMode] = useState<"editor" | "preview">("editor");
   const [showQualityDialog, setShowQualityDialog] = useState(false);
   const [qualityWarnings, setQualityWarnings] = useState<string[]>([]);
   const [streamingText, setStreamingText] = useState("");
@@ -416,13 +415,7 @@ export default function PropertyReportPage() {
           setContent(c);
           savedContentRef.current = c;
           setReportType(r.reportType);
-          // Check query param for Quick Review entry
-          const requestedView = searchParams.get("view");
-          if (requestedView === "quickReview") {
-            setViewMode("quickReview");
-          } else {
-            setViewMode(r.status === "certified" || r.status === "filed" ? "preview" : "editor");
-          }
+          setViewMode(r.status === "certified" || r.status === "filed" ? "preview" : "editor");
           // Parse report options
           try {
             setReportOptions(JSON.parse(r.reportOptions || "{}"));
@@ -1046,8 +1039,9 @@ export default function PropertyReportPage() {
     if (!report) return;
     setPdfLoading(true);
     try {
+      // Try server-side PDF first
       const res = await fetch(`/api/reports/${report.id}/pdf`);
-      if (!res.ok) throw new Error(`PDF generation failed (${res.status})`);
+      if (!res.ok) throw new Error(`Server PDF failed (${res.status})`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -1057,17 +1051,58 @@ export default function PropertyReportPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("PDF download failed:", err);
-      toast({
-        title: "PDF download failed",
-        description: "Could not generate PDF. Please try again.",
-        variant: "destructive",
-      });
+    } catch (serverErr) {
+      console.warn("Server PDF failed, trying client-side generation:", serverErr);
+      try {
+        // Fallback to client-side jsPDF
+        const pdfData: ClientPdfData = {
+          reportType: reportType || "removal_permit",
+          reportTypeLabel: reportType ? (getReportTypeConfig(reportType)?.label || reportType) : "Tree Assessment Report",
+          narrativeContent: content,
+          propertyAddress: property?.address || "",
+          propertyCity: property?.city || "",
+          clientName: property?.homeownerName || undefined,
+          trees: (property?.trees || []).map((t: TreeRecord) => ({
+            treeNumber: t.treeNumber,
+            speciesCommon: t.speciesCommon,
+            speciesScientific: t.speciesScientific,
+            dbh: t.dbhInches ? String(t.dbhInches) : null,
+            height: t.heightFt ? String(t.heightFt) : null,
+            canopySpread: t.canopySpreadFt ? String(t.canopySpreadFt) : null,
+            conditionRating: t.conditionRating,
+            action: t.recommendedAction,
+            isProtected: t.isProtected,
+            isHeritage: false,
+          })),
+          arboristName: arborist?.name || "Certified Arborist",
+          companyName: arborist?.companyName,
+          isaCredentialNumber: arborist?.isaCertificationNum,
+          isaQualification: arborist?.traqCertified ? "TRAQ Qualified" : undefined,
+          licenseNumber: arborist?.licenseNumbers,
+          certifiedAt: report.certifiedAt,
+          createdAt: new Date().toISOString(),
+        };
+        const blob = await generateClientPdf(pdfData);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `report-${report.id}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (clientErr) {
+        console.error("Both server and client PDF generation failed:", clientErr);
+        toast({
+          title: "PDF download failed",
+          description: "Could not generate PDF. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setPdfLoading(false);
     }
-  }, [report, toast]);
+  }, [report, toast, reportType, content, property, arborist]);
 
   // -------------------------------------------------------------------------
   // Download Word helper
@@ -1681,10 +1716,6 @@ export default function PropertyReportPage() {
 
                     <DropdownMenuSeparator />
 
-                    <DropdownMenuItem onClick={() => setViewMode("quickReview")}>
-                      <Smartphone className="h-4 w-4 mr-2" />
-                      Quick Review
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={openVersionHistory}>
                       <History className="h-4 w-4 mr-2" />
                       Version History
@@ -1785,10 +1816,6 @@ export default function PropertyReportPage() {
                     >
                       <FileEdit className="h-4 w-4 mr-2" />
                       Request Amendment
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setViewMode("quickReview")}>
-                      <Smartphone className="h-4 w-4 mr-2" />
-                      Quick Review
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={openVersionHistory}>
                       <History className="h-4 w-4 mr-2" />
@@ -1900,7 +1927,7 @@ export default function PropertyReportPage() {
         )}
 
         {/* Review flags banner — shown in editor modes when flags exist */}
-        {viewMode !== "quickReview" && report?.reviewFlags && (() => {
+        {report?.reviewFlags && (() => {
           try {
             const flags: ReviewFlag[] = JSON.parse(report.reviewFlags);
             if (flags.length === 0) return null;
@@ -1931,45 +1958,7 @@ export default function PropertyReportPage() {
           } catch { return null; }
         })()}
 
-        {/* Quick Review full-screen mode */}
-        {viewMode === "quickReview" && property && report ? (
-          <QuickReview
-            reportId={report.id}
-            reportContent={content}
-            reportStatus={report.status}
-            propertyId={property.id}
-            propertyAddress={property.address}
-            propertyCity={property.city}
-            trees={property.trees}
-            initialFlags={(() => {
-              try { return report.reviewFlags ? JSON.parse(report.reviewFlags) : []; }
-              catch { return []; }
-            })()}
-            onExitQuickReview={() => {
-              setViewMode(isCertified ? "preview" : "editor");
-            }}
-            onStartCertification={() => {
-              setCertifyStep(1);
-              setReviewChecked(false);
-              setCertifyAgreed(false);
-              setSignatureText("");
-              setCertifySuccess(false);
-              setWarningsAcknowledged(false);
-              if (report) fetchValidation(report.id);
-              setShowCertifyPanel(true);
-            }}
-            onSaveFlags={async (flags) => {
-              const flagsJson = JSON.stringify(flags);
-              const res = await fetch(`/api/reports/${report.id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ reviewFlags: flagsJson }),
-              });
-              if (!res.ok) throw new Error("Failed to save flags");
-              setReport({ ...report, reviewFlags: flagsJson });
-            }}
-          />
-        ) : viewMode === "editor" && (!isCertified || isAmending) ? (
+        {viewMode === "editor" && (!isCertified || isAmending) ? (
           <SectionEditor
             content={content}
             reportId={report?.id || ""}
