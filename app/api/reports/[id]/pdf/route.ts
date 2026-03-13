@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { renderMarkdownToHtml } from "@/lib/markdown";
 import { logEvent } from "@/lib/analytics";
-import puppeteer from "puppeteer";
+import { launchBrowser } from "@/lib/pdf-browser";
 import fs from "fs";
 import path from "path";
 import QRCode from "qrcode";
@@ -2202,10 +2202,7 @@ export async function GET(
     // =========================================================================
     // RENDER PDF
     // =========================================================================
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    browser = await launchBrowser();
     const page = await browser.newPage();
     await page.setContent(processedHtml, { waitUntil: "networkidle0" });
 
@@ -2261,14 +2258,19 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("PDF generation error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("PDF generation error:", errorMessage, error);
     return NextResponse.json(
-      { error: "Failed to generate PDF" },
+      { error: `Failed to generate PDF: ${errorMessage}` },
       { status: 500 }
     );
   } finally {
     if (browser) {
-      await browser.close();
+      try {
+        await browser.close();
+      } catch (closeError) {
+        console.error("Error closing browser:", closeError);
+      }
     }
   }
 }

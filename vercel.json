@@ -1,0 +1,15 @@
+{
+  "functions": {
+    "app/api/reports/[id]/pdf/route.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "app/api/sample-report/route.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "app/api/ai/generate-report/route.ts": {
+      "maxDuration": 120
+    }
+  }
+}

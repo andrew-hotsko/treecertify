@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireArborist } from "@/lib/auth";
 import { renderMarkdownToHtml } from "@/lib/markdown";
 import { SAMPLE_REPORT } from "@/lib/sample-report-data";
-import puppeteer from "puppeteer";
+import { launchBrowser } from "@/lib/pdf-browser";
 import fs from "fs";
 import path from "path";
 
@@ -404,10 +404,7 @@ ${signatureBlock}
   }
 
   // Render PDF with Puppeteer
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  const browser = await launchBrowser();
   try {
     const page = await browser.newPage();
     await page.setContent(processedHtml, { waitUntil: "networkidle0" });
