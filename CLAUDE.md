@@ -50,6 +50,23 @@
 - Instrument Sans loaded via CSS `@import` in `globals.css`. Roboto + IBM Plex Mono via `next/font/google` in `app/layout.tsx`.
 - Condition dot colors (emerald-500, gray-400/700, etc.) in `CONDITION_DOT_COLOR` maps are data visualization — do NOT change to brand colors.
 
+## Design System (Session 42)
+- **IMPORTANT**: All `.tsx` components use **explicit hex values** instead of Tailwind `forest` theme classes. Do NOT use `bg-forest`, `text-forest`, etc. in components. Use the hex equivalents below.
+- **Primary colors (hex)**: `#1D4E3E` (forest), `#2A6B55` (forest-light/hover), `#3D7D68` (forest-muted/accents), `#9C9C93` (muted text/labels).
+- **Typography patterns**:
+  - Page titles: `text-2xl md:text-3xl tracking-tight` (no font-display, no font-semibold)
+  - Section/mono labels: `text-[10px] font-mono uppercase tracking-widest text-[#9C9C93]` — used above page titles and as section headers
+  - Status badges: `text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full` with inline `style={{ color, backgroundColor }}`
+  - Data values: `font-mono` for measurements, ISA numbers, currency, tree numbers
+- **Spacing**: `space-y-8` between major sections, `p-4`/`p-5` card padding, `space-y-2` between list cards.
+- **Max widths**: `max-w-6xl` dashboard, `max-w-5xl` properties/content pages, `max-w-4xl` share page, `max-w-3xl` settings.
+- **Buttons**: Primary `bg-[#1D4E3E] hover:bg-[#2A6B55] text-white`, outline `border-[#1D4E3E]/20 hover:bg-[#1D4E3E]/5 hover:border-[#1D4E3E]/40`.
+- **Cards**: `border-border` (not `border-neutral-200`), hover `hover:border-[#1D4E3E]/30 hover:bg-accent/30 transition-all`, clickable with `cursor-pointer group`.
+- **Backgrounds**: `bg-[#1D4E3E]/5` for tinted cards, `bg-[#1D4E3E]/10` for stronger tints, `bg-[#FEFDFB]` for warm page backgrounds (share page).
+- **Borders**: `border-[#1D4E3E]/20` standard, `border-[#1D4E3E]/30` for inputs/focus, `border-[#1D4E3E]/40` for hover states.
+- **Icons**: `text-[#1D4E3E]` for card/section icons. `h-5 w-5` standard, `h-4 w-4` for inline.
+- **Footer (share page)**: `text-[10px] font-mono uppercase tracking-widest text-[#9C9C93]` centered.
+
 ## PDF Generation
 - PDF route: `app/api/reports/[id]/pdf/route.ts` — Puppeteer renders HTML template to PDF.
 - Professional layout: Instrument Sans headings, Roboto body, Dancing Script e-signatures.
