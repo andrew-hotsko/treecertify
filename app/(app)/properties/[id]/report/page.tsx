@@ -1274,234 +1274,221 @@ export default function PropertyReportPage() {
 
   if (!report) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-        <div className="w-full max-w-lg">
-          <Link
-            href={`/properties/${propertyId}`}
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {property.address}
-          </Link>
-
-          <Card className="shadow-sm">
-            <CardContent className="pt-8 pb-6 px-6 space-y-5">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-forest/10 mb-4">
-                  <Sparkles className="h-7 w-7 text-forest" />
+      <>
+        {/* Generation Progress Modal — full-screen overlay, nothing visible behind */}
+        {generating && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="w-full max-w-md mx-4 bg-white rounded-2xl p-8 shadow-2xl">
+              <div className="text-center space-y-5">
+                <div className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-forest/10 mx-auto">
+                  <Sparkles className="h-7 w-7 text-forest animate-pulse" />
                 </div>
-                <h2 className="text-xl font-semibold font-display tracking-tight">Generate AI Report</h2>
-                <p className="text-sm text-muted-foreground mt-1.5">
-                  {property.address}, {property.city}
+
+                <div>
+                  <h3 className="text-xl font-semibold font-display tracking-tight">
+                    Generating your report...
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {getReportTypeConfig(reportType)?.label || reportType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                  </p>
+                </div>
+
+                <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-forest h-2 rounded-full transition-all duration-1000 ease-out"
+                    style={{
+                      width: `${Math.min(
+                        elapsedSeconds < 3 ? 5 :
+                        elapsedSeconds < 8 ? 15 :
+                        elapsedSeconds < 15 ? 30 :
+                        elapsedSeconds < 25 ? 55 :
+                        elapsedSeconds < 40 ? 75 :
+                        elapsedSeconds < 60 ? 88 : 95,
+                        95
+                      )}%`,
+                    }}
+                  />
+                </div>
+
+                <p className="text-sm text-muted-foreground">
+                  {elapsedSeconds < 3
+                    ? `Analyzing ${property.trees.length} tree${property.trees.length !== 1 ? "s" : ""} in ${property.city}...`
+                    : elapsedSeconds < 8
+                      ? "Loading municipal ordinance data..."
+                      : elapsedSeconds < 15
+                        ? "Generating report sections..."
+                        : elapsedSeconds < 25
+                          ? "Writing site observations and recommendations..."
+                          : elapsedSeconds < 40
+                            ? "Formatting and reviewing..."
+                            : "Almost there — complex reports take a bit longer..."}
                 </p>
-                <Badge variant="outline" className="mt-2">
-                  {getReportTypeConfig(reportType)?.label ||
-                    reportType
-                      .replace(/_/g, " ")
-                      .replace(/\b\w/g, (c) => c.toUpperCase())}
-                </Badge>
+
+                {streamingText && (
+                  <p className="text-xs text-muted-foreground/60">
+                    {streamingText.split(/\s+/).length} words generated
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Data Quality Check Dialog */}
+        {showQualityDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="w-full max-w-lg mx-4 bg-white rounded-2xl p-6 shadow-2xl space-y-4">
+              <h3 className="text-lg font-semibold">Ready to Generate Report</h3>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p><span className="font-medium text-foreground">Property:</span> {property.address}, {property.city}</p>
+                <p><span className="font-medium text-foreground">Report Type:</span> {getReportTypeConfig(reportType)?.label || reportType}</p>
+                <p><span className="font-medium text-foreground">Trees:</span> {property.trees.length} assessed</p>
               </div>
 
-              <div className="rounded-lg bg-forest/5 border border-forest/10 p-4 text-sm text-neutral-700">
-                <p className="font-medium mb-2 text-neutral-800">
-                  The AI will generate a comprehensive report including:
-                </p>
-                <ul className="list-disc list-inside space-y-1 text-neutral-600">
-                  <li>Scope of Assignment &amp; Site Observations</li>
-                  <li>
-                    Tree Inventory table ({property.trees.length} tree{property.trees.length !== 1 ? "s" : ""})
-                  </li>
-                  <li>Individual Tree Assessments</li>
-                  <li>Recommendations &amp; Mitigation</li>
-                  <li>Arborist Certification Statement</li>
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-amber-800">
+                  <AlertTriangle className="h-4 w-4" />
+                  Data Quality Notes
+                </div>
+                <ul className="text-sm text-amber-700 space-y-1 list-disc list-inside">
+                  {qualityWarnings.map((w, i) => (
+                    <li key={i}>{w}</li>
+                  ))}
                 </ul>
               </div>
 
-              <OnboardingHint hintId="report_generation" className="mb-2">
-                The AI will draft a full report based on your tree data. Review it, then certify when ready.
-              </OnboardingHint>
+              <p className="text-xs text-muted-foreground">
+                The AI will fill in missing details with professional language, but the report will be stronger with complete field data.
+              </p>
 
-              <Button
-                onClick={handleGenerateClick}
-                disabled={generating || property.trees.length === 0}
-                className="w-full h-12 bg-forest hover:bg-forest-light active:scale-[0.98] transition-all text-base"
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowQualityDialog(false)}
+                >
+                  Go Back and Complete
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowQualityDialog(false);
+                    generateReport();
+                  }}
+                  className="bg-forest hover:bg-forest-light"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Generate Anyway
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Generate card — hidden when generating */}
+        {!generating && (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+            <div className="w-full max-w-lg">
+              <Link
+                href={`/properties/${propertyId}`}
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
               >
-                {generating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generating Report...
-                  </>
-                ) : (
-                  <>
+                <ArrowLeft className="h-4 w-4" />
+                {property.address}
+              </Link>
+
+              <Card className="shadow-sm">
+                <CardContent className="pt-8 pb-6 px-6 space-y-5">
+                  <div className="text-center">
+                    <div className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-forest/10 mb-4">
+                      <Sparkles className="h-7 w-7 text-forest" />
+                    </div>
+                    <h2 className="text-xl font-semibold font-display tracking-tight">Generate AI Report</h2>
+                    <p className="text-sm text-muted-foreground mt-1.5">
+                      {property.address}, {property.city}
+                    </p>
+                    <Badge variant="outline" className="mt-2">
+                      {getReportTypeConfig(reportType)?.label ||
+                        reportType
+                          .replace(/_/g, " ")
+                          .replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </Badge>
+                  </div>
+
+                  <div className="rounded-lg bg-forest/5 border border-forest/10 p-4 text-sm text-neutral-700">
+                    <p className="font-medium mb-2 text-neutral-800">
+                      The AI will generate a comprehensive report including:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 text-neutral-600">
+                      <li>Scope of Assignment &amp; Site Observations</li>
+                      <li>
+                        Tree Inventory table ({property.trees.length} tree{property.trees.length !== 1 ? "s" : ""})
+                      </li>
+                      <li>Individual Tree Assessments</li>
+                      <li>Recommendations &amp; Mitigation</li>
+                      <li>Arborist Certification Statement</li>
+                    </ul>
+                  </div>
+
+                  <OnboardingHint hintId="report_generation" className="mb-2">
+                    The AI will draft a full report based on your tree data. Review it, then certify when ready.
+                  </OnboardingHint>
+
+                  <Button
+                    onClick={handleGenerateClick}
+                    disabled={property.trees.length === 0}
+                    className="w-full h-12 bg-forest hover:bg-forest-light active:scale-[0.98] transition-all text-base"
+                  >
                     <Sparkles className="h-4 w-4 mr-2" />
                     Generate AI Draft
-                  </>
-                )}
-              </Button>
+                  </Button>
 
-              {property.trees.length === 0 && (
-                <p className="text-sm text-amber-600 text-center">
-                  Add at least one tree before generating a report.
-                </p>
-              )}
+                  {property.trees.length === 0 && (
+                    <p className="text-sm text-amber-600 text-center">
+                      Add at least one tree before generating a report.
+                    </p>
+                  )}
 
-              {error && !generating && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-5 space-y-4">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-amber-900">
-                        Report generation failed
-                      </p>
-                      <p className="text-sm text-amber-700 mt-1">
-                        {error}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      size="sm"
-                      className="bg-forest hover:bg-forest-light"
-                      onClick={() => {
-                        setError(null);
-                        generateReport();
-                      }}
-                    >
-                      <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                      Try Again
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => router.push(`/properties/${propertyId}`)}
-                    >
-                      <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
-                      Back to Property
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Data Quality Check Dialog */}
-              {showQualityDialog && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                  <Card className="w-full max-w-lg mx-4">
-                    <CardContent className="p-6 space-y-4">
-                      <h3 className="text-lg font-semibold">Ready to Generate Report</h3>
-                      <div className="text-sm text-muted-foreground space-y-1">
-                        <p><span className="font-medium text-foreground">Property:</span> {property.address}, {property.city}</p>
-                        <p><span className="font-medium text-foreground">Report Type:</span> {getReportTypeConfig(reportType)?.label || reportType}</p>
-                        <p><span className="font-medium text-foreground">Trees:</span> {property.trees.length} assessed</p>
-                      </div>
-
-                      <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 space-y-2">
-                        <div className="flex items-center gap-2 text-sm font-medium text-amber-800">
-                          <AlertTriangle className="h-4 w-4" />
-                          Data Quality Notes
+                  {error && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-5 space-y-4">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-amber-900">
+                            Report generation failed
+                          </p>
+                          <p className="text-sm text-amber-700 mt-1">
+                            {error}
+                          </p>
                         </div>
-                        <ul className="text-sm text-amber-700 space-y-1 list-disc list-inside">
-                          {qualityWarnings.map((w, i) => (
-                            <li key={i}>{w}</li>
-                          ))}
-                        </ul>
                       </div>
-
-                      <p className="text-xs text-muted-foreground">
-                        The AI will fill in missing details with professional language, but the report will be stronger with complete field data.
-                      </p>
-
-                      <div className="flex gap-3 justify-end">
+                      <div className="flex items-center gap-3">
                         <Button
-                          variant="outline"
-                          onClick={() => setShowQualityDialog(false)}
-                        >
-                          Go Back and Complete
-                        </Button>
-                        <Button
+                          size="sm"
+                          className="bg-forest hover:bg-forest-light"
                           onClick={() => {
-                            setShowQualityDialog(false);
+                            setError(null);
                             generateReport();
                           }}
-                          className="bg-blue-600 hover:bg-blue-700"
                         >
-                          <Sparkles className="h-4 w-4 mr-2" />
-                          Generate Anyway
+                          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                          Try Again
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => router.push(`/properties/${propertyId}`)}
+                        >
+                          <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+                          Back to Property
                         </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-
-              {/* Streaming Progress Modal — centered, simple, confidence-building */}
-              {generating && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                  <Card className="w-full max-w-md mx-4 shadow-lg">
-                    <CardContent className="pt-10 pb-8 px-8">
-                      <div className="text-center space-y-5">
-                        {/* Animated tree icon */}
-                        <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-forest/10 mx-auto">
-                          <Sparkles className="h-8 w-8 text-forest animate-pulse" />
-                        </div>
-
-                        {/* Title */}
-                        <div>
-                          <h3 className="text-lg font-semibold font-display tracking-tight">
-                            Generating your report...
-                          </h3>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {getReportTypeConfig(reportType)?.label || reportType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                          </p>
-                        </div>
-
-                        {/* Progress bar */}
-                        <div className="w-full bg-neutral-200 rounded-full h-2 overflow-hidden">
-                          <div
-                            className="bg-forest h-2 rounded-full transition-all duration-1000 ease-out"
-                            style={{
-                              width: `${Math.min(
-                                elapsedSeconds < 3 ? 5 :
-                                elapsedSeconds < 8 ? 15 :
-                                elapsedSeconds < 15 ? 30 :
-                                elapsedSeconds < 25 ? 55 :
-                                elapsedSeconds < 40 ? 75 :
-                                elapsedSeconds < 60 ? 88 : 95,
-                                95
-                              )}%`,
-                            }}
-                          />
-                        </div>
-
-                        {/* Timed status message */}
-                        <p className="text-sm text-muted-foreground">
-                          {elapsedSeconds < 3
-                            ? `Analyzing ${property.trees.length} tree${property.trees.length !== 1 ? "s" : ""} in ${property.city}...`
-                            : elapsedSeconds < 8
-                              ? "Loading municipal ordinance data..."
-                              : elapsedSeconds < 15
-                                ? "Generating report sections..."
-                                : elapsedSeconds < 25
-                                  ? "Writing site observations and recommendations..."
-                                  : elapsedSeconds < 40
-                                    ? "Formatting and reviewing..."
-                                    : "Almost there — complex reports take a bit longer..."}
-                        </p>
-
-                        {/* Word count (if streaming has started) */}
-                        {streamingText && (
-                          <p className="text-xs text-muted-foreground/60">
-                            {streamingText.split(/\s+/).length} words generated
-                          </p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
