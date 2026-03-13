@@ -2396,9 +2396,9 @@ export default function PropertyReportPage() {
 
       {/* ---- Certification Ceremony Dialog ---- */}
       {showCertifyPanel && (!isCertified || isAmending) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <Card className="w-full max-w-lg mx-4">
-            <CardContent className="p-6 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+          <Card className="w-full max-w-lg mx-auto my-auto">
+            <CardContent className="p-6 space-y-4 max-h-[85vh] overflow-y-auto">
               {/* Success state */}
               {certifySuccess ? (
                 <div className="text-center py-8 space-y-4">
