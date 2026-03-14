@@ -1039,24 +1039,27 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     : selectedTree?.treeNumber ?? 1;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-6">
       {/* Page Header */}
-      <div className="space-y-2">
-        {/* Row 1: Back + Address */}
-        <div className="flex items-center gap-3 min-w-0">
-          <Link
-            href="/properties"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Properties
-          </Link>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold tracking-tight font-display text-foreground truncate">
-              {property.address}
-            </h1>
-            <p className="text-sm text-muted-foreground truncate">{property.city}</p>
-          </div>
+      <div className="space-y-3">
+        {/* Back link */}
+        <Link
+          href="/properties"
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Properties
+        </Link>
+
+        {/* Title block */}
+        <div className="min-w-0">
+          <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-0.5">
+            Property Assessment
+          </p>
+          <h1 className="text-2xl md:text-3xl tracking-tight font-display text-foreground truncate">
+            {property.address}
+          </h1>
+          <p className="text-sm text-muted-foreground truncate">{property.city}</p>
         </div>
 
         {/* Row 2: Badges + Primary Action */}
@@ -1346,7 +1349,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
 
       {/* Sample property banner */}
       {property.address === "123 Sample Street" && (
-        <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-700">
+        <div className="rounded-lg bg-[#1D4E3E]/5 border border-[#1D4E3E]/20 px-4 py-3 text-sm text-foreground">
           This is a sample property to help you explore TreeCertify. Feel free to generate a report, try the certification flow, or delete it when you&apos;re ready.
         </div>
       )}
@@ -1358,16 +1361,14 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             className="pb-2 cursor-pointer hover:bg-muted/50 transition-colors"
             onClick={() => setProjectOpen((v) => !v)}
           >
-            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-              <HardHat className="h-4 w-4 text-blue-600" />
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold font-display">
+              <HardHat className="h-4 w-4 text-[#1D4E3E]" />
               Project Information
-              <span className="ml-auto flex items-center justify-center h-11 w-11 -mr-3">
-                <ChevronDown
-                  className={`h-4 w-4 text-muted-foreground transition-transform ${
-                    projectOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </span>
+              <ChevronDown
+                className={`h-4 w-4 ml-auto text-muted-foreground transition-transform duration-200 ${
+                  projectOpen ? "rotate-180" : ""
+                }`}
+              />
             </CardTitle>
           </CardHeader>
           {projectOpen && (
@@ -1427,7 +1428,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                   size="sm"
                   onClick={handleSaveProject}
                   disabled={savingProject}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-[#1D4E3E] hover:bg-[#2A6B55] text-white"
                 >
                   {savingProject ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -1447,16 +1448,14 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
           className="pb-2 cursor-pointer hover:bg-muted/50 transition-colors"
           onClick={() => setSiteInfoOpen((v) => !v)}
         >
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-            <ClipboardList className="h-4 w-4 text-violet-600" />
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold font-display">
+            <ClipboardList className="h-4 w-4 text-[#1D4E3E]" />
             Site Information
-            <span className="ml-auto flex items-center justify-center h-11 w-11 -mr-3">
-              <ChevronDown
-                className={`h-4 w-4 text-muted-foreground transition-transform ${
-                  siteInfoOpen ? "rotate-180" : ""
-                }`}
-              />
-            </span>
+            <ChevronDown
+              className={`h-4 w-4 ml-auto text-muted-foreground transition-transform duration-200 ${
+                siteInfoOpen ? "rotate-180" : ""
+              }`}
+            />
           </CardTitle>
         </CardHeader>
         {siteInfoOpen && (
@@ -1522,7 +1521,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                 size="sm"
                 onClick={handleSaveSiteInfo}
                 disabled={savingSiteInfo}
-                className="bg-violet-600 hover:bg-violet-700 text-white"
+                className="bg-[#1D4E3E] hover:bg-[#2A6B55] text-white"
               >
                 {savingSiteInfo ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -1539,8 +1538,8 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
       {(lifecycleState === "assessing" || lifecycleState === "report_draft") && (property.reportType === "tree_valuation" || property.reportType === "real_estate_package") && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <DollarSign className="h-4 w-4 text-amber-600" />
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold font-display">
+              <DollarSign className="h-4 w-4 text-[#1D4E3E]" />
               Valuation Report Settings
             </CardTitle>
           </CardHeader>
@@ -1748,7 +1747,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
         {showTreeList && trees.length > 0 && (
           <div className="hidden md:flex flex-col w-[400px] border-r bg-neutral-50 overflow-hidden flex-shrink-0">
             <div className="p-3 border-b flex items-center justify-between">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <h3 className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93]">
                 Trees ({trees.length})
               </h3>
               <button
@@ -1883,7 +1882,7 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             {showLegend ? (
               <div className="bg-neutral-50/95 backdrop-blur-sm rounded-lg shadow-md border p-2.5 text-[10px]">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-semibold text-muted-foreground uppercase tracking-wider">
+                  <span className="font-mono text-[#9C9C93] uppercase tracking-widest">
                     Legend
                   </span>
                   <button
@@ -1895,40 +1894,40 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-[#22c55e] border-2 border-white shadow-sm" />
+                    <span className="w-3 h-3 rounded-full bg-[#1D4E3E] border-2 border-white shadow-sm" />
                     <span>Excellent</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-[#84cc16] border-2 border-white shadow-sm" />
+                    <span className="w-3 h-3 rounded-full bg-[#3D7D68] border-2 border-white shadow-sm" />
                     <span>Good</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-[#eab308] border-2 border-white shadow-sm" />
+                    <span className="w-3 h-3 rounded-full bg-[#D4A017] border-2 border-white shadow-sm" />
                     <span>Fair</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-[#f97316] border-2 border-white shadow-sm" />
+                    <span className="w-3 h-3 rounded-full bg-[#E07B3C] border-2 border-white shadow-sm" />
                     <span>Poor</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-[#ef4444] border-2 border-white shadow-sm" />
-                    <span>Dead / Critical / Remove</span>
+                    <span className="w-3 h-3 rounded-full bg-[#C0392B] border-2 border-white shadow-sm" />
+                    <span>Dead / Critical</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-[#9ca3af] border-2 border-white shadow-sm" />
+                    <span className="w-3 h-3 rounded-full bg-[#9CA3AF] border-2 border-white shadow-sm" />
                     <span>Unassessed</span>
                   </div>
                   <div className="border-t pt-1 mt-1">
                     <div className="flex items-center gap-2">
                       <span
-                        className="w-3 h-3 rounded-full bg-gray-400 border-2 border-white outline outline-2 outline-[#22c55e]"
+                        className="w-3 h-3 rounded-full bg-[#9CA3AF] border-2 border-white outline outline-2 outline-[#F59E0B]"
                         style={{ outlineOffset: "1px" }}
                       />
                       <span>Protected</span>
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span
-                        className="w-3 h-3 rounded-full bg-gray-400 border-2 border-white outline outline-2 outline-[#eab308]"
+                        className="w-3 h-3 rounded-full bg-[#9CA3AF] border-2 border-white outline outline-2 outline-[#A855F7]"
                         style={{ outlineOffset: "1px" }}
                       />
                       <span>Heritage</span>

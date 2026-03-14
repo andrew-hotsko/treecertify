@@ -51,12 +51,12 @@ const CONDITION_LABELS: Record<number, string> = {
 };
 
 const CONDITION_DOT_COLOR: Record<number, string> = {
-  0: "bg-neutral-700",
-  1: "bg-red-500",
-  2: "bg-orange-500",
-  3: "bg-amber-500",
-  4: "bg-emerald-500",
-  5: "bg-green-500",
+  0: "bg-[#C0392B]",   // red — Dead
+  1: "bg-[#C0392B]",   // red — Critical
+  2: "bg-[#E07B3C]",   // orange — Poor
+  3: "bg-[#D4A017]",   // gold — Fair
+  4: "bg-[#3D7D68]",   // forest muted — Good
+  5: "bg-[#1D4E3E]",   // forest — Excellent
 };
 
 const ACTION_LABELS: Record<string, { label: string; className: string }> = {
