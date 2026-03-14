@@ -9,46 +9,30 @@ import { useConnectivity } from "@/lib/connectivity";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { TreeSidePanel, type TreeFormData } from "@/components/tree-side-panel";
 import { MobileFieldMode } from "@/components/mobile-field-mode";
 import { type Observation } from "@/lib/default-observations";
-import { TreeSummaryPanel } from "@/components/tree-summary-panel";
 import type { TreePin, CircleOverlay } from "@/components/property-map";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { VoiceInput } from "@/components/voice-input";
 import { getReportTypeConfig, calcTpzRadius, calcSrzRadius } from "@/lib/report-types";
 import { VALUATION_PURPOSES, DEFAULT_BASIS_STATEMENT, formatCurrency } from "@/lib/valuation";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/status-badge";
-import { OnboardingHint } from "@/components/onboarding-hint";
 import { PermitTracker, type PermitUpdateData } from "@/components/permit-tracker";
 import {
   ArrowLeft,
   FileText,
   TreePine,
   ChevronDown,
+  ChevronRight,
   HardHat,
   Loader2,
-  ClipboardList,
-  Download,
-  FileDown,
-  Share2,
-  Copy,
   X,
-  PanelLeftClose,
-  PanelLeftOpen,
-  ShieldCheck,
   Zap,
   Trash2,
-  Smartphone,
-  Monitor,
   DollarSign,
   Save,
-  Pencil,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -59,6 +43,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 // Dynamically import PropertyMap with SSR disabled (Google Maps needs window/DOM)
@@ -118,6 +103,7 @@ interface PropertyData {
   siteObservations?: string | null;
   scopeOfAssignment?: string | null;
   neededByDate?: string | null;
+  shareToken?: string | null;
   trees: TreeData[];
   reports: {
     id: string;
@@ -178,13 +164,13 @@ const CONDITION_LABELS: Record<number, string> = {
   5: "Excellent",
 };
 
-const CONDITION_DOT_COLOR: Record<number, string> = {
-  0: "bg-[#C0392B]",   // red — Dead
-  1: "bg-[#C0392B]",   // red — Critical
-  2: "bg-[#E07B3C]",   // orange — Poor
-  3: "bg-[#D4A017]",   // gold — Fair
-  4: "bg-[#3D7D68]",   // forest muted — Good
-  5: "bg-[#1D4E3E]",   // forest — Excellent
+const CONDITION_PIN_HEX: Record<number, string> = {
+  0: "#C0392B",
+  1: "#C0392B",
+  2: "#E07B3C",
+  3: "#D4A017",
+  4: "#3D7D68",
+  5: "#1D4E3E",
 };
 
 type FilterKey = "all" | "incomplete" | "protected" | "remove" | "retain";
@@ -259,23 +245,14 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     { common: string; scientific: string }[]
   >([]);
 
-  // Tree list panel (desktop only)
-  const [showTreeList, setShowTreeList] = useState(true);
-
-  // Filter chips
-  const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
+  // Filter (always "all" — filter chips removed, kept for dimmedPinIds compat)
+  const activeFilter: FilterKey = "all";
 
   // Delete confirmation dialog
   const [deleteConfirmTreeId, setDeleteConfirmTreeId] = useState<string | null>(null);
 
-  // Map legend
-  const [showLegend, setShowLegend] = useState(false);
-
-  // Share link
-  const [shareToken, setShareToken] = useState<string | null>(null);
-  const [showSharePopover, setShowSharePopover] = useState(false);
-  const [sharingLoading, setSharingLoading] = useState(false);
-  const [shareCopied, setShareCopied] = useState(false);
+  // Share token (read from property, used for lifecycle state)
+  const shareToken = property.shareToken ?? null;
 
   // Permit tracking state (local for optimistic updates)
   const report0 = property.reports?.[0];
@@ -306,19 +283,13 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
   );
   const [savingProject, setSavingProject] = useState(false);
 
-  // Site information fields
-  const [siteInfoOpen, setSiteInfoOpen] = useState(false);
+  const [valuationOpen, setValuationOpen] = useState(false);
   const [scopeOfAssignment, setScopeOfAssignment] = useState(
     property.scopeOfAssignment ?? ""
   );
   const [siteObservations, setSiteObservations] = useState(
     property.siteObservations ?? ""
   );
-  const [neededByDate, setNeededByDate] = useState(
-    property.neededByDate ? property.neededByDate.split("T")[0] : ""
-  );
-  const [savingSiteInfo, setSavingSiteInfo] = useState(false);
-
   const reportType = property.reportType ?? "health_assessment";
   const reportTypeConfig = getReportTypeConfig(reportType);
 
@@ -523,15 +494,6 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
       status: "draft",
     });
   }
-
-  // Filter chip definitions
-  const filterChips: { key: FilterKey; label: string; count: number }[] = [
-    { key: "all", label: "All", count: trees.length },
-    { key: "incomplete", label: "Needs Data", count: trees.filter((t) => !isTreeComplete(t)).length },
-    { key: "protected", label: "Protected", count: trees.filter((t) => t.isProtected).length },
-    { key: "remove", label: "Remove", count: trees.filter((t) => t.recommendedAction === "remove").length },
-    { key: "retain", label: "Retain", count: trees.filter((t) => t.recommendedAction === "retain").length },
-  ];
 
   // ---- Handlers ----
   const handleMapClick = useCallback(
@@ -875,13 +837,6 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     []
   );
 
-  const handleSelectTreeFromSummary = useCallback((id: string) => {
-    setPendingPin(null);
-    setSelectedTreeId(id);
-    setShowSidePanel(true);
-    setFlyToId(id);
-  }, []);
-
   const handleSelectTreeFromList = useCallback((id: string) => {
     setPendingPin(null);
     setSelectedTreeId(id);
@@ -915,31 +870,6 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     }
   }, [property.id, projectDescription, permitNumber, developerName, architectName, toast]);
 
-  const handleSaveSiteInfo = useCallback(async () => {
-    setSavingSiteInfo(true);
-    try {
-      const res = await fetch(`/api/properties/${property.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scopeOfAssignment: scopeOfAssignment.trim() || null,
-          siteObservations: siteObservations.trim() || null,
-          neededByDate: neededByDate || null,
-        }),
-      });
-      if (!res.ok) throw new Error("Save failed");
-    } catch (err) {
-      console.error("Failed to save site info:", err);
-      toast({
-        title: "Save failed",
-        description: "Could not save site info. Try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setSavingSiteInfo(false);
-    }
-  }, [property.id, scopeOfAssignment, siteObservations, neededByDate, toast]);
-
   // ---- Valuation computed totals ----
   const valuationTotal = trees.reduce((sum, t) => sum + (t.valuationAppraisedValue ?? 0), 0);
   const treesWithValues = trees.filter(t => t.valuationAppraisedValue != null && t.valuationAppraisedValue > 0);
@@ -963,73 +893,6 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     }
   }, [latestReport?.id, valuationPurpose, valuationBasisStatement, valuationTotal, toast]);
 
-  const handleDuplicate = useCallback(async () => {
-    try {
-      const res = await fetch("/api/properties", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          address: "(New Property)",
-          city: property.city,
-          county: "",
-          reportType,
-          scopeOfAssignment: property.scopeOfAssignment || undefined,
-        }),
-      });
-      if (res.ok) {
-        const newProperty = await res.json();
-        router.push(`/properties/${newProperty.id}`);
-      }
-    } catch (err) {
-      console.error("Failed to duplicate:", err);
-    }
-  }, [property.city, property.scopeOfAssignment, reportType, router]);
-
-  const handleShare = useCallback(async () => {
-    setSharingLoading(true);
-    try {
-      const res = await fetch(`/api/properties/${property.id}/share`, {
-        method: "POST",
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setShareToken(data.shareToken);
-        setShowSharePopover(true);
-      }
-    } catch (err) {
-      console.error("Failed to create share link:", err);
-    } finally {
-      setSharingLoading(false);
-    }
-  }, [property.id]);
-
-  const handleRevokeShare = useCallback(async () => {
-    setSharingLoading(true);
-    try {
-      const res = await fetch(`/api/properties/${property.id}/share`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        setShareToken(null);
-        setShowSharePopover(false);
-        setShareCopied(false);
-      }
-    } catch (err) {
-      console.error("Failed to revoke share link:", err);
-    } finally {
-      setSharingLoading(false);
-    }
-  }, [property.id]);
-
-  const handleCopyShareLink = useCallback(() => {
-    if (!shareToken) return;
-    const url = `${window.location.origin}/share/${shareToken}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setShareCopied(true);
-      setTimeout(() => setShareCopied(false), 2000);
-    });
-  }, [shareToken]);
-
   // ---- Current side panel data ----
   const sidePanelTree = pendingPin
     ? { pinLat: pendingPin.lat, pinLng: pendingPin.lng }
@@ -1038,913 +901,119 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
     ? trees.length + 1
     : selectedTree?.treeNumber ?? 1;
 
+
   return (
-    <div className="flex flex-col gap-6">
-      {/* Page Header */}
-      <div className="space-y-3">
-        {/* Back link */}
-        <Link
-          href="/properties"
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Properties
-        </Link>
-
-        {/* Title block */}
-        <div className="min-w-0">
-          <p className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] mb-0.5">
-            Property Assessment
-          </p>
-          <h1 className="text-2xl md:text-3xl tracking-tight font-display text-foreground truncate">
-            {property.address}
-          </h1>
-          <p className="text-sm text-muted-foreground truncate">{property.city}</p>
-        </div>
-
-        {/* Row 2: Badges + Primary Action */}
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-2 flex-wrap">
-            {reportTypeConfig && (
-              <Badge variant="outline" className="text-xs">
-                {reportTypeConfig.label}
-              </Badge>
-            )}
-            {trees.length > 0 && (
-              <Badge variant="secondary" className="gap-1">
-                <TreePine className="h-3 w-3" />
-                {trees.length} tree{trees.length !== 1 ? "s" : ""}
-              </Badge>
-            )}
-            {property.reports?.[0] && (
-              <StatusBadge status={property.reports[0].status} />
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Primary action — changes per lifecycle state */}
-            {lifecycleState === "report_draft" && (
-              <Link href={`/properties/${property.id}/report`}>
-                <Button className="bg-[#1D4E3E] hover:bg-[#2A6B55] active:scale-[0.98] transition-all">
-                  <FileText className="h-4 w-4 mr-2" />
-                  {property.reports?.[0]?.status === "review" ? "Review Report" : "Edit Report"}
-                </Button>
-              </Link>
-            )}
-            {lifecycleState === "certified" && (
-              <Button className="bg-[#1D4E3E] hover:bg-[#2A6B55] active:scale-[0.98] transition-all" onClick={handleShare} disabled={sharingLoading}>
-                {sharingLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Share2 className="h-4 w-4 mr-2" />
-                )}
-                Share with Client
-              </Button>
-            )}
-            {lifecycleState === "shared" && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.open(`/share/${shareToken}`, "_blank")}
-                >
-                  View Share Page
-                </Button>
-                <Button
-                  className="bg-[#1D4E3E] hover:bg-[#2A6B55]"
-                  onClick={() => {
-                    const a = document.createElement("a");
-                    a.href = `/api/reports/${property.reports[0].id}/pdf`;
-                    a.download = "";
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                  }}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download PDF
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Row 3: Secondary actions + assessment toggles */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Field / Desktop toggle — mobile only, assessment phases */}
-          {(lifecycleState === "no_trees" || lifecycleState === "assessing") && (
-            <div className="flex items-center gap-1.5 md:hidden">
-              <label
-                htmlFor="field-mode-toggle"
-                className={`flex items-center gap-1 text-xs cursor-pointer select-none ${
-                  fieldMode ? "text-[#1D4E3E] font-medium" : "text-muted-foreground"
-                }`}
-              >
-                {fieldMode ? (
-                  <Smartphone className="h-3.5 w-3.5 text-[#1D4E3E]" />
-                ) : (
-                  <Monitor className="h-3.5 w-3.5" />
-                )}
-                <span>{fieldMode ? "Field" : "Desktop"}</span>
-              </label>
-              <Switch
-                id="field-mode-toggle"
-                checked={fieldMode}
-                onCheckedChange={setFieldMode}
-                className="scale-75"
-              />
-            </div>
-          )}
-          {/* Tag a Tree button — inline for toolbar, floating on map below */}
-          {(lifecycleState === "no_trees" || lifecycleState === "assessing") && (
-            <button
-              type="button"
-              onClick={() => setQuickAddMode(!quickAddMode)}
-              className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                quickAddMode
-                  ? "bg-[#1D4E3E] text-white"
-                  : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
-              }`}
-            >
-              <TreePine className="h-3.5 w-3.5" />
-              <span>{quickAddMode ? "Adding Trees..." : "Tag a Tree"}</span>
-            </button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDuplicate}
-            title="Duplicate property setup"
-          >
-            <Copy className="h-3.5 w-3.5 mr-1.5" />
-            <span className="hidden sm:inline">Duplicate</span>
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
+      {/* ---- Compact Header ---- */}
+      <div className="flex items-center gap-3 px-3 py-2 shrink-0">
+        <Link href="/properties">
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+            <ArrowLeft className="h-4 w-4" />
           </Button>
-          {trees.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const a = document.createElement("a");
-                a.href = `/api/properties/${property.id}/trees/export`;
-                a.download = "";
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-              }}
-              title="Export tree inventory as CSV"
-            >
-              <FileDown className="h-3.5 w-3.5 mr-1.5" />
-              <span className="hidden sm:inline">Export CSV</span>
-            </Button>
-          )}
-          {/* Share button (secondary) — when not the primary action */}
-          {lifecycleState !== "certified" && (
-            <div className="relative">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleShare}
-                disabled={sharingLoading}
-                title="Share property map"
-              >
-                {sharingLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                ) : (
-                  <Share2 className="h-3.5 w-3.5 mr-1.5" />
-                )}
-                <span className="hidden sm:inline">Share</span>
-              </Button>
-              {showSharePopover && shareToken && (
-                <div className="absolute right-0 top-full mt-2 z-50 w-80 bg-neutral-50 rounded-lg border shadow-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold">Share Link</h3>
-                    <button
-                      onClick={() => {
-                        setShowSharePopover(false);
-                        setShareCopied(false);
-                      }}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <OnboardingHint hintId="share_link" className="mb-1">
-                    Share this link with your client. They&apos;ll see a plain-English summary and can download the PDF.
-                  </OnboardingHint>
-                  <div className="flex items-center gap-2">
-                    <input
-                      readOnly
-                      value={`${typeof window !== "undefined" ? window.location.origin : ""}/share/${shareToken}`}
-                      className="flex-1 text-xs bg-neutral-100 border rounded px-2 py-1.5 text-neutral-700 select-all"
-                      onClick={(e) => (e.target as HTMLInputElement).select()}
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCopyShareLink}
-                      className="shrink-0"
-                    >
-                      {shareCopied ? (
-                        <span className="text-[#1D4E3E] text-xs">Copied!</span>
-                      ) : (
-                        <>
-                          <Copy className="h-3.5 w-3.5 mr-1" />
-                          <span className="text-xs">Copy</span>
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Anyone with this link can view the property map and tree inventory.
-                  </p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleRevokeShare}
-                    disabled={sharingLoading}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 w-full"
-                  >
-                    {sharingLoading ? (
-                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                    ) : (
-                      "Revoke Link"
-                    )}
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-          {/* Report link (secondary) — for certified/shared states */}
-          {(lifecycleState === "certified" || lifecycleState === "shared") && (
+        </Link>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h1 className="text-base md:text-lg font-semibold truncate">{property.address}</h1>
+            {property.reports?.[0] && <StatusBadge status={property.reports[0].status} />}
+          </div>
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+            {reportTypeConfig && <span>{reportTypeConfig.label}</span>}
+            {property.city && <span>{property.city}</span>}
+            <span className="font-mono">{trees.length} tree{trees.length !== 1 ? "s" : ""}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {lifecycleState === "assessing" && allTreesComplete && (
             <Link href={`/properties/${property.id}/report`}>
-              <Button variant="outline" size="sm">
-                <FileText className="h-4 w-4 mr-1.5" />
-                <span className="hidden sm:inline">View Report</span>
+              <Button size="sm" className="gap-1.5 bg-[#1D4E3E] hover:bg-[#2A6B55] text-white h-8 text-xs">
+                <FileText className="h-3.5 w-3.5" />
+                Generate Report
               </Button>
             </Link>
           )}
-          {/* Download buttons — certified/shared */}
-          {(lifecycleState === "certified" || lifecycleState === "shared") && property.reports?.[0] && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const a = document.createElement("a");
-                  a.href = `/api/reports/${property.reports[0].id}/pdf`;
-                  a.download = "";
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                }}
-                title="Download PDF"
-              >
-                <Download className="h-3.5 w-3.5" />
+          {lifecycleState === "report_draft" && (
+            <Link href={`/properties/${property.id}/report`}>
+              <Button size="sm" className="gap-1.5 bg-[#1D4E3E] hover:bg-[#2A6B55] text-white h-8 text-xs">
+                <FileText className="h-3.5 w-3.5" />
+                {property.reports?.[0]?.status === "review" ? "Review" : "Edit Report"}
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const a = document.createElement("a");
-                  a.href = `/api/reports/${property.reports[0].id}/word`;
-                  a.download = "";
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                }}
-                title="Download Word"
-              >
-                <FileDown className="h-3.5 w-3.5" />
-              </Button>
-            </>
+            </Link>
           )}
+          {(lifecycleState === "certified" || lifecycleState === "shared") && (
+            <Link href={`/properties/${property.id}/report`}>
+              <Button size="sm" className="gap-1.5 bg-[#1D4E3E] hover:bg-[#2A6B55] text-white h-8 text-xs">
+                <FileText className="h-3.5 w-3.5" />
+                View Report
+              </Button>
+            </Link>
+          )}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8">
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Property</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete this property, all trees, and any reports. This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={async () => {
+                    try {
+                      await fetch(`/api/properties/${property.id}`, { method: "DELETE" });
+                      router.push("/properties");
+                    } catch {
+                      toast({ title: "Failed to delete property", variant: "destructive" });
+                    }
+                  }}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 
-      {/* Permit Tracker — certified/shared, permit-relevant report types */}
+      {/* ---- Permit Tracker ---- */}
       {(lifecycleState === "certified" || lifecycleState === "shared") &&
         (reportType === "removal_permit" || reportType === "construction_encroachment") &&
         report0 && (
-          <PermitTracker
-            reportId={report0.id}
-            permitStatus={permitData.permitStatus}
-            submittedAt={permitData.submittedAt}
-            submittedTo={permitData.submittedTo}
-            reviewerNotes={permitData.reviewerNotes}
-            conditionsOfApproval={permitData.conditionsOfApproval}
-            denialReason={permitData.denialReason}
-            approvedAt={permitData.approvedAt}
-            permitExpiresAt={permitData.permitExpiresAt}
-            city={property.city}
-            reportType={reportType}
-            onUpdate={(data: PermitUpdateData) => {
-              setPermitData((prev) => ({
-                ...prev,
-                ...Object.fromEntries(
-                  Object.entries(data).filter(([, v]) => v !== undefined)
-                ),
-              }));
-            }}
-          />
-        )}
-
-      {/* Sample property banner */}
-      {property.address === "123 Sample Street" && (
-        <div className="rounded-lg bg-[#1D4E3E]/5 border border-[#1D4E3E]/20 px-4 py-3 text-sm text-foreground">
-          This is a sample property to help you explore TreeCertify. Feel free to generate a report, try the certification flow, or delete it when you&apos;re ready.
-        </div>
-      )}
-
-      {/* Construction Encroachment: Project Info Card — assessment phases only */}
-      {(lifecycleState === "assessing" || lifecycleState === "report_draft") && reportType === "construction_encroachment" && (
-        <Card>
-          <CardHeader
-            className="pb-2 cursor-pointer hover:bg-muted/50 transition-colors"
-            onClick={() => setProjectOpen((v) => !v)}
-          >
-            <CardTitle className="flex items-center gap-2 text-sm font-semibold font-display">
-              <HardHat className="h-4 w-4 text-[#1D4E3E]" />
-              Project Information
-              <ChevronDown
-                className={`h-4 w-4 ml-auto text-muted-foreground transition-transform duration-200 ${
-                  projectOpen ? "rotate-180" : ""
-                }`}
-              />
-            </CardTitle>
-          </CardHeader>
-          {projectOpen && (
-            <CardContent className="pt-0 px-3 md:px-6 space-y-3">
-              <div>
-                <Label htmlFor="mv-proj-desc" className="text-xs">
-                  Project Description
-                </Label>
-                <Input
-                  id="mv-proj-desc"
-                  placeholder="New addition, foundation work, etc."
-                  value={projectDescription}
-                  onChange={(e) => setProjectDescription(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="mv-permit" className="text-xs">
-                    Permit Number
-                  </Label>
-                  <Input
-                    id="mv-permit"
-                    placeholder="BP-2024-001234"
-                    value={permitNumber}
-                    onChange={(e) => setPermitNumber(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="mv-developer" className="text-xs">
-                    Developer / Contractor
-                  </Label>
-                  <Input
-                    id="mv-developer"
-                    placeholder="ABC Construction"
-                    value={developerName}
-                    onChange={(e) => setDeveloperName(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-              <div className="flex items-end gap-3">
-                <div className="flex-1">
-                  <Label htmlFor="mv-architect" className="text-xs">
-                    Architect
-                  </Label>
-                  <Input
-                    id="mv-architect"
-                    placeholder="Jane Smith, AIA"
-                    value={architectName}
-                    onChange={(e) => setArchitectName(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <Button
-                  size="sm"
-                  onClick={handleSaveProject}
-                  disabled={savingProject}
-                  className="bg-[#1D4E3E] hover:bg-[#2A6B55] text-white"
-                >
-                  {savingProject ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "Save"
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          )}
-        </Card>
-      )}
-
-      {/* Site Information — assessment phases only */}
-      {(lifecycleState === "assessing" || lifecycleState === "report_draft") && <Card>
-        <CardHeader
-          className="pb-2 cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => setSiteInfoOpen((v) => !v)}
-        >
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold font-display">
-            <ClipboardList className="h-4 w-4 text-[#1D4E3E]" />
-            Site Information
-            <ChevronDown
-              className={`h-4 w-4 ml-auto text-muted-foreground transition-transform duration-200 ${
-                siteInfoOpen ? "rotate-180" : ""
-              }`}
+          <div className="px-3 pb-2 shrink-0">
+            <PermitTracker
+              reportId={report0.id}
+              permitStatus={permitData.permitStatus}
+              submittedAt={permitData.submittedAt}
+              submittedTo={permitData.submittedTo}
+              reviewerNotes={permitData.reviewerNotes}
+              conditionsOfApproval={permitData.conditionsOfApproval}
+              denialReason={permitData.denialReason}
+              approvedAt={permitData.approvedAt}
+              permitExpiresAt={permitData.permitExpiresAt}
+              city={property.city}
+              reportType={reportType}
+              onUpdate={(data: PermitUpdateData) => {
+                setPermitData((prev) => ({
+                  ...prev,
+                  ...Object.fromEntries(
+                    Object.entries(data).filter(([, v]) => v !== undefined)
+                  ),
+                }));
+              }}
             />
-          </CardTitle>
-        </CardHeader>
-        {siteInfoOpen && (
-          <CardContent className="pt-0 px-3 md:px-6 space-y-3">
-            <div>
-              <Label htmlFor="mv-needed-by" className="text-xs">
-                Needed By
-              </Label>
-              <Input
-                id="mv-needed-by"
-                type="date"
-                value={neededByDate}
-                onChange={(e) => setNeededByDate(e.target.value)}
-                className="mt-1 w-48"
-              />
-            </div>
-            <div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="mv-scope" className="text-xs">
-                  Scope of Assignment
-                </Label>
-                <VoiceInput
-                  onTranscript={(text) =>
-                    setScopeOfAssignment((prev) =>
-                      prev ? prev + " " + text : text
-                    )
-                  }
-                />
-              </div>
-              <Textarea
-                id="mv-scope"
-                placeholder="Describe the scope and purpose of this assessment..."
-                value={scopeOfAssignment}
-                onChange={(e) => setScopeOfAssignment(e.target.value)}
-                rows={3}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="mv-site-obs" className="text-xs">
-                  Site Observations
-                </Label>
-                <VoiceInput
-                  onTranscript={(text) =>
-                    setSiteObservations((prev) =>
-                      prev ? prev + " " + text : text
-                    )
-                  }
-                />
-              </div>
-              <Textarea
-                id="mv-site-obs"
-                placeholder="Describe the property setting, topography, soil conditions, surrounding land use, proximity to structures/infrastructure, and any relevant environmental factors..."
-                value={siteObservations}
-                onChange={(e) => setSiteObservations(e.target.value)}
-                rows={3}
-                className="mt-1"
-              />
-            </div>
-            <div className="flex justify-end">
-              <Button
-                size="sm"
-                onClick={handleSaveSiteInfo}
-                disabled={savingSiteInfo}
-                className="bg-[#1D4E3E] hover:bg-[#2A6B55] text-white"
-              >
-                {savingSiteInfo ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "Save"
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        )}
-      </Card>}
-
-      {/* Valuation Report Settings — assessment phases only */}
-      {(lifecycleState === "assessing" || lifecycleState === "report_draft") && (property.reportType === "tree_valuation" || property.reportType === "real_estate_package") && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-sm font-semibold font-display">
-              <DollarSign className="h-4 w-4 text-[#1D4E3E]" />
-              Valuation Report Settings
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-sm">Purpose of Appraisal</Label>
-              <select
-                value={valuationPurpose}
-                onChange={(e) => setValuationPurpose(e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="">Select purpose...</option>
-                {VALUATION_PURPOSES.map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-sm">Basis Statement</Label>
-              <Textarea
-                value={valuationBasisStatement}
-                onChange={(e) => setValuationBasisStatement(e.target.value)}
-                rows={4}
-                className="text-sm"
-              />
-              <p className="text-xs text-muted-foreground">
-                This statement appears in the generated report describing the appraisal methodology.
-              </p>
-            </div>
-
-            {/* Summary */}
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-amber-900">Total Appraised Value</span>
-                <span className="font-mono text-xl font-bold text-amber-900">
-                  {formatCurrency(valuationTotal)}
-                </span>
-              </div>
-              {treesWithValues.length > 0 && (
-                <p className="text-xs text-amber-700">
-                  {treesWithValues.length} tree{treesWithValues.length !== 1 ? "s" : ""} assessed · Average: {formatCurrency(valuationTotal / treesWithValues.length)} per tree
-                </p>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                onClick={saveValuationReportSettings}
-                className="bg-[#1D4E3E] hover:bg-[#2A6B55]"
-              >
-                <Save className="h-3.5 w-3.5 mr-1.5" />
-                Save Valuation Settings
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={async () => {
-                  try {
-                    const res = await fetch(
-                      `/api/properties/${property.id}/trees/apply-valuation-defaults`,
-                      {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({}),
-                      }
-                    );
-                    if (!res.ok) throw new Error("Failed");
-                    const data = await res.json();
-                    toast({
-                      title: `Defaults applied to ${data.updated} tree${data.updated !== 1 ? "s" : ""}`,
-                    });
-                    // Refresh tree list to pick up new values
-                    const treesRes = await fetch(`/api/properties/${property.id}/trees`);
-                    if (treesRes.ok) {
-                      const updatedTrees = await treesRes.json();
-                      setTrees(updatedTrees);
-                    }
-                  } catch {
-                    toast({
-                      title: "Failed to apply defaults",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-              >
-                <Zap className="h-3.5 w-3.5 mr-1.5" />
-                Apply Defaults to All Trees
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Protected Trees Permit Warning Banner — assessment phases only */}
-      {(lifecycleState === "assessing" || lifecycleState === "report_draft") && trees.some((t) => t.isProtected) && (
-        <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
-          <ShieldCheck className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-          <p className="text-sm text-amber-800">
-            Protected trees on this property may require permits before work
-            begins. Check individual tree details for permit requirements.
-          </p>
-        </div>
-      )}
-
-      {/* Filter Chips */}
-      {trees.length > 0 && (
-        <div className="flex items-center gap-1.5 px-1 overflow-x-auto">
-          {filterChips
-            .filter((f) => f.key === "all" || f.count > 0)
-            .map((filter) => (
-              <button
-                key={filter.key}
-                onClick={() => setActiveFilter(filter.key)}
-                className={`text-xs px-2.5 py-1 rounded-full whitespace-nowrap transition-colors ${
-                  activeFilter === filter.key
-                    ? "bg-[#1D4E3E] text-white"
-                    : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300"
-                }`}
-              >
-                {filter.label} ({filter.count})
-              </button>
-            ))}
-        </div>
-      )}
-
-      {/* First-use hint for tree placement */}
-      {lifecycleState === "no_trees" && (
-        <OnboardingHint hintId="assessment_first_tree" className="mb-3">
-          Tap the map to place a tree, or use + Add Tree to enter data manually.
-        </OnboardingHint>
-      )}
-
-      {/* Tree Readiness Checklist — assessing with incomplete trees */}
-      {lifecycleState === "assessing" && incompleteTrees.length > 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-medium text-amber-900 mb-2">
-            {incompleteTrees.length} tree{incompleteTrees.length !== 1 ? "s" : ""} need{incompleteTrees.length === 1 ? "s" : ""} assessment data before generating a report
-          </p>
-          <div className="space-y-1">
-            {incompleteTrees.slice(0, 5).map((t) => (
-              <button
-                key={t.id}
-                onClick={() => handleSelectTreeFromList(t.id)}
-                className="flex items-center gap-2 text-xs text-amber-800 hover:text-amber-950 w-full text-left"
-              >
-                <span className="font-mono">#{t.treeNumber}</span>
-                <span>{t.speciesCommon || "Unidentified"}</span>
-                <span className="text-amber-600">
-                  — missing{" "}
-                  {[
-                    !t.speciesCommon?.trim() && "species",
-                    (!t.dbhInches || t.dbhInches <= 0) && "DBH",
-                    (!t.conditionRating || t.conditionRating <= 0) && "condition",
-                  ]
-                    .filter(Boolean)
-                    .join(", ")}
-                </span>
-              </button>
-            ))}
-            {incompleteTrees.length > 5 && (
-              <p className="text-xs text-amber-600">+ {incompleteTrees.length - 5} more</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Ready to Generate prompt — assessing with all trees complete */}
-      {lifecycleState === "assessing" && allTreesComplete && (
-        <div className="rounded-lg border border-[#1D4E3E]/20 bg-[#1D4E3E]/5 p-4 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-foreground">
-              All {trees.length} tree{trees.length !== 1 ? "s" : ""} assessed
-            </p>
-            <p className="text-xs text-muted-foreground">Ready to generate your report</p>
-          </div>
-          <Link href={`/properties/${property.id}/report`}>
-            <Button className="bg-[#1D4E3E] hover:bg-[#2A6B55]">
-              <FileText className="h-4 w-4 mr-2" />
-              Generate Report
-            </Button>
-          </Link>
-        </div>
-      )}
-
-      {/* Main Area: Tree List + Map + Side Panel */}
-      <div className="flex gap-0 rounded-xl border overflow-hidden relative">
-        {/* Quick-entry placement prompt */}
-        {showPlacementPrompt && !selectedTreeId && !pendingPin && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-[#1D4E3E] text-white px-4 py-2 rounded-full shadow-lg text-sm font-medium flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
-            <span>&#10003; Tree #{lastSavedNumber} saved</span>
-            <span className="text-[#3D7D68]">&middot;</span>
-            <span>Tap map to place Tree #{lastSavedNumber + 1}</span>
-            <button
-              onClick={() => setShowPlacementPrompt(false)}
-              className="ml-1 text-[#3D7D68] hover:text-white"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
           </div>
         )}
 
-        {/* Tree List Panel — desktop only */}
-        {showTreeList && trees.length > 0 && (
-          <div className="hidden md:flex flex-col w-[400px] border-r bg-neutral-50 overflow-hidden flex-shrink-0">
-            <div className="p-3 border-b flex items-center justify-between">
-              <h3 className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93]">
-                Trees ({trees.length})
-              </h3>
-              <button
-                onClick={() => setShowTreeList(false)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <PanelLeftClose className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="divide-y overflow-y-auto flex-1">
-              {[...trees]
-                .sort((a, b) => a.treeNumber - b.treeNumber)
-                .map((tree) => {
-                  const isDimmed = dimmedPinIds.includes(tree.id);
-                  return (
-                    <div
-                      key={tree.id}
-                      className={`group w-full text-left px-3 py-2 text-xs hover:bg-neutral-100 transition-colors flex items-center gap-2 ${
-                        selectedTreeId === tree.id
-                          ? "bg-[#1D4E3E]/5 border-l-2 border-[#1D4E3E]"
-                          : ""
-                      } ${isDimmed ? "opacity-40" : ""}`}
-                    >
-                      <button
-                        onClick={() => handleSelectTreeFromList(tree.id)}
-                        className="flex items-center gap-2 flex-1 min-w-0"
-                      >
-                        <span className="font-mono font-semibold text-muted-foreground w-6">
-                          #{tree.treeNumber}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="truncate font-medium text-left">
-                            {tree.speciesCommon || "Unidentified"}
-                          </p>
-                          <div className="flex items-center gap-1.5 text-muted-foreground">
-                            {tree.dbhInches ? (
-                              <span>{tree.dbhInches}&quot;</span>
-                            ) : null}
-                            {tree.conditionRating != null && tree.conditionRating > 0 ? (
-                              <span className="flex items-center gap-0.5">
-                                <span
-                                  className={`inline-block w-1.5 h-1.5 rounded-full ${
-                                    CONDITION_DOT_COLOR[tree.conditionRating] ?? "bg-gray-400"
-                                  }`}
-                                />
-                                {CONDITION_LABELS[tree.conditionRating]}
-                              </span>
-                            ) : null}
-                          </div>
-                        </div>
-                        {tree.isProtected && (
-                          <ShieldCheck className="h-3 w-3 text-[#1D4E3E] flex-shrink-0" />
-                        )}
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSelectTreeFromList(tree.id);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-neutral-200 text-muted-foreground hover:text-foreground flex-shrink-0"
-                        title={`Edit Tree #${tree.treeNumber}`}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteRequest(tree.id);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 flex-shrink-0"
-                        title={`Delete Tree #${tree.treeNumber}`}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
-        )}
-
-        {/* Map area — with relative positioning for overlays */}
-        <div
-          className={`w-full md:flex-1 relative h-[55vh] md:h-auto ${quickAddMode ? "cursor-crosshair" : ""}`}
-          style={{ minHeight: "calc(100vh - 4rem)" }}
-        >
-          {/* Map empty state overlay — no trees */}
-          {trees.length === 0 && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-              <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border p-6 text-center max-w-xs pointer-events-auto">
-                <TreePine className="h-8 w-8 text-[#1D4E3E] mx-auto mb-3" />
-                <p className="text-sm font-medium text-foreground mb-1">
-                  Start your assessment
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Tap the map to place your first tree, or it will be placed at the property center.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Tree list toggle button (when list is hidden) */}
-          {!showTreeList && trees.length > 0 && (
-            <button
-              onClick={() => setShowTreeList(true)}
-              className="hidden md:flex absolute top-4 left-4 z-10 bg-neutral-50/95 backdrop-blur-sm rounded-lg shadow-md border px-2 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground items-center gap-1"
-            >
-              <PanelLeftOpen className="h-3.5 w-3.5" />
-              Trees
-            </button>
-          )}
-
-          {/* Floating "Tag a Tree" button on map */}
-          {(lifecycleState === "no_trees" || lifecycleState === "assessing") && (
-            <button
-              type="button"
-              onClick={() => setQuickAddMode(!quickAddMode)}
-              className={`absolute bottom-20 left-4 z-10 flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg text-sm font-semibold transition-all ${
-                quickAddMode
-                  ? "bg-[#1D4E3E] text-white ring-2 ring-[#1D4E3E]/30"
-                  : "bg-white text-[#1D4E3E] hover:bg-[#1D4E3E]/5 border"
-              }`}
-            >
-              <TreePine className="h-4 w-4" />
-              <span>{quickAddMode ? "Adding Trees..." : "Tag a Tree"}</span>
-            </button>
-          )}
-
-          {/* Map Legend */}
-          <div className="absolute bottom-4 left-4 z-10">
-            {showLegend ? (
-              <div className="bg-neutral-50/95 backdrop-blur-sm rounded-lg shadow-md border p-2.5 text-[10px]">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-mono text-[#9C9C93] uppercase tracking-widest">
-                    Legend
-                  </span>
-                  <button
-                    onClick={() => setShowLegend(false)}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-[#1D4E3E] border-2 border-white shadow-sm" />
-                    <span>Excellent</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-[#3D7D68] border-2 border-white shadow-sm" />
-                    <span>Good</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-[#D4A017] border-2 border-white shadow-sm" />
-                    <span>Fair</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-[#E07B3C] border-2 border-white shadow-sm" />
-                    <span>Poor</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-[#C0392B] border-2 border-white shadow-sm" />
-                    <span>Dead / Critical</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-[#9CA3AF] border-2 border-white shadow-sm" />
-                    <span>Unassessed</span>
-                  </div>
-                  <div className="border-t pt-1 mt-1">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="w-3 h-3 rounded-full bg-[#9CA3AF] border-2 border-white outline outline-2 outline-[#F59E0B]"
-                        style={{ outlineOffset: "1px" }}
-                      />
-                      <span>Protected</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span
-                        className="w-3 h-3 rounded-full bg-[#9CA3AF] border-2 border-white outline outline-2 outline-[#A855F7]"
-                        style={{ outlineOffset: "1px" }}
-                      />
-                      <span>Heritage</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowLegend(true)}
-                className="bg-neutral-50/95 backdrop-blur-sm rounded-lg shadow-md border px-2.5 py-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground"
-              >
-                Legend
-              </button>
-            )}
-          </div>
-
+      {/* ---- Split View: Map + Tree Sidebar ---- */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-0 overflow-hidden rounded-lg border border-border mx-3 mb-3 relative">
+        {/* Map Area */}
+        <div className={`flex-1 relative h-[55vh] lg:h-auto overflow-hidden ${quickAddMode ? "cursor-crosshair" : ""}`}>
           <PropertyMap
             center={center}
             pins={pins}
@@ -1973,74 +1042,340 @@ export function PropertyMapView({ property }: PropertyMapViewProps) {
             interactive
             className="h-full w-full"
           />
+
+          {/* Floating Add Trees — top-left on map */}
+          {(lifecycleState === "no_trees" || lifecycleState === "assessing") && (
+            <div className="absolute top-3 left-3 z-10">
+              <button
+                type="button"
+                onClick={() => setQuickAddMode(!quickAddMode)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg text-xs font-medium transition-all ${
+                  quickAddMode
+                    ? "bg-[#1D4E3E] text-white ring-2 ring-white/50"
+                    : "bg-white hover:bg-gray-50 text-[#1D4E3E] border border-border"
+                }`}
+              >
+                <TreePine className="h-3.5 w-3.5" />
+                {quickAddMode ? "Adding Trees..." : "Add Trees"}
+              </button>
+            </div>
+          )}
+
+          {/* Map Legend — bottom-left, compact horizontal */}
+          {trees.length > 0 && (
+            <div className="absolute bottom-3 left-3 z-10 bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-border">
+              <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-1">Condition</p>
+              <div className="flex items-center gap-2.5">
+                {[
+                  { label: "Excellent", color: "#1D4E3E" },
+                  { label: "Good", color: "#3D7D68" },
+                  { label: "Fair", color: "#D4A017" },
+                  { label: "Poor", color: "#E07B3C" },
+                  { label: "Dead", color: "#C0392B" },
+                ].map((c) => (
+                  <div key={c.label} className="flex items-center gap-1">
+                    <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.color }} />
+                    <span className="text-[10px] text-muted-foreground">{c.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Quick-entry placement prompt */}
+          {showPlacementPrompt && !selectedTreeId && !pendingPin && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-[#1D4E3E] text-white px-4 py-2 rounded-full shadow-lg text-sm font-medium flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+              <span>&#10003; Tree #{lastSavedNumber} saved</span>
+              <span className="text-[#3D7D68]">&middot;</span>
+              <span>Tap map to place Tree #{lastSavedNumber + 1}</span>
+              <button
+                onClick={() => setShowPlacementPrompt(false)}
+                className="ml-1 text-[#3D7D68] hover:text-white"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Slide-in Assessment Panel — overlays map from right */}
+          {showSidePanel && (
+            <div className="fixed inset-0 z-50 bg-white lg:absolute lg:inset-y-0 lg:right-0 lg:left-auto lg:w-[420px] lg:z-20 lg:border-l lg:shadow-xl overflow-hidden">
+              {fieldMode ? (
+                <MobileFieldMode
+                  key={(sidePanelTree && 'id' in sidePanelTree) ? (sidePanelTree as TreeData).id : `new-${pendingPin?.lat}-${pendingPin?.lng}`}
+                  tree={sidePanelTree}
+                  treeNumber={sidePanelTreeNumber}
+                  propertyId={property.id}
+                  propertyCity={property.city}
+                  propertyCenter={center}
+                  existingPins={trees
+                    .filter((t) => t.pinLat != null && t.pinLng != null)
+                    .map((t) => ({
+                      lat: t.pinLat,
+                      lng: t.pinLng,
+                      treeNumber: t.treeNumber,
+                    }))}
+                  reportType={reportType}
+                  onSave={handleSave}
+                  onSaveAndNext={handleSaveAndNext}
+                  onClose={handleClosePanel}
+                  saving={saving}
+                  lastSavedTree={lastSavedTree}
+                  recentSpecies={recentSpecies}
+                  arboristHealthObs={arboristHealthObs}
+                  arboristStructuralObs={arboristStructuralObs}
+                  arboristRecommendationMap={arboristRecommendationMap}
+                  arboristCommonSpecies={arboristCommonSpecies}
+                  arboristDefaultUnitPrice={arboristDefaultUnitPrice}
+                />
+              ) : (
+                <TreeSidePanel
+                  tree={sidePanelTree}
+                  treeNumber={sidePanelTreeNumber}
+                  totalTrees={trees.length}
+                  propertyId={property.id}
+                  propertyCity={property.city}
+                  reportType={reportType}
+                  onSave={handleSave}
+                  onDelete={
+                    selectedTree ? () => handleDeleteRequest() : undefined
+                  }
+                  onClose={handleClosePanel}
+                  saving={saving}
+                  lastSavedTree={lastSavedTree}
+                  recentSpecies={recentSpecies}
+                  quickAddMode={quickAddMode}
+                  arboristHealthObs={arboristHealthObs}
+                  arboristStructuralObs={arboristStructuralObs}
+                  arboristRecommendationMap={arboristRecommendationMap}
+                  arboristCommonSpecies={arboristCommonSpecies}
+                  arboristDefaultUnitPrice={arboristDefaultUnitPrice}
+                />
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Side Panel — Field Mode on mobile, TreeSidePanel on desktop */}
-        {showSidePanel && (
-          fieldMode ? (
-            <MobileFieldMode
-              key={'id' in (sidePanelTree ?? {}) ? (sidePanelTree as TreeData).id : `new-${pendingPin?.lat}-${pendingPin?.lng}`}
-              tree={sidePanelTree}
-              treeNumber={sidePanelTreeNumber}
-              propertyId={property.id}
-              propertyCity={property.city}
-              propertyCenter={center}
-              existingPins={trees
-                .filter((t) => t.pinLat != null && t.pinLng != null)
-                .map((t) => ({
-                  lat: t.pinLat,
-                  lng: t.pinLng,
-                  treeNumber: t.treeNumber,
-                }))}
-              reportType={reportType}
-              onSave={handleSave}
-              onSaveAndNext={handleSaveAndNext}
-              onClose={handleClosePanel}
-              saving={saving}
-              lastSavedTree={lastSavedTree}
-              recentSpecies={recentSpecies}
-              arboristHealthObs={arboristHealthObs}
-              arboristStructuralObs={arboristStructuralObs}
-              arboristRecommendationMap={arboristRecommendationMap}
-              arboristCommonSpecies={arboristCommonSpecies}
-              arboristDefaultUnitPrice={arboristDefaultUnitPrice}
-            />
-          ) : (
-            <TreeSidePanel
-              tree={sidePanelTree}
-              treeNumber={sidePanelTreeNumber}
-              totalTrees={trees.length}
-              propertyId={property.id}
-              propertyCity={property.city}
-              reportType={reportType}
-              onSave={handleSave}
-              onDelete={
-                selectedTree ? () => handleDeleteRequest() : undefined
-              }
-              onClose={handleClosePanel}
-              saving={saving}
-              lastSavedTree={lastSavedTree}
-              recentSpecies={recentSpecies}
-              quickAddMode={quickAddMode}
-              arboristHealthObs={arboristHealthObs}
-              arboristStructuralObs={arboristStructuralObs}
-              arboristRecommendationMap={arboristRecommendationMap}
-              arboristCommonSpecies={arboristCommonSpecies}
-              arboristDefaultUnitPrice={arboristDefaultUnitPrice}
-            />
-          )
-        )}
-      </div>
+        {/* ---- Tree List Sidebar ---- */}
+        <div className="w-full lg:w-72 xl:w-80 border-t lg:border-t-0 lg:border-l border-border bg-[#FAF9F6] flex flex-col shrink-0 overflow-hidden">
+          {/* Sidebar header */}
+          <div className="px-3 py-2.5 border-b border-border shrink-0">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93]">
+              Trees ({trees.length})
+            </span>
+          </div>
 
-      {/* Summary Panel — assessment phases only */}
-      {(lifecycleState === "assessing" || lifecycleState === "report_draft") && (
-        <TreeSummaryPanel
-          trees={trees}
-          selectedTreeId={selectedTreeId}
-          onSelectTree={handleSelectTreeFromSummary}
-          reportType={reportType}
-        />
-      )}
+          {/* Tree list — scrollable */}
+          <div className="flex-1 overflow-y-auto">
+            {trees.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                <div className="h-10 w-10 rounded-full bg-[#1D4E3E]/10 flex items-center justify-center mb-3">
+                  <TreePine className="h-4 w-4 text-[#1D4E3E]" />
+                </div>
+                <p className="text-sm font-medium mb-1">No trees yet</p>
+                <p className="text-xs text-muted-foreground">
+                  Click &ldquo;Add Trees&rdquo; then click the map to place your first tree.
+                </p>
+              </div>
+            ) : (
+              <div className="py-1">
+                {[...trees]
+                  .sort((a, b) => a.treeNumber - b.treeNumber)
+                  .map((tree) => {
+                    const isSelected = selectedTreeId === tree.id;
+                    return (
+                      <button
+                        key={tree.id}
+                        onClick={() => handleSelectTreeFromList(tree.id)}
+                        className={`w-full flex items-center gap-2.5 py-2.5 px-3 transition-colors text-left group ${
+                          isSelected ? "bg-[#1D4E3E]/10" : "hover:bg-accent/50"
+                        }`}
+                      >
+                        <div
+                          className="h-7 w-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold font-mono shrink-0"
+                          style={{ backgroundColor: CONDITION_PIN_HEX[tree.conditionRating] ?? "#9CA3AF" }}
+                        >
+                          {tree.treeNumber}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-medium truncate">{tree.speciesCommon || "Unknown"}</span>
+                            {tree.isProtected && (
+                              <span className="text-[8px] font-mono uppercase px-1 py-0 rounded bg-amber-50 text-amber-700 border border-amber-200">P</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                            {tree.dbhInches ? <span>{tree.dbhInches}&quot; DBH</span> : null}
+                            {tree.conditionRating != null && tree.conditionRating > 0 && (
+                              <span>· {CONDITION_LABELS[tree.conditionRating]}</span>
+                            )}
+                          </div>
+                        </div>
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-[#1D4E3E] transition-colors shrink-0" />
+                      </button>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+
+          {/* Construction Project Info — collapsible in sidebar */}
+          {reportType === "construction_encroachment" && (lifecycleState === "assessing" || lifecycleState === "report_draft") && (
+            <div className="border-t border-border shrink-0">
+              <button
+                type="button"
+                onClick={() => setProjectOpen((v) => !v)}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-accent/30 transition-colors"
+              >
+                <HardHat className="h-3.5 w-3.5 text-[#1D4E3E]" />
+                <span className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] flex-1">Project Info</span>
+                <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 ${projectOpen ? "rotate-180" : ""}`} />
+              </button>
+              {projectOpen && (
+                <div className="px-3 pb-3 space-y-2">
+                  <div>
+                    <Label htmlFor="mv-proj-desc" className="text-xs">Project Description</Label>
+                    <Input
+                      id="mv-proj-desc"
+                      placeholder="New addition, foundation work..."
+                      value={projectDescription}
+                      onChange={(e) => setProjectDescription(e.target.value)}
+                      className="mt-1 h-8 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="mv-permit" className="text-xs">Permit Number</Label>
+                    <Input
+                      id="mv-permit"
+                      placeholder="BP-2024-001234"
+                      value={permitNumber}
+                      onChange={(e) => setPermitNumber(e.target.value)}
+                      className="mt-1 h-8 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="mv-developer" className="text-xs">Developer / Contractor</Label>
+                    <Input
+                      id="mv-developer"
+                      placeholder="ABC Construction"
+                      value={developerName}
+                      onChange={(e) => setDeveloperName(e.target.value)}
+                      className="mt-1 h-8 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="mv-architect" className="text-xs">Architect</Label>
+                    <Input
+                      id="mv-architect"
+                      placeholder="Jane Smith, AIA"
+                      value={architectName}
+                      onChange={(e) => setArchitectName(e.target.value)}
+                      className="mt-1 h-8 text-xs"
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={handleSaveProject}
+                    disabled={savingProject}
+                    className="w-full bg-[#1D4E3E] hover:bg-[#2A6B55] text-white h-8 text-xs"
+                  >
+                    {savingProject ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save Project Info"}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Valuation Summary — collapsible in sidebar */}
+          {(reportType === "tree_valuation" || reportType === "real_estate_package") && (lifecycleState === "assessing" || lifecycleState === "report_draft") && (
+            <div className="border-t border-border shrink-0">
+              <button
+                type="button"
+                onClick={() => setValuationOpen((v) => !v)}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-accent/30 transition-colors"
+              >
+                <DollarSign className="h-3.5 w-3.5 text-[#1D4E3E]" />
+                <span className="text-[10px] font-mono uppercase tracking-widest text-[#9C9C93] flex-1">Valuation</span>
+                <span className="font-mono text-xs font-semibold text-foreground mr-2">{formatCurrency(valuationTotal)}</span>
+                <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 ${valuationOpen ? "rotate-180" : ""}`} />
+              </button>
+              {valuationOpen && (
+                <div className="px-3 pb-3 space-y-2">
+                  <div>
+                    <Label className="text-xs">Purpose</Label>
+                    <select
+                      value={valuationPurpose}
+                      onChange={(e) => setValuationPurpose(e.target.value)}
+                      className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1"
+                    >
+                      <option value="">Select...</option>
+                      {VALUATION_PURPOSES.map((p) => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Basis Statement</Label>
+                    <Textarea
+                      value={valuationBasisStatement}
+                      onChange={(e) => setValuationBasisStatement(e.target.value)}
+                      rows={3}
+                      className="mt-1 text-xs"
+                    />
+                  </div>
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-amber-900">Total</span>
+                      <span className="font-mono text-sm font-bold text-amber-900">{formatCurrency(valuationTotal)}</span>
+                    </div>
+                    {treesWithValues.length > 0 && (
+                      <p className="text-[10px] text-amber-700 mt-0.5">
+                        {treesWithValues.length} tree{treesWithValues.length !== 1 ? "s" : ""} · Avg: {formatCurrency(valuationTotal / treesWithValues.length)}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-1.5">
+                    <Button
+                      size="sm"
+                      onClick={saveValuationReportSettings}
+                      className="flex-1 bg-[#1D4E3E] hover:bg-[#2A6B55] h-8 text-xs"
+                    >
+                      <Save className="h-3 w-3 mr-1" />
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const res = await fetch(
+                            `/api/properties/${property.id}/trees/apply-valuation-defaults`,
+                            { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }
+                          );
+                          if (!res.ok) throw new Error("Failed");
+                          const data = await res.json();
+                          toast({ title: `Defaults applied to ${data.updated} tree${data.updated !== 1 ? "s" : ""}` });
+                          const treesRes = await fetch(`/api/properties/${property.id}/trees`);
+                          if (treesRes.ok) {
+                            const updatedTrees = await treesRes.json();
+                            setTrees(updatedTrees);
+                          }
+                        } catch {
+                          toast({ title: "Failed to apply defaults", variant: "destructive" });
+                        }
+                      }}
+                      className="h-8 text-xs"
+                    >
+                      <Zap className="h-3 w-3 mr-1" />
+                      Defaults
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Delete Tree Confirmation Dialog */}
       <AlertDialog open={!!deleteConfirmTreeId} onOpenChange={(open) => !open && setDeleteConfirmTreeId(null)}>
