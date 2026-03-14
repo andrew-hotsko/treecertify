@@ -2202,11 +2202,16 @@ export async function GET(
     // =========================================================================
     // RENDER PDF
     // =========================================================================
+    console.log("[PDF] Launching browser...");
     browser = await launchBrowser();
+    console.log("[PDF] Browser launched, creating page...");
     const page = await browser.newPage();
-    await page.setContent(processedHtml, { waitUntil: "networkidle0" });
+    // Use domcontentloaded instead of networkidle0 to prevent hanging on external resources
+    await page.setContent(processedHtml, { waitUntil: "domcontentloaded", timeout: 30000 });
+    console.log("[PDF] Page content loaded, generating PDF...");
 
     const pdfBuffer = await page.pdf({
+      timeout: 60000,
       format: "Letter",
       printBackground: true,
       margin: {
@@ -2234,6 +2239,7 @@ export async function GET(
       `,
     });
 
+    console.log(`[PDF] PDF generated successfully (${pdfBuffer.byteLength} bytes)`);
     await browser.close();
     browser = undefined;
 

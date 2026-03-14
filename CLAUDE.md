@@ -499,7 +499,18 @@
 - **Certified three-dot menu**: Simplified — Download Word, Copy Share Link, Request Amendment, Quick Review, Version History, View Property, Delete Report. Removed Email to Client and Email Realtor items.
 - **Section editor sidebar**: Widened from `w-48` to `w-[280px] min-w-[280px]`. Text wrapping enabled (removed truncate). Hidden on mobile (`hidden md:flex`). Section cards max-width set to 800px.
 
-## Current Status (as of Session 42, 2026-03-12)
+## Property Detail Layout Overhaul (Session 43)
+- **Full-viewport layout**: Property detail page rebuilt as `h-[calc(100vh-4rem)]` flex container with NO content below the fold. Previously had map at 40% of screen with massive dead white space below.
+- **Compact header** (~48px): Back button + address + status badge + report link + delete icon. Replaced the old multi-row header with back link, mono label, h1 title, badges row, and actions row.
+- **Split view**: Map fills `flex-1` remaining space. Tree sidebar `lg:w-72 xl:w-80` with warm `bg-[#FAF9F6]` background, condition-colored circles showing tree numbers, species/DBH/condition text, and ChevronRight.
+- **Floating map controls**: "Add Trees" toggle button positioned `absolute top-3 left-3 z-10` on the map. Compact horizontal condition legend at `absolute bottom-3 left-3`. Replaced the old bottom-of-page "Tag a Tree" button and toggle legend button.
+- **Assessment panel**: Slides in OVER the map from right. Desktop: `absolute inset-y-0 right-0 w-[420px] z-20`. Mobile: `fixed inset-0 z-50` full-screen overlay.
+- **Sidebar sections**: Project Info (construction_encroachment only) and Valuation (tree_valuation/real_estate_package) as collapsible sections at bottom of tree sidebar, replacing standalone cards.
+- **Removed UI**: "Start your assessment" empty state card, bottom Tag a Tree button, Duplicate/Export CSV/Share buttons, filter chip tab bar, warning banners, incomplete trees checklist, ready-to-generate prompt, Site Information card, TreeSummaryPanel integration, share popover, legend toggle.
+- **Dead code cleanup**: Removed ~665 lines (2078 → 1413). Removed unused state (`showTreeList`, `showLegend`, `showSharePopover`, `sharingLoading`, `shareCopied`, `siteInfoOpen`), unused handlers (`handleDuplicate`, `handleShare`, `handleRevokeShare`, `handleCopyShareLink`, `handleSaveSiteInfo`, `handleSelectTreeFromSummary`), `filterChips` derived value, and `CONDITION_DOT_COLOR` constant. Converted `shareToken` from state to derived value from `property.shareToken`.
+- **PDF resilience**: Added diagnostic logging to `pdf-browser.ts` and PDF route. Changed `waitUntil` from `networkidle0` to `domcontentloaded` with 30s timeout to prevent hanging on external resources. Added `--disable-dev-shm-usage` and `--disable-gpu` flags for better local/CI compatibility.
+
+## Current Status (as of Session 43, 2026-03-13)
 
 ### What's Built and Working
 - **Full assessment workflow**: Property → trees → AI report → certification → PDF → share
@@ -523,7 +534,8 @@
 - **No MunicipalOrdinance data** for North Bay, Tahoe, or Reno in database — `checkTreeProtection()` returns "protection status unknown" for these cities. Ordinance data only in `lib/city-contacts.ts` (share page), not in `prisma/seed.ts` (protection checker).
 - **TreeRecord.photos field DEPRECATED**: Legacy JSON string field still in schema. All writes use TreePhoto model. Safe to drop column.
 - **`lib/city-submission-guides.ts` still exists**: 159 lines, not imported anywhere. Replaced by `lib/city-contacts.ts`. Safe to delete.
-- **Largest page bundles**: property detail (200 kB first load) and report editor (199 kB first load) — driven by Google Maps + rich editor. Already dynamically imported; no easy wins without feature removal.
+- **Largest page bundles**: property detail (209 kB first load) and report editor (342 kB first load) — driven by Google Maps + rich editor. Already dynamically imported; no easy wins without feature removal.
+- **TreeSummaryPanel not rendered**: `components/tree-summary-panel.tsx` exists (~318 lines) but is no longer imported by property-map-view after Session 43 layout overhaul. Safe to delete or repurpose.
 
 ### Architecture Decisions
 - **Prisma `db push`** (not migrations) for schema changes — project uses Neon PostgreSQL
